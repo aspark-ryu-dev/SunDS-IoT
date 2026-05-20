@@ -1254,7 +1254,7 @@
         const device = devices[item.bind_ref] || {};
         const title = item.label || device.area_id || device.name || item.bind_ref;
         const config = item.style_config || parseStyle(item.style);
-        const metrics = (config.metrics || []).slice(0, 3);
+        const metrics = (config.metrics || []).slice(0, 12);
         const mode = config.displayMode === 'popup' ? 'popup' : 'card';
         if (mode === 'popup') {
           const point = document.createElement('button');

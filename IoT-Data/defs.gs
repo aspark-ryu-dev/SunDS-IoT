@@ -526,7 +526,9 @@ function apiSaveDeviceLayoutSettings(deviceId, styleConfig) {
   ensureIngestReady_();
   const target = String(deviceId || '').trim();
   if (!target) throw new Error('device_id is required');
-  const cleanStyle = normalizeStyleConfig_(styleConfig || {});
+  styleConfig = styleConfig || {};
+  const incomingStyle = normalizeStyleConfig_(styleConfig);
+  const hasDisplayMode = Object.prototype.hasOwnProperty.call(styleConfig, 'displayMode') || Object.prototype.hasOwnProperty.call(styleConfig, 'display_mode');
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -536,6 +538,11 @@ function apiSaveDeviceLayoutSettings(deviceId, styleConfig) {
     const values = sh.getDataRange().getValues();
     for (let r = 1; r < values.length; r++) {
       if (String(values[r][2] || '').trim() !== target) continue;
+      const existingStyle = parseStyleConfig_(values[r][6]);
+      const cleanStyle = {
+        metrics: incomingStyle.metrics,
+        displayMode: hasDisplayMode ? incomingStyle.displayMode : (existingStyle.displayMode || 'card')
+      };
       const item = normalizeLayoutItem_({
         item_id: values[r][0],
         bind_type: values[r][1] || 'device',
@@ -1013,7 +1020,7 @@ function normalizeStyleConfig_(value) {
   const metrics = Array.isArray(obj.metrics) ? obj.metrics : [];
   const displayMode = String(obj.displayMode || obj.display_mode || 'card').trim().toLowerCase();
   return {
-    metrics: metrics.map(function (m) { return String(m || '').trim(); }).filter(Boolean).slice(0, 3),
+    metrics: metrics.map(function (m) { return String(m || '').trim(); }).filter(Boolean).slice(0, 12),
     displayMode: displayMode === 'popup' ? 'popup' : 'card'
   };
 }

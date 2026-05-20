@@ -468,6 +468,43 @@
       color: var(--muted);
       font-size: 12px;
     }
+    .metric-toggle-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      background: var(--panel);
+      min-height: 58px;
+    }
+    .metric-toggle-list:empty::before {
+      content: "受信済み key がありません";
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .metric-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--card-border);
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+    }
+    .metric-chip.active {
+      border-color: rgba(45,212,191,.5);
+      background: rgba(45,212,191,.16);
+      color: var(--ink);
+      box-shadow: inset 0 0 0 1px rgba(45,212,191,.12);
+    }
+    .metric-chip.dragging { opacity: .55; cursor: grabbing; }
     .map-preview {
       position: relative;
       width: 100%;
@@ -935,6 +972,7 @@
             <h2>配置追加</h2>
             <div class="form-grid">
               <label class="full">デバイス<select id="mapAddDeviceSelect"></select></label>
+              <label class="full" data-i18n-label="data.layout.displayMode"><select id="mapAddDisplayMode"><option value="card">カード固定</option><option value="popup">クリック表示</option></select></label>
               <div class="map-coordinate-row full">
                 <label>X<input id="mapAddX" type="number" min="0" max="1" step="0.001" value="0.5"></label>
                 <label>Y<input id="mapAddY" type="number" min="0" max="1" step="0.001" value="0.5"></label>
@@ -1096,9 +1134,8 @@
         <div class="field-group">
           <h3>マップ表示</h3>
           <div class="form-grid">
-            <label data-i18n-label="data.layout.displayMode"><select id="device_map_display_mode"><option value="card">カード固定</option><option value="popup">クリック表示</option></select></label>
-            <label class="full" data-i18n-label="data.layout.metrics"><input id="device_map_metrics" placeholder="temperature, humidity, battery"></label>
-            <p class="hint full">マップに配置済みのデバイスだけ反映されます。配置の追加・削除・移動はマップ設定で行います。</p>
+            <div id="deviceMetricToggles" class="metric-toggle-list full"></div>
+            <p class="hint full">実際に受信した key だけ表示します。点灯している key がカードに表示され、ドラッグで表示順を変更できます。</p>
           </div>
         </div>
         <div class="drawer-actions">
@@ -1381,6 +1418,21 @@
       $('mapAddY').value = Number(p.y).toFixed(3);
     }
 
+    function renderDeviceMetricToggles(device, selectedMetrics) {
+      const el = $('deviceMetricToggles');
+      if (!el) return;
+      const keys = ((device && device.metricKeys) || []).filter((m) => !isBatteryMetric(m));
+      const selected = [];
+      (selectedMetrics || []).forEach((key) => {
+        if (keys.indexOf(key) > -1 && selected.indexOf(key) < 0) selected.push(key);
+      });
+      const ordered = selected.concat(keys.filter((key) => selected.indexOf(key) < 0));
+      el.innerHTML = ordered.map((key) => {
+        const active = selected.indexOf(key) > -1;
+        return '<button type="button" class="metric-chip ' + (active ? 'active' : '') + '" draggable="' + (active ? 'true' : 'false') + '" data-key="' + esc(attrEscape(key)) + '">' + esc(metricLabel(key)) + '</button>';
+      }).join('');
+    }
+
     function previewMetricLine(device, metric) {
       const hit = device.metrics && device.metrics[metric];
       const meta = state.snapshot.metricMeta && state.snapshot.metricMeta[metric];
@@ -1538,8 +1590,7 @@
       $('device_enabled').checked = d.enabled !== false;
       const layout = findLayoutForDevice(d.device_id);
       const cfg = layout ? (layout.style_config || parseStyle(layout.style)) : { metrics: [], displayMode: 'card' };
-      $('device_map_display_mode').value = cfg.displayMode === 'popup' ? 'popup' : 'card';
-      $('device_map_metrics').value = (cfg.metrics || []).join(', ');
+      renderDeviceMetricToggles(d, cfg.metrics || []);
       $('device_id').readOnly = isEdit;
       $('deviceIdHint').textContent = isEdit ? '（変更不可）' : '';
       $('deviceDrawerTitle').textContent = isEdit ? 'デバイス編集' : 'デバイス追加';
@@ -1665,8 +1716,7 @@
 
     function collectDeviceLayoutSettings() {
       return {
-        displayMode: $('device_map_display_mode').value === 'popup' ? 'popup' : 'card',
-        metrics: $('device_map_metrics').value.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 3)
+        metrics: Array.from($('deviceMetricToggles').querySelectorAll('.metric-chip.active')).map((chip) => chip.getAttribute('data-key')).filter(Boolean)
       };
     }
 
@@ -1735,7 +1785,7 @@
         x_norm: Number(item.x_norm) || 0,
         y_norm: Number(item.y_norm) || 0,
         label: item.label || '',
-        style_config: { metrics: (cfg.metrics || []).slice(0, 3), displayMode: cfg.displayMode === 'popup' ? 'popup' : 'card' },
+        style_config: { metrics: (cfg.metrics || []).slice(0, 12), displayMode: cfg.displayMode === 'popup' ? 'popup' : 'card' },
         enabled: item.enabled !== false
       };
     }
@@ -1817,7 +1867,8 @@
     function addLayoutAt(deviceId, x, y) {
       if (!deviceId) { showToast('デバイスを選択してください', true); return; }
       const dev = deviceMap()[deviceId] || {};
-      const metrics = (dev.metricKeys || []).filter((m) => !isBatteryMetric(m)).slice(0, 3);
+      const metrics = (dev.metricKeys || []).filter((m) => !isBatteryMetric(m));
+      const displayMode = $('mapAddDisplayMode').value === 'popup' ? 'popup' : 'card';
       const item = {
         item_id: 'item_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
         bind_type: 'device',
@@ -1825,7 +1876,7 @@
         x_norm: x,
         y_norm: y,
         label: '',
-        style_config: { metrics: metrics, displayMode: 'card' },
+        style_config: { metrics: metrics, displayMode: displayMode },
         enabled: true
       };
       getMapDraftItems().push(item);
@@ -1886,6 +1937,32 @@
           showToast('デバイスを保存しました');
         });
       });
+    });
+    $('deviceMetricToggles').addEventListener('click', (ev) => {
+      const chip = ev.target.closest('.metric-chip');
+      if (!chip) return;
+      chip.classList.toggle('active');
+      chip.draggable = chip.classList.contains('active');
+    });
+    $('deviceMetricToggles').addEventListener('dragstart', (ev) => {
+      const chip = ev.target.closest('.metric-chip.active');
+      if (!chip) { ev.preventDefault(); return; }
+      chip.classList.add('dragging');
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.setData('text/plain', chip.getAttribute('data-key') || '');
+    });
+    $('deviceMetricToggles').addEventListener('dragend', (ev) => {
+      const chip = ev.target.closest('.metric-chip');
+      if (chip) chip.classList.remove('dragging');
+    });
+    $('deviceMetricToggles').addEventListener('dragover', (ev) => {
+      const dragging = $('deviceMetricToggles').querySelector('.metric-chip.dragging');
+      const over = ev.target.closest('.metric-chip.active');
+      if (!dragging || !over || dragging === over) return;
+      ev.preventDefault();
+      const box = over.getBoundingClientRect();
+      const before = ev.clientX < box.left + box.width / 2;
+      over.parentNode.insertBefore(dragging, before ? over : over.nextSibling);
     });
     $('addDeviceBtn').addEventListener('click', () => openDeviceDrawer('add'));
     $('deviceDrawerClose').addEventListener('click', closeDeviceDrawer);

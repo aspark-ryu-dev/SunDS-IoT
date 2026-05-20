@@ -172,7 +172,7 @@ function parseStyleConfig_(style) {
     const metrics = obj && Array.isArray(obj.metrics) ? obj.metrics : [];
     const displayMode = String((obj && (obj.displayMode || obj.display_mode)) || 'card').trim().toLowerCase();
     return {
-      metrics: metrics.map(function (m) { return String(m || '').trim(); }).filter(Boolean).slice(0, 3),
+      metrics: metrics.map(function (m) { return String(m || '').trim(); }).filter(Boolean).slice(0, 12),
       displayMode: displayMode === 'popup' ? 'popup' : 'card'
     };
   } catch (err) {

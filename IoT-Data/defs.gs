@@ -397,7 +397,14 @@ function apiDeleteDefinition(id) {
 
 function apiSeedKnownMetricDefinitions() {
   ensureIngestReady_();
+  seedKeyCatalog_();
   seedKnownMetricDefinitions_();
+  return getAdminSnapshot_();
+}
+
+function apiSeedKeyCatalog() {
+  ensureIngestReady_();
+  seedKeyCatalog_();
   return getAdminSnapshot_();
 }
 
@@ -579,12 +586,14 @@ function apiGenerateDevicePayload(model, deviceId) {
 
 function getAdminSnapshot_() {
   ensureHeaders_(getSheet_(SHEET_DEVICES), HEADERS.Devices);
+  ensureHeaders_(getSheet_(SHEET_KEY_CATALOG), HEADERS.KeyCatalog);
   const devices = readDevices_();
   const latest = readLatestRows_();
   attachMetricsToDevices_(devices, latest);
   return {
     devices: devices,
     definitions: readDefinitions_(),
+    keyCatalog: readKeyCatalog_(),
     latest: latest,
     dashboard: {
       config: getDashboardConfig_(),
@@ -676,6 +685,85 @@ function seedKnownMetricDefinitions_() {
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, 8).setValues(rows);
   }
   return { added: rows.length };
+}
+
+function seedKeyCatalog_() {
+  const sh = getSheet_(SHEET_KEY_CATALOG);
+  ensureHeaders_(sh, HEADERS.KeyCatalog);
+  const idx = headerIndex_(sh);
+  const values = sh.getDataRange().getValues();
+  const existing = {};
+  for (let r = 1; r < values.length; r++) {
+    const key = String(valueByHeader_(values[r], idx, 'key') || '').trim();
+    if (key) existing[key] = r + 1;
+  }
+
+  const rows = [];
+  knownMetricKeys_().forEach(function (key) {
+    const meta = keyCatalogMetaForKey_(key);
+    if (existing[key]) {
+      fillKeyCatalogBlanks_(sh, existing[key], idx, meta);
+    } else {
+      rows.push(keyCatalogToRow_(meta, idx));
+    }
+  });
+
+  if (rows.length) {
+    sh.getRange(sh.getLastRow() + 1, 1, rows.length, sh.getLastColumn()).setValues(rows);
+  }
+  return { added: rows.length };
+}
+
+function fillKeyCatalogBlanks_(sheet, rowNumber, idx, meta) {
+  const row = sheet.getRange(rowNumber, 1, 1, sheet.getLastColumn()).getValues()[0];
+  ['label_ja', 'data_type', 'unit', 'source', 'models', 'enabled'].forEach(function (key) {
+    if (idx[key] === undefined) return;
+    if (String(row[idx[key]] || '').trim() !== '') return;
+    sheet.getRange(rowNumber, idx[key] + 1).setValue(meta[key]);
+  });
+}
+
+function keyCatalogToRow_(meta, idx) {
+  const width = Math.max.apply(null, Object.keys(idx).map(function (name) { return idx[name]; })) + 1;
+  const row = new Array(width).fill('');
+  setByHeader_(row, idx, 'key', meta.key);
+  setByHeader_(row, idx, 'label_ja', meta.label_ja);
+  setByHeader_(row, idx, 'data_type', meta.data_type);
+  setByHeader_(row, idx, 'unit', meta.unit);
+  setByHeader_(row, idx, 'source', meta.source);
+  setByHeader_(row, idx, 'models', meta.models);
+  setByHeader_(row, idx, 'note', meta.note);
+  setByHeader_(row, idx, 'enabled', meta.enabled);
+  return row;
+}
+
+function keyCatalogMetaForKey_(key) {
+  const meta = metricMetaForKey_(key);
+  return {
+    key: key,
+    label_ja: meta.label,
+    data_type: inferKeyDataType_(key),
+    unit: meta.unit,
+    source: 'device-examples',
+    models: modelsForMetricKey_(key).join(','),
+    note: '',
+    enabled: true
+  };
+}
+
+function modelsForMetricKey_(key) {
+  const models = [];
+  Object.keys(DEVICE_EXAMPLE_KEYS).forEach(function (model) {
+    if ((DEVICE_EXAMPLE_KEYS[model] || []).indexOf(key) > -1) models.push(model);
+  });
+  return models.sort();
+}
+
+function inferKeyDataType_(key) {
+  const normalized = String(key || '').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  if (/(^|_)(sn|mac|imei|imsi|iccid|version|qrcode|text|class|type|id|status)$/.test(normalized)) return 'string';
+  if (/(^|_)(enable|enabled|alarm|lock|open|occupied|occupancy|pir|switch|leakage|magnet|tamper)($|_)/.test(normalized)) return 'boolean';
+  return 'number';
 }
 
 function buildKnownMetricMeta_() {
@@ -827,6 +915,29 @@ function readLatestRows_() {
     });
   }
   return out;
+}
+
+function readKeyCatalog_() {
+  const sh = getSheet_(SHEET_KEY_CATALOG);
+  ensureHeaders_(sh, HEADERS.KeyCatalog);
+  const values = sh.getDataRange().getValues();
+  const idx = headerIndex_(sh);
+  const out = [];
+  for (let r = 1; r < values.length; r++) {
+    const key = String(valueByHeader_(values[r], idx, 'key') || '').trim();
+    if (!key) continue;
+    out.push({
+      key: key,
+      label_ja: String(valueByHeader_(values[r], idx, 'label_ja') || ''),
+      data_type: String(valueByHeader_(values[r], idx, 'data_type') || 'number'),
+      unit: String(valueByHeader_(values[r], idx, 'unit') || ''),
+      source: String(valueByHeader_(values[r], idx, 'source') || ''),
+      models: String(valueByHeader_(values[r], idx, 'models') || ''),
+      note: String(valueByHeader_(values[r], idx, 'note') || ''),
+      enabled: parseBool_(valueByHeader_(values[r], idx, 'enabled'))
+    });
+  }
+  return out.sort(function (a, b) { return a.key.localeCompare(b.key); });
 }
 
 function attachMetricsToDevices_(devices, latest) {

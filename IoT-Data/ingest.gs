@@ -519,11 +519,11 @@ function jsonOut_(obj) {
 
 function ensureIngestReady_() {
   const cache = CacheService.getScriptCache();
-  if (cache.get('iot_ingest_ready_v4') === '1') return;
+  if (cache.get('iot_ingest_ready_v5') === '1') return;
   ensureScriptProps_();
   ensureSheets_();
   seedConfigDefaults_();
-  cache.put('iot_ingest_ready_v4', '1', 21600);
+  cache.put('iot_ingest_ready_v5', '1', 21600);
 }
 
 function testIngest() {

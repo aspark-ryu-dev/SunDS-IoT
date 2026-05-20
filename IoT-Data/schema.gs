@@ -7,6 +7,7 @@ const SHEET_READINGS = 'Readings';
 const SHEET_LATEST = 'Latest';
 const SHEET_DEVICES = 'Devices';
 const SHEET_DEFINITIONS = 'Definitions';
+const SHEET_KEY_CATALOG = 'KeyCatalog';
 const SHEET_CONFIG = 'Config';
 const SHEET_LAYOUT = 'Layout';
 const DEFAULT_SPREADSHEET_ID = '1HZwK5W8Yhd15sNypNO9Ydfx4G0NSehvEoTm8ZmKRygE';
@@ -16,6 +17,7 @@ const HEADERS = {
   Latest: ['device_id', 'metric', 'value', 'ts', 'latest_key'],
   Devices: ['device_id', 'name', 'note', 'enabled', 'last_seen', 'first_seen', 'area_id', 'location', 'type', 'sensor_type', 'power_source', 'report_interval_min'],
   Definitions: ['id', 'type', 'name', 'unit', 'source', 'expression', 'params', 'enabled'],
+  KeyCatalog: ['key', 'label_ja', 'data_type', 'unit', 'source', 'models', 'note', 'enabled'],
   Config: ['key', 'value'],
   Layout: ['item_id', 'bind_type', 'bind_ref', 'x_norm', 'y_norm', 'label', 'style', 'enabled']
 };

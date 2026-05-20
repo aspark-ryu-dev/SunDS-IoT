@@ -984,7 +984,18 @@
         <h2 data-i18n="data.definitions.title"></h2>
         <div class="row">
           <button id="seedDefsBtn" type="button" class="secondary" data-i18n="data.definitions.seedKnown"></button>
+          <button id="seedKeyCatalogBtn" type="button" class="secondary">キーDB更新</button>
+          <input id="keyCatalogSearch" placeholder="key / 日本語 / model 検索" style="max-width:280px">
         </div>
+        <div style="overflow:auto;max-height:320px;margin-top:12px">
+          <table>
+            <thead>
+              <tr><th>Key</th><th>日本語</th><th>型</th><th>単位</th><th>モデル</th><th></th></tr>
+            </thead>
+            <tbody id="keyCatalogRows"></tbody>
+          </table>
+        </div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
         <div style="overflow:auto">
           <table>
             <thead>
@@ -1138,7 +1149,7 @@
     const DATA_THEME_KEY = 'iotData.theme';
     const DATA_ALLOWED_STORAGE_KEYS = [DATA_CACHE_KEY, DATA_PAGE_KEY, DATA_QUERY_KEY, DATA_LATEST_DEVICE_KEY, DATA_MENU_KEY, DATA_THEME_KEY];
     const DATA_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-    const state = { snapshot: null, deviceMap: {}, deviceQuery: '', latestDeviceId: '', editingDeviceId: '', mapDraft: null, mapAddPoint: null };
+    const state = { snapshot: null, deviceMap: {}, deviceQuery: '', latestDeviceId: '', editingDeviceId: '', keyCatalogQuery: '', mapDraft: null, mapAddPoint: null };
     const $ = (id) => document.getElementById(id);
 
     function t(path) {
@@ -1195,6 +1206,7 @@
       renderMapPreview();
       renderMapAddControls();
       renderDefinitions();
+      renderKeyCatalog();
       renderLatest();
       renderExampleModels();
     }
@@ -1396,6 +1408,27 @@
         </tr>`).join('') || `<tr><td colspan="6" class="muted">${esc(t('data.definitions.none'))}</td></tr>`;
     }
 
+    function renderKeyCatalog() {
+      const rows = (state.snapshot.keyCatalog || []).filter((row) => row.enabled !== false);
+      const q = String(state.keyCatalogQuery || '').trim().toLowerCase();
+      const filtered = q ? rows.filter((row) => {
+        return [row.key, row.label_ja, row.data_type, row.unit, row.models, row.source]
+          .join(' ').toLowerCase().indexOf(q) > -1;
+      }) : rows;
+      $('keyCatalogRows').innerHTML = filtered.slice(0, 120).map((row) => {
+        const models = String(row.models || '').split(',').filter(Boolean);
+        const modelText = models.length > 3 ? models.slice(0, 3).join(', ') + ' +' + (models.length - 3) : models.join(', ');
+        return `<tr>
+          <td><code>${esc(row.key)}</code></td>
+          <td>${esc(row.label_ja)}</td>
+          <td>${esc(row.data_type)}</td>
+          <td>${esc(row.unit)}</td>
+          <td class="muted">${esc(modelText)}</td>
+          <td><button class="secondary" type="button" onclick='applyKeyCatalog(${jsonAttr(row)})'>定義へ反映</button></td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="6" class="muted">キーDBがありません</td></tr>';
+    }
+
     function renderLatest() {
       const latest = (state.snapshot.latest || []).slice();
       const byDevice = {};
@@ -1582,6 +1615,23 @@
       $('def_expression').value = d.expression || '';
       $('def_params').value = d.params || '';
       $('def_enabled').checked = d.enabled !== false;
+      $('testResult').textContent = '';
+    };
+
+    window.applyKeyCatalog = function (row) {
+      row = row || {};
+      $('def_id').value = row.key || '';
+      $('def_type').value = 'metric';
+      $('def_name').value = row.label_ja || row.key || '';
+      $('def_unit').value = row.unit || '';
+      $('def_source').value = row.source || 'device-examples';
+      $('def_expression').value = '';
+      $('def_params').value = JSON.stringify({
+        data_type: row.data_type || 'number',
+        models: row.models || '',
+        note: row.note || ''
+      }, null, 2);
+      $('def_enabled').checked = row.enabled !== false;
       $('testResult').textContent = '';
     };
 
@@ -1944,6 +1994,13 @@
     });
     $('seedDefsBtn').addEventListener('click', () => {
       callServer('apiSeedKnownMetricDefinitions', [], toastRender('既知キーを追加しました'));
+    });
+    $('seedKeyCatalogBtn').addEventListener('click', () => {
+      callServer('apiSeedKeyCatalog', [], toastRender('キーDBを更新しました'));
+    });
+    $('keyCatalogSearch').addEventListener('input', (ev) => {
+      state.keyCatalogQuery = ev.target.value || '';
+      renderKeyCatalog();
     });
     $('deleteDefBtn').addEventListener('click', () => {
       const id = $('def_id').value.trim();

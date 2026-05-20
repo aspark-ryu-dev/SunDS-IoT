@@ -7,10 +7,12 @@
 function setup() {
   CacheService.getScriptCache().remove('iot_ingest_ready_v3');
   CacheService.getScriptCache().remove('iot_ingest_ready_v4');
+  CacheService.getScriptCache().remove('iot_ingest_ready_v5');
   CacheService.getScriptCache().remove('iot_latest_index_v2');
   ensureScriptProps_();
   ensureSheets_();
   seedConfigDefaults_();
+  seedKeyCatalog_();
   seedKnownMetricDefinitions_();
   Logger.log('IoT-Data setup complete.');
 }

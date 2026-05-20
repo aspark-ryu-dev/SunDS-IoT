@@ -17,19 +17,13 @@
 const DEVICE_ROW_CACHE_PREFIX = 'iot_device_row_v2:';
 const LATEST_INDEX_CACHE_KEY = 'iot_latest_index_v2';
 const DEVICE_ID_KEYS = [
-  // LoRaWAN devices.
+  // LoRaWAN devices: devEUI only.
   'deveui',
   'dev_eui',
   'device_eui',
   'deviceeui',
-  'eui',
-  // Normal devices identify by serial number.
-  'sn',
-  'serial',
-  'serial_no',
-  'serialno',
-  'serial_number',
-  'serialnumber'
+  // Normal devices identify by SN only.
+  'sn'
 ];
 const DEVICE_NAME_KEYS = [
   'devicename',

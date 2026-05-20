@@ -171,13 +171,22 @@ function parseStyleConfig_(style) {
     const obj = JSON.parse(String(style || '{}'));
     const metrics = obj && Array.isArray(obj.metrics) ? obj.metrics : [];
     const displayMode = String((obj && (obj.displayMode || obj.display_mode)) || 'card').trim().toLowerCase();
+    const cardWidth = clampNumber_(Number(obj && (obj.cardWidth || obj.card_width)), 100, 360, 0);
+    const cardHeight = clampNumber_(Number(obj && (obj.cardHeight || obj.card_height)), 54, 260, 0);
     return {
       metrics: metrics.map(function (m) { return String(m || '').trim(); }).filter(Boolean).slice(0, 12),
-      displayMode: displayMode === 'popup' ? 'popup' : 'card'
+      displayMode: displayMode === 'popup' ? 'popup' : 'card',
+      cardWidth: cardWidth,
+      cardHeight: cardHeight
     };
   } catch (err) {
-    return { metrics: [], displayMode: 'card' };
+    return { metrics: [], displayMode: 'card', cardWidth: 0, cardHeight: 0 };
   }
+}
+
+function clampNumber_(value, min, max, fallback) {
+  if (!isFinite(value) || value <= 0) return fallback;
+  return Math.max(min, Math.min(max, value));
 }
 
 function getBackgroundUrl_() {

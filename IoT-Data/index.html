@@ -532,8 +532,11 @@
     .map-preview-item {
       position: absolute;
       transform: translate(-50%, -50%);
-      min-width: 116px;
-      max-width: 180px;
+      width: var(--card-w, 150px);
+      min-width: 100px;
+      max-width: 360px;
+      min-height: 54px;
+      max-height: 260px;
       padding: 7px 9px;
       border-radius: var(--r-sm);
       border: 1px solid rgba(15,23,42,.1);
@@ -543,14 +546,18 @@
       font-size: 11px;
       cursor: grab;
       user-select: none;
+      overflow: hidden;
+      z-index: 2;
     }
     .map-preview-item.dragging { cursor: grabbing; opacity: .86; z-index: 5; }
     .map-preview-item.popup {
+      width: auto;
       min-width: 86px;
       max-width: 130px;
       padding: 6px 8px;
       border-color: rgba(45,212,191,.45);
       background: rgba(236,253,245,.96);
+      z-index: 9;
     }
     .map-preview-item::before {
       content: "";
@@ -563,6 +570,29 @@
       background: var(--grad);
     }
     .map-preview-item.popup .map-preview-metrics { display: none; }
+    .map-resize {
+      position: absolute;
+      right: 2px;
+      bottom: 2px;
+      width: 16px;
+      height: 16px;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      cursor: nwse-resize;
+      opacity: .58;
+    }
+    .map-resize::before {
+      content: "";
+      position: absolute;
+      right: 3px;
+      bottom: 3px;
+      width: 10px;
+      height: 10px;
+      border-right: 2px solid #64748b;
+      border-bottom: 2px solid #64748b;
+    }
+    .map-preview-item.popup .map-resize { display: none; }
     .map-preview-title {
       color: #64708a;
       font-weight: 800;
@@ -1385,10 +1415,14 @@
         const metrics = (cfg.metrics || []).filter((m) => !isBatteryMetric(m)).slice(0, 2);
         const title = item.label || device.area_id || device.name || item.bind_ref;
         const mode = cfg.displayMode === 'popup' ? 'popup' : 'card';
-        return '<div class="map-preview-item ' + mode + '" data-item-id="' + esc(attrEscape(item.item_id)) + '" style="left:' + (Number(item.x_norm) * 100) + '%;top:' + (Number(item.y_norm) * 100) + '%">' +
+        const sizeStyle = mode === 'card'
+          ? ';--card-w:' + (Number(cfg.cardWidth) || 150) + 'px;height:' + (Number(cfg.cardHeight) || 0 || 'auto') + (Number(cfg.cardHeight) ? 'px' : '')
+          : '';
+        return '<div class="map-preview-item ' + mode + '" data-item-id="' + esc(attrEscape(item.item_id)) + '" style="left:' + (Number(item.x_norm) * 100) + '%;top:' + (Number(item.y_norm) * 100) + '%' + sizeStyle + '">' +
           '<button class="map-del" type="button" title="削除" data-del-id="' + esc(attrEscape(item.item_id)) + '">×</button>' +
           '<div class="map-preview-title">' + esc(title) + '</div>' +
           '<div class="map-preview-metrics">' + metrics.map((m) => previewMetricLine(device, m)).join('') + '</div>' +
+          '<button class="map-resize" type="button" title="サイズ変更" aria-label="サイズ変更"></button>' +
           '</div>';
       }).join('');
       const hint = bg ? '<div class="map-hint">クリックで位置指定、ドラッグで移動、最後に保存</div>' : '';
@@ -1785,7 +1819,7 @@
         x_norm: Number(item.x_norm) || 0,
         y_norm: Number(item.y_norm) || 0,
         label: item.label || '',
-        style_config: { metrics: (cfg.metrics || []).slice(0, 12), displayMode: cfg.displayMode === 'popup' ? 'popup' : 'card' },
+        style_config: { metrics: (cfg.metrics || []).slice(0, 12), displayMode: cfg.displayMode === 'popup' ? 'popup' : 'card', cardWidth: Number(cfg.cardWidth) || 0, cardHeight: Number(cfg.cardHeight) || 0 },
         enabled: item.enabled !== false
       };
     }
@@ -1843,6 +1877,17 @@
       markMapDirty();
     }
 
+    function saveResizedLayout(item, width, height) {
+      const cfg = item.style_config || parseStyle(item.style);
+      item.style_config = {
+        metrics: (cfg.metrics || []).slice(0, 12),
+        displayMode: cfg.displayMode === 'popup' ? 'popup' : 'card',
+        cardWidth: Math.max(100, Math.min(360, Math.round(width))),
+        cardHeight: Math.max(54, Math.min(260, Math.round(height)))
+      };
+      markMapDirty();
+    }
+
     function pointToNorm(ev) {
       const box = $('mapPreview').getBoundingClientRect();
       const x = Math.max(0, Math.min(1, (ev.clientX - box.left) / box.width));
@@ -1876,7 +1921,7 @@
         x_norm: x,
         y_norm: y,
         label: '',
-        style_config: { metrics: metrics, displayMode: displayMode },
+        style_config: { metrics: metrics, displayMode: displayMode, cardWidth: displayMode === 'card' ? 150 : 0, cardHeight: 0 },
         enabled: true
       };
       getMapDraftItems().push(item);
@@ -1890,9 +1935,9 @@
     function parseStyle(style) {
       try {
         const obj = JSON.parse(style || '{}');
-        return { metrics: Array.isArray(obj.metrics) ? obj.metrics : [], displayMode: obj.displayMode === 'popup' ? 'popup' : 'card' };
+        return { metrics: Array.isArray(obj.metrics) ? obj.metrics : [], displayMode: obj.displayMode === 'popup' ? 'popup' : 'card', cardWidth: Number(obj.cardWidth || obj.card_width) || 0, cardHeight: Number(obj.cardHeight || obj.card_height) || 0 };
       } catch (err) {
-        return { metrics: [], displayMode: 'card' };
+        return { metrics: [], displayMode: 'card', cardWidth: 0, cardHeight: 0 };
       }
     }
 
@@ -2021,6 +2066,35 @@
       const item = layoutById(target.getAttribute('data-item-id'));
       if (!item) return;
       ev.preventDefault();
+      const resize = ev.target.closest('.map-resize');
+      if (resize) {
+        ev.stopPropagation();
+        target.classList.add('dragging');
+        target.setPointerCapture(ev.pointerId);
+        const startX = ev.clientX;
+        const startY = ev.clientY;
+        const startW = target.offsetWidth;
+        const startH = target.offsetHeight;
+        let nextW = startW;
+        let nextH = startH;
+        const moveResize = (moveEv) => {
+          nextW = Math.max(100, Math.min(360, startW + moveEv.clientX - startX));
+          nextH = Math.max(54, Math.min(260, startH + moveEv.clientY - startY));
+          target.style.setProperty('--card-w', Math.round(nextW) + 'px');
+          target.style.height = Math.round(nextH) + 'px';
+        };
+        const upResize = () => {
+          target.classList.remove('dragging');
+          target.removeEventListener('pointermove', moveResize);
+          target.removeEventListener('pointerup', upResize);
+          target.removeEventListener('pointercancel', upResize);
+          saveResizedLayout(item, nextW, nextH);
+        };
+        target.addEventListener('pointermove', moveResize);
+        target.addEventListener('pointerup', upResize);
+        target.addEventListener('pointercancel', upResize);
+        return;
+      }
       target.classList.add('dragging');
       target.setPointerCapture(ev.pointerId);
       const box = $('mapPreview').getBoundingClientRect();

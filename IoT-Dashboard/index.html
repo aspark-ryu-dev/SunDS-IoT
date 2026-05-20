@@ -638,8 +638,12 @@
     .widget {
       position: absolute;
       transform: translate(-50%, -50%);
-      min-width: 142px;
-      max-width: 220px;
+      z-index: 2;
+      width: var(--card-w, auto);
+      min-width: 100px;
+      max-width: 360px;
+      min-height: 54px;
+      max-height: 260px;
       padding: 10px 11px;
       border-radius: var(--r-sm);
       border: 1px solid rgba(15,23,42,.1);
@@ -648,6 +652,7 @@
       box-shadow: 0 14px 32px -10px rgba(8,12,20,.55), 0 2px 6px rgba(8,12,20,.2);
       backdrop-filter: blur(4px);
       user-select: none;
+      overflow: hidden;
     }
     .widget::before {
       content: "";
@@ -700,6 +705,7 @@
     .map-point {
       position: absolute;
       transform: translate(-50%, -50%);
+      z-index: 8;
       width: 20px;
       height: 20px;
       padding: 0;
@@ -718,7 +724,7 @@
     .map-popup {
       position: absolute;
       transform: translate(-50%, calc(-100% - 18px));
-      z-index: 6;
+      z-index: 10;
     }
     .map-popup::after {
       content: "";
@@ -1288,6 +1294,8 @@
         el.className = 'widget' + (!isOnline(device) ? ' off' : '');
         el.style.left = (Number(item.x_norm) * 100) + '%';
         el.style.top = (Number(item.y_norm) * 100) + '%';
+        if (Number(config.cardWidth)) el.style.setProperty('--card-w', Number(config.cardWidth) + 'px');
+        if (Number(config.cardHeight)) el.style.height = Number(config.cardHeight) + 'px';
         const batteryBadge = renderBatteryBadge(device, 'widget-battery');
         el.innerHTML =
           '<div class="widget-head">' +
@@ -1459,9 +1467,9 @@
     function parseStyle(style) {
       try {
         const obj = JSON.parse(style || '{}');
-        return { metrics: Array.isArray(obj.metrics) ? obj.metrics : [], displayMode: obj.displayMode === 'popup' ? 'popup' : 'card' };
+        return { metrics: Array.isArray(obj.metrics) ? obj.metrics : [], displayMode: obj.displayMode === 'popup' ? 'popup' : 'card', cardWidth: Number(obj.cardWidth || obj.card_width) || 0, cardHeight: Number(obj.cardHeight || obj.card_height) || 0 };
       } catch (err) {
-        return { metrics: [], displayMode: 'card' };
+        return { metrics: [], displayMode: 'card', cardWidth: 0, cardHeight: 0 };
       }
     }
 

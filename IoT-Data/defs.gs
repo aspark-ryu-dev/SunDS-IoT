@@ -541,7 +541,9 @@ function apiSaveDeviceLayoutSettings(deviceId, styleConfig) {
       const existingStyle = parseStyleConfig_(values[r][6]);
       const cleanStyle = {
         metrics: incomingStyle.metrics,
-        displayMode: hasDisplayMode ? incomingStyle.displayMode : (existingStyle.displayMode || 'card')
+        displayMode: hasDisplayMode ? incomingStyle.displayMode : (existingStyle.displayMode || 'card'),
+        cardWidth: existingStyle.cardWidth || 0,
+        cardHeight: existingStyle.cardHeight || 0
       };
       const item = normalizeLayoutItem_({
         item_id: values[r][0],
@@ -1019,10 +1021,19 @@ function normalizeStyleConfig_(value) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) obj = {};
   const metrics = Array.isArray(obj.metrics) ? obj.metrics : [];
   const displayMode = String(obj.displayMode || obj.display_mode || 'card').trim().toLowerCase();
+  const cardWidth = clampNumber_(Number(obj.cardWidth || obj.card_width), 100, 360, 0);
+  const cardHeight = clampNumber_(Number(obj.cardHeight || obj.card_height), 54, 260, 0);
   return {
     metrics: metrics.map(function (m) { return String(m || '').trim(); }).filter(Boolean).slice(0, 12),
-    displayMode: displayMode === 'popup' ? 'popup' : 'card'
+    displayMode: displayMode === 'popup' ? 'popup' : 'card',
+    cardWidth: cardWidth,
+    cardHeight: cardHeight
   };
+}
+
+function clampNumber_(value, min, max, fallback) {
+  if (!isFinite(value) || value <= 0) return fallback;
+  return Math.max(min, Math.min(max, value));
 }
 
 function parseStyleConfig_(style) {
@@ -1030,7 +1041,7 @@ function parseStyleConfig_(style) {
     const obj = JSON.parse(String(style || '{}'));
     return normalizeStyleConfig_(obj);
   } catch (err) {
-    return { metrics: [], displayMode: 'card' };
+    return { metrics: [], displayMode: 'card', cardWidth: 0, cardHeight: 0 };
   }
 }
 

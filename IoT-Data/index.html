@@ -280,7 +280,7 @@
       opacity: .85;
     }
     .grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(340px, .9fr); gap: 18px; align-items: start; }
-    .map-admin-grid { grid-template-columns: minmax(360px, .85fr) minmax(520px, 1.35fr); }
+    .map-admin-grid { grid-template-columns: 1fr; }
     .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     .row { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
     .stack { display: grid; gap: 12px; }
@@ -618,6 +618,40 @@
     .map-preview.dirty {
       box-shadow: 0 24px 60px -24px rgba(0,0,0,.75), 0 0 0 2px rgba(251,191,36,.42);
     }
+    .map-control-grid {
+      display: grid;
+      grid-template-columns: minmax(360px, .9fr) minmax(420px, 1.1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .map-coordinate-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .map-target-dot {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 2px solid #fff;
+      background: rgba(34,211,238,.26);
+      box-shadow: 0 0 0 5px rgba(34,211,238,.18), 0 12px 24px -12px rgba(0,0,0,.75);
+      z-index: 6;
+      pointer-events: none;
+    }
+    .map-target-dot::before,
+    .map-target-dot::after {
+      content: "";
+      position: absolute;
+      background: #fff;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .map-target-dot::before { width: 30px; height: 2px; }
+    .map-target-dot::after { width: 2px; height: 30px; }
     /* quick-add popover anchored at the clicked point */
     .map-add-popover {
       position: absolute;
@@ -868,24 +902,6 @@
 
       <div class="page hidden" data-page="dashboard">
     <div class="grid map-admin-grid">
-      <section>
-        <h2 data-i18n="data.dashboard.title"></h2>
-        <form id="dashboardForm" class="form-grid">
-          <label class="full" data-i18n-label="data.dashboard.background"><input id="bgUrl" type="url"></label>
-          <label data-i18n-label="data.dashboard.refreshInterval"><select id="refreshInterval">
-            <option value="60">1m</option>
-            <option value="300">5m</option>
-            <option value="600">10m</option>
-          </select></label>
-          <div class="row full">
-            <button type="submit" data-i18n="data.dashboard.saveSettings"></button>
-          </div>
-        </form>
-        <div class="map-edit-note">
-          空き位置をクリックしてデバイスを追加、配置済みカードをドラッグして移動、×で削除します。変更は「マップを保存」でまとめて反映されます。
-        </div>
-      </section>
-
       <section class="stack">
         <div class="section-head">
           <h2 data-i18n="data.layout.preview"></h2>
@@ -896,6 +912,43 @@
           </div>
         </div>
         <div id="mapPreview" class="map-preview"></div>
+      </section>
+
+      <section>
+        <div class="map-control-grid">
+          <div>
+            <h2 data-i18n="data.dashboard.title"></h2>
+            <form id="dashboardForm" class="form-grid">
+              <label class="full" data-i18n-label="data.dashboard.background"><input id="bgUrl" type="url"></label>
+              <label data-i18n-label="data.dashboard.refreshInterval"><select id="refreshInterval">
+                <option value="60">1m</option>
+                <option value="300">5m</option>
+                <option value="600">10m</option>
+              </select></label>
+              <div class="row full">
+                <button type="submit" data-i18n="data.dashboard.saveSettings"></button>
+              </div>
+            </form>
+          </div>
+
+          <div>
+            <h2>配置追加</h2>
+            <div class="form-grid">
+              <label class="full">デバイス<select id="mapAddDeviceSelect"></select></label>
+              <div class="map-coordinate-row full">
+                <label>X<input id="mapAddX" type="number" min="0" max="1" step="0.001" value="0.5"></label>
+                <label>Y<input id="mapAddY" type="number" min="0" max="1" step="0.001" value="0.5"></label>
+              </div>
+              <div class="row full">
+                <button id="mapAddBtn" type="button">この位置に追加</button>
+                <button id="mapClearPointBtn" type="button" class="secondary">位置をクリア</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="map-edit-note">
+          上のマップをクリックして追加位置を指定します。数値を微調整してから追加できます。配置済みカードはドラッグで移動、×で削除し、最後に「マップを保存」で反映します。
+        </div>
       </section>
     </div>
       </div>
@@ -1085,7 +1138,7 @@
     const DATA_THEME_KEY = 'iotData.theme';
     const DATA_ALLOWED_STORAGE_KEYS = [DATA_CACHE_KEY, DATA_PAGE_KEY, DATA_QUERY_KEY, DATA_LATEST_DEVICE_KEY, DATA_MENU_KEY, DATA_THEME_KEY];
     const DATA_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-    const state = { snapshot: null, deviceMap: {}, deviceQuery: '', latestDeviceId: '', editingDeviceId: '', mapDraft: null };
+    const state = { snapshot: null, deviceMap: {}, deviceQuery: '', latestDeviceId: '', editingDeviceId: '', mapDraft: null, mapAddPoint: null };
     const $ = (id) => document.getElementById(id);
 
     function t(path) {
@@ -1140,6 +1193,7 @@
       renderDeviceDatalists();
       renderLayout();
       renderMapPreview();
+      renderMapAddControls();
       renderDefinitions();
       renderLatest();
       renderExampleModels();
@@ -1288,9 +1342,31 @@
           '<div class="map-preview-metrics">' + metrics.map((m) => previewMetricLine(device, m)).join('') + '</div>' +
           '</div>';
       }).join('');
-      const hint = bg ? '<div class="map-hint">クリックで追加、ドラッグで移動、最後に保存</div>' : '';
-      el.innerHTML = items + hint;
+      const hint = bg ? '<div class="map-hint">クリックで位置指定、ドラッグで移動、最後に保存</div>' : '';
+      const target = state.mapAddPoint
+        ? '<div class="map-target-dot" style="left:' + (state.mapAddPoint.x * 100) + '%;top:' + (state.mapAddPoint.y * 100) + '%"></div>'
+        : '';
+      el.innerHTML = items + target + hint;
       updateMapDirtyUi();
+    }
+
+    function renderMapAddControls() {
+      const select = $('mapAddDeviceSelect');
+      if (!select || !state.snapshot) return;
+      const current = select.value;
+      const placed = {};
+      getMapDraftItems().forEach((item) => {
+        if (item.bind_ref) placed[item.bind_ref] = true;
+      });
+      const devices = (state.snapshot.devices || []).filter((d) => d.enabled !== false && !placed[d.device_id]);
+      select.innerHTML = devices.map((d) => {
+        const label = (d.area_id || d.name) ? (d.area_id || d.name) + ' (' + d.device_id + ')' : d.device_id;
+        return '<option value="' + esc(d.device_id) + '">' + esc(label) + '</option>';
+      }).join('') || '<option value="">配置できる有効デバイスがありません</option>';
+      if (current && devices.some((d) => d.device_id === current)) select.value = current;
+      const p = state.mapAddPoint || { x: 0.5, y: 0.5 };
+      $('mapAddX').value = Number(p.x).toFixed(3);
+      $('mapAddY').value = Number(p.y).toFixed(3);
     }
 
     function previewMetricLine(device, metric) {
@@ -1643,6 +1719,7 @@
       state.mapDraft.deletedIds[id] = true;
       markMapDirty();
       renderMapPreview();
+      renderMapAddControls();
     }
 
     function saveMapDraft() {
@@ -1682,40 +1759,9 @@
 
     function openMapAddPopover(x, y) {
       closeMapAddPopover();
-      const placed = {};
-      getMapDraftItems().forEach((item) => {
-        if (item.bind_ref) placed[item.bind_ref] = true;
-      });
-      const devices = (state.snapshot.devices || []).filter((d) => d.enabled !== false && !placed[d.device_id]);
-      if (!devices.length) { showToast('配置できる有効デバイスがありません', true); return; }
-      const map = $('mapPreview');
-      const dot = document.createElement('div');
-      dot.className = 'map-dot';
-      dot.style.left = (x * 100) + '%';
-      dot.style.top = (y * 100) + '%';
-      map.appendChild(dot);
-      const pop = document.createElement('div');
-      pop.className = 'map-add-popover';
-      pop.style.left = (x * 100) + '%';
-      pop.style.top = (y * 100) + '%';
-      const opts = devices.map((d) => {
-        const label = (d.area_id || d.name) ? (d.area_id || d.name) + ' (' + d.device_id + ')' : d.device_id;
-        const n = (d.metricKeys || []).filter((m) => !isBatteryMetric(m)).length;
-        return '<option value="' + esc(d.device_id) + '">' + esc(label) + (n ? ' · ' + n + '指標' : '') + '</option>';
-      }).join('');
-      pop.innerHTML =
-        '<div class="map-add-title">センサーを配置</div>' +
-        '<select class="map-add-device">' + opts + '</select>' +
-        '<div class="map-add-actions">' +
-        '<button type="button" class="map-add-cancel secondary">キャンセル</button>' +
-        '<button type="button" class="map-add-ok">追加</button>' +
-        '</div>';
-      map.appendChild(pop);
-      pop.addEventListener('click', (e) => e.stopPropagation());
-      pop.querySelector('.map-add-cancel').addEventListener('click', closeMapAddPopover);
-      pop.querySelector('.map-add-ok').addEventListener('click', () => {
-        addLayoutAt(pop.querySelector('.map-add-device').value, x, y);
-      });
+      state.mapAddPoint = { x: Number(x.toFixed(3)), y: Number(y.toFixed(3)) };
+      renderMapPreview();
+      renderMapAddControls();
     }
 
     function addLayoutAt(deviceId, x, y) {
@@ -1733,9 +1779,10 @@
         enabled: true
       };
       getMapDraftItems().push(item);
+      state.mapAddPoint = null;
       markMapDirty();
       renderMapPreview();
-      closeMapAddPopover();
+      renderMapAddControls();
       showToast('マップに追加しました');
     }
 
@@ -1817,8 +1864,28 @@
     $('saveMapBtn').addEventListener('click', saveMapDraft);
     $('resetMapBtn').addEventListener('click', () => {
       resetMapDraft();
+      state.mapAddPoint = null;
       renderMapPreview();
+      renderMapAddControls();
       showToast('マップ編集を戻しました');
+    });
+    $('mapAddBtn').addEventListener('click', () => {
+      const x = Math.max(0, Math.min(1, Number($('mapAddX').value || 0.5)));
+      const y = Math.max(0, Math.min(1, Number($('mapAddY').value || 0.5)));
+      addLayoutAt($('mapAddDeviceSelect').value, x, y);
+    });
+    $('mapClearPointBtn').addEventListener('click', () => {
+      state.mapAddPoint = null;
+      renderMapPreview();
+      renderMapAddControls();
+    });
+    ['mapAddX', 'mapAddY'].forEach((id) => {
+      $(id).addEventListener('input', () => {
+        const x = Math.max(0, Math.min(1, Number($('mapAddX').value || 0.5)));
+        const y = Math.max(0, Math.min(1, Number($('mapAddY').value || 0.5)));
+        state.mapAddPoint = { x: x, y: y };
+        renderMapPreview();
+      });
     });
     $('mapPreview').addEventListener('pointerdown', (ev) => {
       if (ev.target.closest('.map-del') || ev.target.closest('.map-add-popover')) return;

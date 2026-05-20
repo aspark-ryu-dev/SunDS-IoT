@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070910;
+      --bg-1: #0b0e17;
+      --panel: rgba(255,255,255,0.038);
+      --panel-2: rgba(255,255,255,0.055);
+      --panel-hi: rgba(255,255,255,0.085);
+      --glass: rgba(13,17,27,0.72);
+      --card-border: rgba(255,255,255,0.07);
+      --card-border-2: rgba(255,255,255,0.11);
+      --ink: #eef1f8;
+      --ink-dim: #c7cdda;
+      --muted: #8b93a7;
+      --muted-2: #5c6478;
+      --line: rgba(255,255,255,0.07);
+      --accent: #2dd4bf;
+      --accent-2: #5b9df6;
+      --accent-3: #818cf8;
+      --grad: linear-gradient(115deg, #2dd4bf 0%, #5b9df6 55%, #818cf8 100%);
+      --grad-soft: linear-gradient(115deg, rgba(45,212,191,.18), rgba(129,140,248,.18));
+      --ok: #34d399;
+      --ok-soft: rgba(52,211,153,.13);
+      --warn: #fbbf24;
+      --warn-soft: rgba(251,191,36,.13);
+      --bad: #fb7185;
+      --bad-soft: rgba(251,113,133,.13);
+      --field: rgba(255,255,255,0.055);
+      --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 8px 24px -16px rgba(0,0,0,.7);
+      --shadow-2: 0 1px 0 rgba(255,255,255,.05) inset, 0 24px 56px -28px rgba(0,0,0,.78);
+      --glow: 0 8px 24px -8px rgba(45,212,191,.5);
+      --r-sm: 9px;
+      --r-md: 12px;
+      --r-lg: 16px;
+      --header-h: 64px;
+      --side-w: 248px;
+      --side-w-collapsed: 76px;
+      font-family: "Zen Kaku Gothic New", "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --font-display: "Outfit", "Zen Kaku Gothic New", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(900px 520px at 4% -10%, rgba(45,212,191,.14), transparent 58%),
+        radial-gradient(1000px 620px at 106% -8%, rgba(129,140,248,.16), transparent 56%),
+        radial-gradient(700px 500px at 80% 120%, rgba(91,157,246,.10), transparent 60%),
+        var(--bg);
+      background-attachment: fixed;
+      font-size: 14px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      height: var(--header-h);
+      padding: 0 18px;
+      background: var(--glass);
+      backdrop-filter: blur(22px) saturate(140%);
+      border-bottom: 1px solid var(--line);
+    }
+    .menu-toggle {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      background: var(--panel-2);
+      color: var(--ink-dim);
+      border: 1px solid var(--card-border-2);
+      box-shadow: none;
+    }
+    .menu-toggle:hover { background: var(--panel-hi); color: var(--ink); }
+    .menu-toggle svg { width: 20px; height: 20px; }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .logo {
+      width: 38px; height: 38px; flex: none;
+      border-radius: 11px;
+      background: var(--grad);
+      display: grid; place-items: center;
+      box-shadow: var(--glow);
+    }
+    .logo svg { width: 21px; height: 21px; display: block; }
+    h1 {
+      margin: 0;
+      font: 800 18px/1.1 var(--font-display);
+      letter-spacing: 0;
+      background: linear-gradient(90deg, var(--ink), var(--ink-dim));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    h2 {
+      margin: 0 0 13px;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    h2::before {
+      content: "";
+      width: 4px;
+      height: 15px;
+      border-radius: 2px;
+      background: var(--grad);
+      flex: none;
+    }
+    .app {
+      display: grid;
+      grid-template-columns: var(--side-w) minmax(0, 1fr);
+      min-height: 100vh;
+      padding-top: var(--header-h);
+      transition: grid-template-columns .2s ease;
+    }
+    body.menu-collapsed .app {
+      grid-template-columns: var(--side-w-collapsed) minmax(0, 1fr);
+    }
+    .sidebar {
+      position: fixed;
+      top: var(--header-h);
+      left: 0;
+      width: var(--side-w);
+      height: calc(100vh - var(--header-h));
+      overflow: auto;
+      border-right: 1px solid var(--line);
+      background: var(--glass);
+      backdrop-filter: blur(18px);
+      padding: 16px 12px;
+      transition: width .2s ease;
+    }
+    body.menu-collapsed .sidebar { width: var(--side-w-collapsed); }
+    .nav-group { display: grid; gap: 4px; }
+    .nav-label {
+      padding: 14px 12px 6px;
+      color: var(--muted-2);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .nav-item {
+      position: relative;
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+      border: 1px solid transparent;
+      border-radius: var(--r-sm);
+      padding: 10px 12px;
+      background: transparent;
+      color: var(--ink-dim);
+      box-shadow: none;
+      text-align: left;
+      transition: .14s;
+      font-weight: 700;
+    }
+    .nav-item:hover {
+      background: var(--panel-2);
+      color: var(--ink);
+    }
+    .nav-item.active {
+      background: var(--grad-soft);
+      border-color: rgba(45,212,191,0.32);
+      color: var(--ink);
+    }
+    .nav-item.active::before {
+      content: "";
+      position: absolute;
+      left: -12px;
+      top: 50%;
+      width: 3px;
+      height: 22px;
+      border-radius: 0 3px 3px 0;
+      background: var(--grad);
+      transform: translateY(-50%);
+    }
+    .nav-icon {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      background: var(--panel-2);
+      color: var(--ink-dim);
+      font-size: 12px;
+      font-weight: 800;
+      font-family: var(--font-display);
+    }
+    .nav-item.active .nav-icon { background: rgba(45,212,191,.18); color: var(--accent); }
+    .nav-text {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    body.menu-collapsed .nav-item {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      padding: 10px 8px;
+    }
+    body.menu-collapsed .nav-text,
+    body.menu-collapsed .nav-label {
+      display: none;
+    }
+    .content {
+      display: grid;
+      gap: 18px;
+      padding: 20px;
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+      grid-column: 2;
+    }
+    .page { display: grid; gap: 18px; animation: fade .26s ease; }
+    .page.hidden { display: none; }
+    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .sidebar-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 24;
+      background: rgba(0,0,0,0.45);
+      display: none;
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--card-border);
+      border-radius: var(--r-lg);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    section::before {
+      content: "";
+      display: block;
+      height: 3px;
+      margin: -18px -18px 15px;
+      border-radius: var(--r-lg) var(--r-lg) 0 0;
+      background: var(--grad);
+      opacity: .85;
+    }
+    .grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(340px, .9fr); gap: 18px; align-items: start; }
+    .map-admin-grid { grid-template-columns: minmax(360px, .85fr) minmax(520px, 1.35fr); }
+    .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .row { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+    .stack { display: grid; gap: 12px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .full { grid-column: 1 / -1; }
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      padding: 9px 11px;
+      font: inherit;
+      background: var(--field);
+      color: var(--ink);
+    }
+    textarea {
+      min-height: 78px;
+      resize: vertical;
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 12.5px;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: rgba(45,212,191,0.55);
+      box-shadow: 0 0 0 3px rgba(45,212,191,0.14);
+    }
+    button {
+      border: 1px solid transparent;
+      border-radius: var(--r-sm);
+      padding: 8px 13px;
+      font: inherit;
+      font-weight: 700;
+      background: var(--grad);
+      color: #052420;
+      cursor: pointer;
+      box-shadow: 0 8px 18px -8px rgba(45,212,191,0.6);
+    }
+    button.secondary {
+      background: var(--panel-2);
+      color: var(--ink-dim);
+      border-color: var(--card-border-2);
+      box-shadow: none;
+    }
+    button.secondary:hover { background: var(--panel-hi); color: var(--ink); }
+    button.danger {
+      background: var(--bad-soft);
+      color: var(--bad);
+      border-color: rgba(251,113,133,.32);
+      box-shadow: none;
+    }
+    button:disabled { opacity: .55; cursor: wait; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 10px 9px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    th {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+    tbody tr:hover { background: var(--panel-2); }
+    td button { padding: 5px 10px; font-size: 12px; }
+    code {
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 11.5px;
+      color: #c8ccff;
+      background: rgba(129,140,248,0.13);
+      border: 1px solid rgba(129,140,248,0.18);
+      border-radius: 5px;
+      padding: 1px 5px;
+    }
+    .muted { color: var(--muted); }
+    .status { min-height: 22px; color: var(--ink-dim); font-size: 12.5px; }
+    .status.error { color: #fca5a5; }
+    .brand-sub {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      margin-top: 2px;
+    }
+    .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .live-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(91,157,246,.3);
+      background: rgba(91,157,246,.13);
+      color: var(--accent-2);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .03em;
+    }
+    .live-dot i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 0 0 rgba(91,157,246,.55);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(91,157,246,.5); }
+      70% { box-shadow: 0 0 0 7px rgba(91,157,246,0); }
+      100% { box-shadow: 0 0 0 0 rgba(91,157,246,0); }
+    }
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .check input { width: 16px; height: 16px; accent-color: var(--accent); }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(45,212,191,0.28);
+      color: var(--accent);
+      background: rgba(45,212,191,0.12);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .pill.off {
+      color: #fca5a5;
+      border-color: rgba(248,113,113,0.32);
+      background: rgba(248,113,113,0.12);
+    }
+    .metric-picks {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      background: var(--panel);
+    }
+    .metric-picks:empty::before {
+      content: "選択可能な指標がありません";
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .map-preview {
+      position: relative;
+      width: 100%;
+      aspect-ratio: var(--map-aspect, 1.5);
+      min-height: 560px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      background-color: #0d1422;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      overflow: hidden;
+      touch-action: none;
+      box-shadow: 0 24px 60px -24px rgba(0,0,0,.75), 0 0 0 1px var(--line);
+    }
+    .map-preview:empty::before {
+      content: "プレビューなし";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .map-preview-item {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      min-width: 116px;
+      max-width: 180px;
+      padding: 7px 9px;
+      border-radius: var(--r-sm);
+      border: 1px solid rgba(15,23,42,.1);
+      background: rgba(255,255,255,.97);
+      color: #141a26;
+      box-shadow: 0 14px 32px -10px rgba(8,12,20,.55), 0 2px 6px rgba(8,12,20,.2);
+      font-size: 11px;
+      cursor: grab;
+      user-select: none;
+    }
+    .map-preview-item.dragging { cursor: grabbing; opacity: .86; z-index: 5; }
+    .map-preview-item.popup {
+      min-width: 86px;
+      max-width: 130px;
+      padding: 6px 8px;
+      border-color: rgba(45,212,191,.45);
+      background: rgba(236,253,245,.96);
+    }
+    .map-preview-item::before {
+      content: "";
+      position: absolute;
+      left: 9px;
+      right: 9px;
+      top: 0;
+      height: 2.5px;
+      border-radius: 0 0 3px 3px;
+      background: var(--grad);
+    }
+    .map-preview-item.popup .map-preview-metrics { display: none; }
+    .map-preview-title {
+      color: #64708a;
+      font-weight: 800;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .map-preview-metrics {
+      display: grid;
+      gap: 2px;
+      margin-top: 4px;
+    }
+    .map-preview-metric {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: #7a8498;
+    }
+    .map-preview-value {
+      color: #141a26;
+      font-weight: 800;
+    }
+    .latest-device-list {
+      display: grid;
+      gap: 8px;
+    }
+    .latest-device {
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      background: var(--panel-2);
+      color: var(--ink);
+      text-align: left;
+      box-shadow: none;
+    }
+    .latest-device.active {
+      border-color: rgba(45,212,191,0.55);
+      background: var(--grad-soft);
+    }
+    .latest-device-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 800;
+    }
+    .latest-device-meta {
+      grid-column: 1 / -1;
+      color: var(--muted);
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+    @media (max-width: 960px) {
+      header { align-items: flex-start; flex-direction: column; }
+      .grid, .three, .form-grid, .map-admin-grid { grid-template-columns: 1fr; }
+      .app,
+      body.menu-collapsed .app { display: block; padding-top: 110px; }
+      .content { padding: 16px; }
+      .map-preview { min-height: 360px; }
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 25;
+        width: min(300px, 86vw);
+        height: 100vh;
+        transform: translateX(-105%);
+        transition: transform .18s ease;
+        background: rgba(11,13,19,0.96);
+      }
+      body.menu-open .sidebar { transform: translateX(0); }
+      body.menu-open .sidebar-backdrop { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <button id="menuToggle" class="menu-toggle" type="button" aria-label="メニュー">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M4 7h16M4 12h16M4 17h16"/>
+        </svg>
+      </button>
+      <span class="logo">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="13" width="4" height="8" rx="1.5" fill="#052420"/>
+          <rect x="10" y="8" width="4" height="13" rx="1.5" fill="#052420"/>
+          <rect x="17" y="3" width="4" height="18" rx="1.5" fill="#052420"/>
+        </svg>
+      </span>
+      <div>
+        <h1 id="title"></h1>
+        <div class="brand-sub"><span>管理コンソール</span> <span id="build"></span></div>
+      </div>
+    </div>
+    <div class="row header-right">
+      <span class="live-dot"><i></i>DATA 管理</span>
+      <button id="refreshBtn" class="secondary" type="button"></button>
+    </div>
+  </header>
+
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="nav-group">
+        <div class="nav-label" data-i18n="data.menu.label"></div>
+        <button class="nav-item active" type="button" data-page-target="devices"><span class="nav-icon">D</span><span class="nav-text" data-i18n="data.menu.devices"></span></button>
+        <button class="nav-item" type="button" data-page-target="dashboard"><span class="nav-icon">M</span><span class="nav-text" data-i18n="data.menu.dashboard"></span></button>
+        <button class="nav-item" type="button" data-page-target="examples"><span class="nav-icon">J</span><span class="nav-text" data-i18n="data.menu.examples"></span></button>
+        <button class="nav-item" type="button" data-page-target="definitions"><span class="nav-icon">F</span><span class="nav-text" data-i18n="data.menu.definitions"></span></button>
+        <button class="nav-item" type="button" data-page-target="latest"><span class="nav-icon">L</span><span class="nav-text" data-i18n="data.menu.latest"></span></button>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div id="status" class="status"></div>
+
+      <div class="page" data-page="devices">
+    <div class="grid">
+      <section class="stack">
+        <h2 data-i18n="data.devices.title"></h2>
+        <input id="deviceSearch" type="search">
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="data.devices.columns.device"></th>
+                <th data-i18n="data.devices.columns.place"></th>
+                <th data-i18n="data.devices.columns.type"></th>
+                <th data-i18n="data.devices.columns.status"></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="deviceRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2 data-i18n="data.deviceEdit.title"></h2>
+        <form id="deviceForm" class="form-grid">
+          <label data-i18n-label="data.deviceEdit.deviceId"><input id="device_id" required></label>
+          <label data-i18n-label="data.deviceEdit.name"><input id="device_name"></label>
+          <label data-i18n-label="data.deviceEdit.area"><input id="device_area_id"></label>
+          <label data-i18n-label="data.deviceEdit.location"><input id="device_location"></label>
+          <label data-i18n-label="data.deviceEdit.type"><input id="device_type"></label>
+          <label data-i18n-label="data.deviceEdit.sensorType"><input id="device_sensor_type" placeholder="iaq / occupancy"></label>
+          <label data-i18n-label="data.deviceEdit.power"><input id="device_power_source" placeholder="battery / poe"></label>
+          <label data-i18n-label="data.deviceEdit.reportInterval"><input id="device_report_interval_min" type="number" min="0.1" step="0.1" placeholder="10"></label>
+          <label class="check"><input id="device_enabled" type="checkbox" checked> <span data-i18n="common.enabled"></span></label>
+          <label class="full" data-i18n-label="data.deviceEdit.note"><textarea id="device_note"></textarea></label>
+          <div class="row full">
+            <button type="submit" data-i18n="common.actions.save"></button>
+            <button id="newDeviceBtn" type="button" class="secondary" data-i18n="common.actions.new"></button>
+          </div>
+        </form>
+      </section>
+    </div>
+      </div>
+
+      <div class="page hidden" data-page="dashboard">
+    <div class="grid map-admin-grid">
+      <section>
+        <h2 data-i18n="data.dashboard.title"></h2>
+        <form id="dashboardForm" class="form-grid">
+          <label class="full" data-i18n-label="data.dashboard.background"><input id="bgUrl" type="url"></label>
+          <label data-i18n-label="data.dashboard.refreshInterval"><select id="refreshInterval">
+            <option value="60">1m</option>
+            <option value="300">5m</option>
+            <option value="600">10m</option>
+          </select></label>
+          <div class="row full">
+            <button type="submit" data-i18n="data.dashboard.saveSettings"></button>
+          </div>
+        </form>
+        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+        <form id="layoutForm" class="form-grid">
+          <label data-i18n-label="data.layout.itemId"><input id="layout_item_id"></label>
+          <label data-i18n-label="data.layout.device"><select id="layout_bind_ref"></select></label>
+          <label data-i18n-label="data.layout.label"><input id="layout_label"></label>
+          <label data-i18n-label="data.layout.x"><input id="layout_x" type="number" step="0.001" min="0" max="1" value="0.5"></label>
+          <label data-i18n-label="data.layout.y"><input id="layout_y" type="number" step="0.001" min="0" max="1" value="0.5"></label>
+          <label data-i18n-label="data.layout.displayMode"><select id="layout_display_mode"><option value="card">カード固定</option><option value="popup">クリック表示</option></select></label>
+          <label class="check"><input id="layout_enabled" type="checkbox" checked> <span data-i18n="common.enabled"></span></label>
+          <label class="full" data-i18n-label="data.layout.metrics"><input id="layout_metrics_text" placeholder="temperature, humidity, battery"></label>
+          <div id="metricChoices" class="metric-picks full"></div>
+          <div class="row full">
+            <button type="submit" data-i18n="common.actions.save"></button>
+            <button id="newLayoutBtn" type="button" class="secondary" data-i18n="common.actions.new"></button>
+            <button id="deleteLayoutBtn" type="button" class="danger" data-i18n="common.actions.delete"></button>
+          </div>
+        </form>
+      </section>
+
+      <section class="stack">
+        <h2 data-i18n="data.layout.title"></h2>
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr><th>ID</th><th data-i18n="data.layout.device"></th><th data-i18n="data.layout.displayMode"></th><th data-i18n="data.layout.metrics"></th><th></th></tr>
+            </thead>
+            <tbody id="layoutRows"></tbody>
+          </table>
+        </div>
+        <h2 data-i18n="data.layout.preview"></h2>
+        <div id="mapPreview" class="map-preview"></div>
+      </section>
+    </div>
+      </div>
+
+      <div class="page hidden" data-page="examples">
+    <div class="grid">
+      <section>
+        <h2 data-i18n="data.examples.title"></h2>
+        <div class="form-grid">
+          <label data-i18n-label="data.examples.model"><select id="exampleModel"></select></label>
+          <label data-i18n-label="data.examples.deviceId"><input id="exampleDeviceId" placeholder="70B3D57ED006A1B2"></label>
+          <div class="row full">
+            <button id="generateExampleBtn" type="button" class="secondary" data-i18n="data.examples.generate"></button>
+          </div>
+          <label class="full" data-i18n-label="data.examples.payload"><textarea id="examplePayload" style="min-height:190px"></textarea></label>
+        </div>
+      </section>
+
+      <section>
+        <h2 data-i18n="data.ingest.title"></h2>
+        <div class="row">
+          <button id="showIngestBtn" type="button" class="secondary" data-i18n="data.ingest.show"></button>
+          <button id="testIngestBtn" type="button" class="secondary" data-i18n="data.ingest.test"></button>
+        </div>
+        <div id="ingestInfo" class="status" style="margin-top:10px"></div>
+      </section>
+    </div>
+      </div>
+
+      <div class="page hidden" data-page="definitions">
+    <div class="grid">
+      <section>
+        <h2 data-i18n="data.definitions.title"></h2>
+        <div class="row">
+          <button id="seedDefsBtn" type="button" class="secondary" data-i18n="data.definitions.seedKnown"></button>
+        </div>
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr><th>ID</th><th data-i18n="data.definitions.name"></th><th data-i18n="data.definitions.type"></th><th data-i18n="data.definitions.source"></th><th data-i18n="data.definitions.expression"></th><th></th></tr>
+            </thead>
+            <tbody id="definitionRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2 data-i18n="data.definitionEdit.title"></h2>
+        <form id="definitionForm" class="form-grid">
+          <label>ID<input id="def_id" required></label>
+          <label data-i18n-label="data.definitions.name"><input id="def_name"></label>
+          <label>種別<select id="def_type"><option value="metric">metric</option><option value="expr">expr</option></select></label>
+          <label>単位<input id="def_unit"></label>
+          <label data-i18n-label="data.definitions.source"><input id="def_source" placeholder="*"></label>
+          <label class="check"><input id="def_enabled" type="checkbox" checked> <span data-i18n="common.enabled"></span></label>
+          <label class="full" data-i18n-label="data.definitions.expression"><input id="def_expression"></label>
+          <label class="full">パラメータ<textarea id="def_params"></textarea></label>
+          <div class="row full">
+            <button type="submit" data-i18n="common.actions.save"></button>
+            <button id="testDefBtn" type="button" class="secondary" data-i18n="data.definitionEdit.test"></button>
+            <button id="deleteDefBtn" type="button" class="danger" data-i18n="common.actions.delete"></button>
+            <button id="newDefBtn" type="button" class="secondary" data-i18n="common.actions.new"></button>
+          </div>
+        </form>
+        <div id="testResult" class="status"></div>
+      </section>
+    </div>
+      </div>
+
+      <div class="page hidden" data-page="latest">
+    <div class="grid">
+      <section class="stack">
+        <h2 data-i18n="data.latest.devicesTitle"></h2>
+        <div id="latestDeviceRows" class="latest-device-list"></div>
+      </section>
+      <section class="stack">
+        <h2 id="latestDetailTitle" data-i18n="data.latest.detailTitle"></h2>
+        <div id="latestDetailMeta" class="muted"></div>
+        <div style="overflow:auto">
+          <table>
+            <thead><tr><th data-i18n="data.latest.metric"></th><th data-i18n="data.latest.value"></th><th data-i18n="data.latest.ts"></th></tr></thead>
+            <tbody id="latestRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const I18N = {
+      ja: {
+        common: {
+          enabled: '有効',
+          actions: { save: '保存', new: '新規', delete: '削除', refresh: '更新' },
+          status: { loading: '処理中...', ready: '準備完了' }
+        },
+        data: {
+          header: { title: 'IoT-Data 管理', build: 'ビルド' },
+          menu: { label: 'Menu', devices: 'デバイス', dashboard: 'マップ設定', examples: 'JSON サンプル', definitions: '定義', latest: '最新値' },
+          devices: { title: 'デバイス', searchPlaceholder: 'デバイス ID、エリア、場所、種別で検索', none: 'デバイスがありません', columns: { device: 'デバイス', place: '場所', type: '種別', status: '状態' } },
+          deviceEdit: { title: 'デバイス編集', deviceId: 'Device ID', name: '名称', area: 'エリア ID', location: '場所', type: '種別', sensorType: 'センサー種別', power: '電源', reportInterval: '送信間隔 (min)', note: 'メモ' },
+          dashboard: { title: 'ダッシュボード設定', background: '背景画像 URL', refreshInterval: '更新間隔', offlineTimeout: 'Offline 判定', saveBackground: '背景を保存', saveSettings: '設定を保存' },
+          layout: { title: '配置', itemId: '配置 ID', device: 'デバイス', label: '表示名', x: 'X 座標 0-1', y: 'Y 座標 0-1', displayMode: '表示方式', metrics: '表示指標', preview: 'Map プレビュー' },
+          examples: { title: '送信 JSON サンプル', model: 'モデル', deviceId: 'Device ID', generate: 'サンプル生成', payload: 'Payload' },
+          ingest: { title: 'Ingest', show: '接続情報', test: 'テスト書き込み' },
+          definitions: { title: '定義', name: '名称', type: '種別', source: '対象', expression: '式', none: '定義がありません', seedKnown: '既知キーを追加' },
+          definitionEdit: { title: '定義編集', test: 'テスト' },
+          latest: { title: '最新値', devicesTitle: 'デバイス別最新値', detailTitle: '受信データ詳細', metric: '指標', value: '値', ts: '時刻', count: '件', none: '最新値がありません', selectDevice: 'デバイスを選択してください', noDeviceData: 'このデバイスの受信データがありません' }
+        }
+      }
+    };
+    const LANG = 'ja';
+    const DATA_CACHE_KEY = 'iotData.adminSnapshot';
+    const DATA_PAGE_KEY = 'iotData.activePage';
+    const DATA_QUERY_KEY = 'iotData.deviceQuery';
+    const DATA_LATEST_DEVICE_KEY = 'iotData.latestDevice';
+    const DATA_MENU_KEY = 'iotData.menuCollapsed';
+    const DATA_ALLOWED_STORAGE_KEYS = [DATA_CACHE_KEY, DATA_PAGE_KEY, DATA_QUERY_KEY, DATA_LATEST_DEVICE_KEY, DATA_MENU_KEY];
+    const DATA_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+    const state = { snapshot: null, deviceMap: {}, deviceQuery: '', latestDeviceId: '' };
+    const $ = (id) => document.getElementById(id);
+
+    function t(path) {
+      return path.split('.').reduce((cur, key) => cur && cur[key], I18N[LANG]) || path;
+    }
+
+    function initText() {
+      $('title').textContent = t('data.header.title');
+      $('refreshBtn').textContent = t('common.actions.refresh');
+      $('deviceSearch').placeholder = t('data.devices.searchPlaceholder');
+      state.deviceQuery = getStored(DATA_QUERY_KEY, '');
+      state.latestDeviceId = getStored(DATA_LATEST_DEVICE_KEY, '');
+      $('deviceSearch').value = state.deviceQuery;
+      document.querySelectorAll('[data-i18n]').forEach((el) => el.textContent = t(el.getAttribute('data-i18n')));
+      document.querySelectorAll('[data-i18n-label]').forEach((label) => {
+        const input = label.querySelector('input,select,textarea');
+        const text = document.createTextNode(t(label.getAttribute('data-i18n-label')));
+        label.insertBefore(text, input);
+      });
+      activatePage(getStored(DATA_PAGE_KEY, 'devices'), false);
+    }
+
+    function callServer(name, args, onSuccess) {
+      setStatus(t('common.status.loading'));
+      document.querySelectorAll('button').forEach((b) => b.disabled = true);
+      google.script.run
+        .withSuccessHandler((res) => {
+          document.querySelectorAll('button').forEach((b) => b.disabled = false);
+          setStatus(t('common.status.ready'));
+          onSuccess(res);
+        })
+        .withFailureHandler((err) => {
+          document.querySelectorAll('button').forEach((b) => b.disabled = false);
+          setStatus(err && err.message ? err.message : String(err), true);
+        })[name](...args);
+    }
+
+    function load() {
+      callServer('apiGetAdminSnapshot', [], render);
+    }
+
+    function render(snapshot) {
+      state.snapshot = snapshot || {};
+      state.deviceMap = buildDeviceMap(state.snapshot.devices || []);
+      saveCachedSnapshot(state.snapshot);
+      $('build').textContent = t('data.header.build') + ' ' + (state.snapshot.build || '');
+      $('bgUrl').value = (state.snapshot.dashboard && state.snapshot.dashboard.config && state.snapshot.dashboard.config.background_image_url) || '';
+      $('refreshInterval').value = String((state.snapshot.dashboard && state.snapshot.dashboard.config && state.snapshot.dashboard.config.refresh_interval_sec) || 60);
+      renderDevices();
+      renderDeviceSelects();
+      renderMetricChoices();
+      renderLayout();
+      renderMapPreview();
+      renderDefinitions();
+      renderLatest();
+      renderExampleModels();
+    }
+
+    function getCachedSnapshot() {
+      try {
+        const raw = localStorage.getItem(DATA_CACHE_KEY);
+        if (!raw) return null;
+        const cached = JSON.parse(raw);
+        if (isExpiredCache(cached, DATA_CACHE_MAX_AGE_MS)) {
+          localStorage.removeItem(DATA_CACHE_KEY);
+          return null;
+        }
+        return cached;
+      } catch (err) {
+        try { localStorage.removeItem(DATA_CACHE_KEY); } catch (e) {}
+        return null;
+      }
+    }
+
+    function saveCachedSnapshot(snapshot) {
+      try {
+        localStorage.setItem(DATA_CACHE_KEY, JSON.stringify({
+          snapshot: snapshot,
+          cached_at: new Date().toISOString()
+        }));
+      } catch (err) {}
+    }
+
+    function applyCachedSnapshot() {
+      const cached = getCachedSnapshot();
+      if (!cached) return;
+      render(cached.snapshot || cached);
+      setStatus('キャッシュを表示中、同期しています...');
+    }
+
+    function getStored(key, fallback) {
+      try {
+        const v = localStorage.getItem(key);
+        return v == null ? fallback : v;
+      } catch (err) {
+        return fallback;
+      }
+    }
+
+    function setStored(key, value) {
+      try { localStorage.setItem(key, value); } catch (err) {}
+    }
+
+    function cleanupLocalStorage(namespace, allowedKeys, maxAgeMs) {
+      try {
+        const allowed = {};
+        allowedKeys.forEach((key) => allowed[key] = true);
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (!key || key.indexOf(namespace) !== 0) continue;
+          if (!allowed[key]) {
+            localStorage.removeItem(key);
+            continue;
+          }
+          if (key === DATA_CACHE_KEY) {
+            const cached = JSON.parse(localStorage.getItem(key) || 'null');
+            if (isExpiredCache(cached, maxAgeMs)) localStorage.removeItem(key);
+          }
+        }
+      } catch (err) {}
+    }
+
+    function isExpiredCache(cached, maxAgeMs) {
+      if (!cached || !cached.cached_at) return false;
+      const t = new Date(cached.cached_at).getTime();
+      return isFinite(t) && Date.now() - t > maxAgeMs;
+    }
+
+    function activatePage(page, persist) {
+      const target = page || 'devices';
+      document.querySelectorAll('[data-page-target]').forEach((n) => {
+        n.classList.toggle('active', n.getAttribute('data-page-target') === target);
+      });
+      document.querySelectorAll('[data-page]').forEach((section) => {
+        section.classList.toggle('hidden', section.getAttribute('data-page') !== target);
+      });
+      if (persist !== false) setStored(DATA_PAGE_KEY, target);
+    }
+
+    function renderDevices() {
+      const q = state.deviceQuery.toLowerCase();
+      const rows = (state.snapshot.devices || []).filter((d) => {
+        const hay = [d.device_id, d.name, d.area_id, d.location, d.type, d.sensor_type].join(' ').toLowerCase();
+        return !q || hay.indexOf(q) > -1;
+      }).sort((a, b) => String(a.sensor_type || '').localeCompare(String(b.sensor_type || '')) || String(a.area_id || a.device_id).localeCompare(String(b.area_id || b.device_id)));
+      $('deviceRows').innerHTML = rows.map((d) => `
+        <tr>
+          <td><code>${esc(d.device_id)}</code><div class="muted">${esc(d.name || '')}</div></td>
+          <td>${esc([d.area_id, d.location].filter(Boolean).join(' / '))}</td>
+          <td>${esc([d.sensor_type, d.type].filter(Boolean).join(' / '))}</td>
+          <td><span class="pill ${isDeviceOnline(d) ? '' : 'off'}">${isDeviceOnline(d) ? 'Online' : 'Offline'}</span><div class="muted">${esc(statusDetail(d))}</div></td>
+          <td><button class="secondary" type="button" onclick='editDevice(${jsonAttr(d)})'>編集</button></td>
+        </tr>`).join('') || `<tr><td colspan="5" class="muted">${esc(t('data.devices.none'))}</td></tr>`;
+    }
+
+    function renderDeviceSelects() {
+      const options = (state.snapshot.devices || []).map((d) => {
+        const label = d.area_id || d.name ? (d.area_id || d.name) + ' (' + d.device_id + ')' : d.device_id;
+        return `<option value="${esc(d.device_id)}">${esc(label)}</option>`;
+      }).join('');
+      $('layout_bind_ref').innerHTML = options || '<option value="">--</option>';
+    }
+
+    function isDeviceOnline(device) {
+      if (!device) return false;
+      if (typeof device.online === 'boolean') return device.online;
+      return device.enabled !== false;
+    }
+
+    function statusDetail(device) {
+      if (!device) return '';
+      if (device.offline_reason === 'disabled') return '無効';
+      if (device.offline_reason === 'never_seen') return '未受信';
+      const interval = device.report_interval_min ? device.report_interval_min + 'min' : '';
+      const after = device.offline_after_min ? ' / Offline ' + device.offline_after_min + 'min' : '';
+      return [interval, shortDate(device.last_seen)].filter(Boolean).join(' / ') + after;
+    }
+
+    function renderMetricChoices(selectedMetrics) {
+      const device = deviceMap()[$('layout_bind_ref').value] || {};
+      const selected = selectedMetrics || metricsFromText();
+      const keys = (device.metricKeys || []).slice().sort();
+      $('metricChoices').innerHTML = keys.map((key) => `
+        <label class="check"><input type="checkbox" value="${esc(key)}" ${selected.indexOf(key) > -1 ? 'checked' : ''}> ${esc(metricLabel(key))}</label>
+      `).join('');
+    }
+
+    function renderLayout() {
+      const rows = ((state.snapshot.dashboard && state.snapshot.dashboard.layout) || []);
+      $('layoutRows').innerHTML = rows.map((item) => {
+        const cfg = item.style_config || parseStyle(item.style);
+        return `<tr>
+          <td><code>${esc(item.item_id)}</code></td>
+          <td>${esc(item.bind_ref)}</td>
+          <td>${esc(cfg.displayMode === 'popup' ? 'クリック表示' : 'カード固定')}</td>
+          <td>${esc((cfg.metrics || []).join(', '))}</td>
+          <td><button class="secondary" type="button" onclick='editLayout(${jsonAttr(item)})'>編集</button></td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="5" class="muted">配置がありません</td></tr>';
+    }
+
+    function renderMapPreview() {
+      const el = $('mapPreview');
+      const dashboard = (state.snapshot && state.snapshot.dashboard) || {};
+      const config = dashboard.config || {};
+      const bg = config.background_url || config.background_image_url || '';
+      const w = Number(config.map_width || 1200);
+      const h = Number(config.map_height || 800);
+      el.style.setProperty('--map-aspect', String(w && h ? w / h : 1.5));
+      el.style.backgroundImage = bg ? 'url("' + bg + '")' : '';
+      const layout = (dashboard.layout || []).filter((item) => item.enabled !== false);
+      const devices = deviceMap();
+      el.innerHTML = layout.map((item) => {
+        const device = devices[item.bind_ref] || {};
+        const cfg = item.style_config || parseStyle(item.style);
+        const metrics = (cfg.metrics || []).filter((m) => !isBatteryMetric(m)).slice(0, 2);
+        const title = item.label || device.area_id || device.name || item.bind_ref;
+        const mode = cfg.displayMode === 'popup' ? 'popup' : 'card';
+        return '<div class="map-preview-item ' + mode + '" data-item-id="' + esc(attrEscape(item.item_id)) + '" style="left:' + (Number(item.x_norm) * 100) + '%;top:' + (Number(item.y_norm) * 100) + '%">' +
+          '<div class="map-preview-title">' + esc(title) + '</div>' +
+          '<div class="map-preview-metrics">' + metrics.map((m) => previewMetricLine(device, m)).join('') + '</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    function previewMetricLine(device, metric) {
+      const hit = device.metrics && device.metrics[metric];
+      const meta = state.snapshot.metricMeta && state.snapshot.metricMeta[metric];
+      const label = meta && meta.label ? meta.label : metric;
+      const value = hit ? formatPreviewValue(hit.value, meta && meta.unit) : '--';
+      return '<div class="map-preview-metric"><span>' + esc(label) + '</span><span class="map-preview-value">' + esc(value) + '</span></div>';
+    }
+
+    function formatPreviewValue(value, unit) {
+      const n = Number(value);
+      const body = isFinite(n) ? (Math.round(n * 10) / 10) : String(value);
+      return unit ? body + unit : body;
+    }
+
+    function renderDefinitions() {
+      const defs = state.snapshot.definitions || [];
+      $('definitionRows').innerHTML = defs.map((d) => `
+        <tr>
+          <td><code>${esc(d.id)}</code></td>
+          <td>${esc(d.name)}</td>
+          <td>${esc(d.type)}</td>
+          <td>${esc(d.source)}</td>
+          <td><code>${esc(d.expression)}</code></td>
+          <td><button class="secondary" type="button" onclick='editDefinition(${jsonAttr(d)})'>編集</button></td>
+        </tr>`).join('') || `<tr><td colspan="6" class="muted">${esc(t('data.definitions.none'))}</td></tr>`;
+    }
+
+    function renderLatest() {
+      const latest = (state.snapshot.latest || []).slice();
+      const byDevice = {};
+      latest.forEach((row) => {
+        const id = String(row.device_id || '').trim();
+        if (!id) return;
+        if (!byDevice[id]) byDevice[id] = [];
+        byDevice[id].push(row);
+      });
+      const devices = Object.keys(byDevice).sort((a, b) => deviceSortLabel(a).localeCompare(deviceSortLabel(b)));
+      if (!state.latestDeviceId || !byDevice[state.latestDeviceId]) {
+        state.latestDeviceId = devices[0] || '';
+        setStored(DATA_LATEST_DEVICE_KEY, state.latestDeviceId);
+      }
+      $('latestDeviceRows').innerHTML = devices.map((id) => {
+        const d = deviceMap()[id] || { device_id: id };
+        const rows = byDevice[id] || [];
+        const title = d.area_id || d.name || id;
+        const meta = [d.location, d.sensor_type || d.type, id].filter(Boolean).join(' / ');
+        return `<button class="latest-device ${id === state.latestDeviceId ? 'active' : ''}" type="button" onclick="selectLatestDevice('${esc(attrEscape(id))}')">
+          <span class="latest-device-title">${esc(title)}</span>
+          <span class="pill">${rows.length} ${esc(t('data.latest.count'))}</span>
+          <span class="latest-device-meta">${esc(meta)}</span>
+        </button>`;
+      }).join('') || `<div class="muted">${esc(t('data.latest.none'))}</div>`;
+
+      const selected = state.latestDeviceId;
+      const selectedDevice = deviceMap()[selected] || { device_id: selected };
+      const rows = (byDevice[selected] || []).slice().sort((a, b) => String(a.metric).localeCompare(String(b.metric)));
+      $('latestDetailTitle').textContent = selected ? (selectedDevice.area_id || selectedDevice.name || selected) : t('data.latest.detailTitle');
+      $('latestDetailMeta').textContent = selected ? [selectedDevice.location, selectedDevice.sensor_type || selectedDevice.type, selected].filter(Boolean).join(' / ') : t('data.latest.selectDevice');
+      $('latestRows').innerHTML = rows.map((r) => {
+        const meta = state.snapshot.metricMeta && state.snapshot.metricMeta[r.metric];
+        const label = meta && meta.label ? meta.label + ' (' + r.metric + ')' : r.metric;
+        const value = meta && meta.unit ? String(r.value) + meta.unit : r.value;
+        return `<tr><td><code>${esc(label)}</code></td><td>${esc(value)}</td><td>${esc(shortDate(r.ts))}</td></tr>`;
+      }).join('') || `<tr><td colspan="3" class="muted">${esc(selected ? t('data.latest.noDeviceData') : t('data.latest.selectDevice'))}</td></tr>`;
+    }
+
+    function renderExampleModels() {
+      const current = $('exampleModel').value;
+      const models = state.snapshot.deviceExamples || [];
+      $('exampleModel').innerHTML = models.map((m) => `<option value="${esc(m.model)}">${esc(m.model)}</option>`).join('');
+      if (current) $('exampleModel').value = current;
+    }
+
+    window.editDevice = function (d) {
+      $('device_id').value = d.device_id || '';
+      $('device_name').value = d.name || '';
+      $('device_area_id').value = d.area_id || '';
+      $('device_location').value = d.location || '';
+      $('device_type').value = d.type || '';
+      $('device_sensor_type').value = d.sensor_type || '';
+      $('device_power_source').value = d.power_source || '';
+      $('device_report_interval_min').value = d.report_interval_min || '';
+      $('device_note').value = d.note || '';
+      $('device_enabled').checked = d.enabled !== false;
+    };
+
+    window.editLayout = function (item) {
+      const cfg = item.style_config || parseStyle(item.style);
+      $('layout_item_id').value = item.item_id || '';
+      $('layout_bind_ref').value = item.bind_ref || '';
+      $('layout_label').value = item.label || '';
+      $('layout_x').value = item.x_norm == null ? 0.5 : item.x_norm;
+      $('layout_y').value = item.y_norm == null ? 0.5 : item.y_norm;
+      $('layout_display_mode').value = (cfg.displayMode === 'popup') ? 'popup' : 'card';
+      $('layout_enabled').checked = item.enabled !== false;
+      $('layout_metrics_text').value = (cfg.metrics || []).join(', ');
+      renderMetricChoices(cfg.metrics || []);
+    };
+
+    window.editDefinition = function (d) {
+      $('def_id').value = d.id || '';
+      $('def_type').value = d.type || 'metric';
+      $('def_name').value = d.name || '';
+      $('def_unit').value = d.unit || '';
+      $('def_source').value = d.source || '*';
+      $('def_expression').value = d.expression || '';
+      $('def_params').value = d.params || '';
+      $('def_enabled').checked = d.enabled !== false;
+      $('testResult').textContent = '';
+    };
+
+    window.selectLatestDevice = function (deviceId) {
+      state.latestDeviceId = deviceId || '';
+      setStored(DATA_LATEST_DEVICE_KEY, state.latestDeviceId);
+      renderLatest();
+    };
+
+    function collectDevice() {
+      return {
+        device_id: $('device_id').value,
+        name: $('device_name').value,
+        area_id: $('device_area_id').value,
+        location: $('device_location').value,
+        type: $('device_type').value,
+        sensor_type: $('device_sensor_type').value,
+        power_source: $('device_power_source').value,
+        report_interval_min: $('device_report_interval_min').value,
+        note: $('device_note').value,
+        enabled: $('device_enabled').checked
+      };
+    }
+
+    function collectLayout() {
+      return {
+        item_id: $('layout_item_id').value,
+        bind_type: 'device',
+        bind_ref: $('layout_bind_ref').value,
+        x_norm: Number($('layout_x').value),
+        y_norm: Number($('layout_y').value),
+        label: $('layout_label').value,
+        style_config: { metrics: metricsFromText().slice(0, 3), displayMode: $('layout_display_mode').value },
+        enabled: $('layout_enabled').checked
+      };
+    }
+
+    function collectDefinition() {
+      return {
+        id: $('def_id').value,
+        type: $('def_type').value,
+        name: $('def_name').value,
+        unit: $('def_unit').value,
+        source: $('def_source').value || '*',
+        expression: $('def_expression').value,
+        params: $('def_params').value,
+        enabled: $('def_enabled').checked
+      };
+    }
+
+    function metricsFromText() {
+      const fromText = $('layout_metrics_text').value.split(',').map((s) => s.trim()).filter(Boolean);
+      const checked = Array.from($('metricChoices').querySelectorAll('input:checked')).map((i) => i.value);
+      return Array.from(new Set(fromText.concat(checked))).slice(0, 3);
+    }
+
+    function deviceMap() {
+      return state.deviceMap || {};
+    }
+
+    function buildDeviceMap(devices) {
+      const out = {};
+      (devices || []).forEach((d) => out[d.device_id] = d);
+      return out;
+    }
+
+    function deviceSortLabel(deviceId) {
+      const d = deviceMap()[deviceId] || {};
+      return String(d.area_id || d.name || deviceId || '');
+    }
+
+    function metricLabel(key) {
+      const meta = state.snapshot.metricMeta && state.snapshot.metricMeta[key];
+      return meta && meta.label ? meta.label + ' (' + key + ')' : key;
+    }
+
+    function isBatteryMetric(metric) {
+      const key = String(metric || '').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+      return key === 'battery' || key === 'battery_level' || key === 'battery_percent' || key === 'battery_percentage' || /(^|_)battery($|_)/.test(key);
+    }
+
+    function layoutById(itemId) {
+      const rows = ((state.snapshot.dashboard && state.snapshot.dashboard.layout) || []);
+      return rows.find((item) => item.item_id === itemId) || null;
+    }
+
+    function saveDraggedLayout(item, x, y) {
+      const cfg = item.style_config || parseStyle(item.style);
+      callServer('apiSaveLayoutItem', [{
+        item_id: item.item_id,
+        bind_type: item.bind_type || 'device',
+        bind_ref: item.bind_ref,
+        x_norm: x,
+        y_norm: y,
+        label: item.label || '',
+        style_config: cfg,
+        enabled: item.enabled !== false
+      }], render);
+    }
+
+    function parseStyle(style) {
+      try {
+        const obj = JSON.parse(style || '{}');
+        return { metrics: Array.isArray(obj.metrics) ? obj.metrics : [], displayMode: obj.displayMode === 'popup' ? 'popup' : 'card' };
+      } catch (err) {
+        return { metrics: [], displayMode: 'card' };
+      }
+    }
+
+    $('refreshBtn').addEventListener('click', load);
+    $('menuToggle').addEventListener('click', () => {
+      if (window.matchMedia('(max-width: 960px)').matches) {
+        document.body.classList.toggle('menu-open');
+      } else {
+        document.body.classList.toggle('menu-collapsed');
+        setStored(DATA_MENU_KEY, document.body.classList.contains('menu-collapsed') ? '1' : '0');
+      }
+    });
+    $('sidebarBackdrop').addEventListener('click', () => {
+      document.body.classList.remove('menu-open');
+    });
+    document.querySelectorAll('[data-page-target]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        activatePage(btn.getAttribute('data-page-target'), true);
+        document.body.classList.remove('menu-open');
+      });
+    });
+    $('deviceSearch').addEventListener('input', (ev) => {
+      state.deviceQuery = ev.target.value || '';
+      setStored(DATA_QUERY_KEY, state.deviceQuery);
+      renderDevices();
+    });
+    $('deviceForm').addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      callServer('apiSaveDevice', [collectDevice()], render);
+    });
+    $('newDeviceBtn').addEventListener('click', () => {
+      $('deviceForm').reset();
+      $('device_enabled').checked = true;
+    });
+    $('dashboardForm').addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const url = $('bgUrl').value.trim();
+      const save = (width, height) => callServer('apiSaveDashboardSettings', [{
+        imageUrl: url,
+        width: width || 0,
+        height: height || 0,
+        refresh_interval_sec: Number($('refreshInterval').value || 60)
+      }], render);
+      if (!url) return save(0, 0);
+      const img = new Image();
+      img.onload = () => save(img.naturalWidth, img.naturalHeight);
+      img.onerror = () => save(0, 0);
+      img.src = url;
+    });
+    $('layoutForm').addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      callServer('apiSaveLayoutItem', [collectLayout()], render);
+    });
+    $('layout_bind_ref').addEventListener('change', () => {
+      $('layout_metrics_text').value = '';
+      renderMetricChoices([]);
+    });
+    $('metricChoices').addEventListener('change', () => {
+      $('layout_metrics_text').value = metricsFromText().join(', ');
+    });
+    $('newLayoutBtn').addEventListener('click', () => {
+      $('layoutForm').reset();
+      $('layout_x').value = 0.5;
+      $('layout_y').value = 0.5;
+      $('layout_display_mode').value = 'card';
+      $('layout_enabled').checked = true;
+      renderMetricChoices([]);
+    });
+    $('mapPreview').addEventListener('pointerdown', (ev) => {
+      const target = ev.target.closest('.map-preview-item');
+      if (!target) return;
+      const item = layoutById(target.getAttribute('data-item-id'));
+      if (!item) return;
+      ev.preventDefault();
+      editLayout(item);
+      target.classList.add('dragging');
+      target.setPointerCapture(ev.pointerId);
+      const box = $('mapPreview').getBoundingClientRect();
+      let moved = false;
+      const move = (moveEv) => {
+        const x = Math.max(0, Math.min(1, (moveEv.clientX - box.left) / box.width));
+        const y = Math.max(0, Math.min(1, (moveEv.clientY - box.top) / box.height));
+        target.style.left = (x * 100) + '%';
+        target.style.top = (y * 100) + '%';
+        $('layout_x').value = x.toFixed(3);
+        $('layout_y').value = y.toFixed(3);
+        moved = true;
+      };
+      const up = (upEv) => {
+        target.classList.remove('dragging');
+        target.removeEventListener('pointermove', move);
+        target.removeEventListener('pointerup', up);
+        target.removeEventListener('pointercancel', up);
+        if (moved) saveDraggedLayout(item, Number($('layout_x').value), Number($('layout_y').value));
+      };
+      target.addEventListener('pointermove', move);
+      target.addEventListener('pointerup', up);
+      target.addEventListener('pointercancel', up);
+    });
+    $('deleteLayoutBtn').addEventListener('click', () => {
+      const id = $('layout_item_id').value.trim();
+      if (!id || !confirm('配置 "' + id + '" を削除しますか?')) return;
+      callServer('apiDeleteLayoutItem', [id], render);
+    });
+    $('definitionForm').addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      callServer('apiSaveDefinition', [collectDefinition()], render);
+    });
+    $('seedDefsBtn').addEventListener('click', () => {
+      callServer('apiSeedKnownMetricDefinitions', [], render);
+    });
+    $('deleteDefBtn').addEventListener('click', () => {
+      const id = $('def_id').value.trim();
+      if (!id || !confirm('定義 "' + id + '" を削除しますか?')) return;
+      callServer('apiDeleteDefinition', [id], render);
+    });
+    $('testDefBtn').addEventListener('click', () => {
+      const scope = prompt('スコープ JSON', '{"temperature":25,"humidity":60}') || '';
+      callServer('apiTestExpression', [$('def_expression').value, scope], (res) => {
+        $('testResult').textContent = res.ok ? ('結果: ' + res.value) : ('エラー: ' + res.error);
+      });
+    });
+    $('newDefBtn').addEventListener('click', () => {
+      $('definitionForm').reset();
+      $('def_type').value = 'metric';
+      $('def_source').value = '*';
+      $('def_enabled').checked = true;
+      $('testResult').textContent = '';
+    });
+    $('generateExampleBtn').addEventListener('click', () => {
+      callServer('apiGenerateDevicePayload', [$('exampleModel').value, $('exampleDeviceId').value], (res) => {
+        $('examplePayload').value = res.json || '';
+      });
+    });
+    $('showIngestBtn').addEventListener('click', () => {
+      callServer('apiGetIngestInfo', [], (res) => {
+        $('ingestInfo').innerHTML = 'スプレッドシート: <code>' + esc(res.spreadsheet_id) + '</code><br>認証: <code>' + esc(res.endpoint_auth) + '</code>';
+      });
+    });
+    $('testIngestBtn').addEventListener('click', () => {
+      callServer('apiTestIngest', [], (res) => {
+        $('ingestInfo').innerHTML = '<code>' + esc(JSON.stringify(res)) + '</code>';
+        load();
+      });
+    });
+
+    function setStatus(text, isError) {
+      $('status').textContent = text || '';
+      $('status').className = 'status' + (isError ? ' error' : '');
+    }
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[ch]));
+    }
+    function jsonAttr(v) {
+      return esc(JSON.stringify(v));
+    }
+    function attrEscape(v) {
+      return String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, '\\\'').replace(/\n/g, '');
+    }
+    function shortDate(v) {
+      if (!v) return '';
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? v : d.toLocaleString('ja-JP');
+    }
+
+    cleanupLocalStorage('iotData.', DATA_ALLOWED_STORAGE_KEYS, DATA_CACHE_MAX_AGE_MS);
+    initText();
+    if (getStored(DATA_MENU_KEY, '0') === '1') document.body.classList.add('menu-collapsed');
+    applyCachedSnapshot();
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "SunDS IoT GAS"
+  short_description: "SunDS IoT の GAS 管理画面と公開 Dashboard を保守する。"
+  default_prompt: "SunDS IoT GAS プロジェクトを、Data 管理・Dashboard 読み取り専用・日語 i18n の方針に沿って改修してください。"

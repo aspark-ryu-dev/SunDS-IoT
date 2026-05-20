@@ -1,0 +1,19 @@
+/**
+ * IoT-Dashboard Apps Script entry point.
+ * Public read-only dashboard for the shared IoT spreadsheet.
+ */
+
+const BUILD_VERSION = 'v2026-05-19-readonly-metrics';
+
+function doGet(e) {
+  const tpl = HtmlService.createTemplateFromFile('index');
+  tpl.BUILD_VERSION = BUILD_VERSION;
+  return tpl.evaluate()
+    .setTitle('IoT ダッシュボード')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function include(name) {
+  return HtmlService.createHtmlOutputFromFile(name).getContent();
+}

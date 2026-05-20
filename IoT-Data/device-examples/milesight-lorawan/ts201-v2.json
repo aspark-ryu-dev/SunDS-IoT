@@ -1,0 +1,1 @@
+["event[].humidity","event[].humidity_alarm","event[].humidity_mutation","event[].temperature","event[].temperature_alarm","event[].temperature_mutation","event[].temperature_sensor_status","history[].event.event_type","history[].event.temperature_sensor_status","history[].sensor_type","history[].temperature","history[].timestamp","humidity","temperature"]

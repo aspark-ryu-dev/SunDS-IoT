@@ -364,6 +364,8 @@
       font-weight: 800;
       font-family: var(--font-display);
     }
+    .nav-icon svg { width: 15px; height: 15px; }
+    .nav-item.sub .nav-icon svg { width: 13px; height: 13px; }
     .nav-item.active .nav-icon {
       background: rgba(45,212,191,.18);
       color: var(--accent);
@@ -940,14 +942,14 @@
     <aside class="sidebar" id="sidebar">
       <div class="nav-group">
         <div class="nav-label">Navigation</div>
-        <button class="nav-parent" id="iotMenuParent" type="button" aria-expanded="true"><span class="nav-icon">I</span><span class="nav-text" data-i18n="dashboard.menu.label"></span><span class="nav-caret">▾</span></button>
+        <button class="nav-parent" id="iotMenuParent" type="button" aria-expanded="true"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="nav-text" data-i18n="dashboard.menu.label"></span><span class="nav-caret">▾</span></button>
         <div class="nav-subgroup" id="iotMenuGroup">
-          <button class="nav-item sub active" type="button" data-page-target="dashboard"><span class="nav-icon">D</span><span class="nav-text" data-i18n="dashboard.menu.dashboard"></span><span class="nav-badge" id="navDevCount">0</span></button>
-          <button class="nav-item sub" type="button" data-page-target="map"><span class="nav-icon">M</span><span class="nav-text" data-i18n="dashboard.menu.map"></span></button>
-          <button class="nav-item sub" type="button" data-page-target="meeting"><span class="nav-icon">N</span><span class="nav-text" data-i18n="dashboard.menu.meeting"></span></button>
+          <button class="nav-item sub active" type="button" data-page-target="dashboard"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h8V3H3zM13 21h8V11h-8zM13 3v6h8V3zM3 17v4h8v-4z"/></svg></span><span class="nav-text" data-i18n="dashboard.menu.dashboard"></span><span class="nav-badge" id="navDevCount">0</span></button>
+          <button class="nav-item sub" type="button" data-page-target="map"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 4 5v16l5-2 6 2 5-2V3l-5 2-6-2z"/><path d="M9 3v16M15 5v16"/></svg></span><span class="nav-text" data-i18n="dashboard.menu.map"></span></button>
+          <button class="nav-item sub" type="button" data-page-target="meeting"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/></svg></span><span class="nav-text" data-i18n="dashboard.menu.meeting"></span></button>
         </div>
-        <button class="nav-item" type="button" data-page-target="lpr"><span class="nav-icon">L</span><span class="nav-text" data-i18n="dashboard.menu.lpr"></span></button>
-        <button class="nav-item" type="button" data-page-target="pmc"><span class="nav-icon">P</span><span class="nav-text" data-i18n="dashboard.menu.pmc"></span></button>
+        <button class="nav-item" type="button" data-page-target="lpr"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><circle cx="12" cy="14" r="3"/></svg></span><span class="nav-text" data-i18n="dashboard.menu.lpr"></span></button>
+        <button class="nav-item" type="button" data-page-target="pmc"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg></span><span class="nav-text" data-i18n="dashboard.menu.pmc"></span></button>
       </div>
     </aside>
 

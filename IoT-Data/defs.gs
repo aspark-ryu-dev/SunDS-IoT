@@ -473,6 +473,80 @@ function apiSaveLayoutItem(item) {
   }
 }
 
+function apiSaveMapLayout(items, deletedIds) {
+  ensureIngestReady_();
+  items = Array.isArray(items) ? items : [];
+  deletedIds = Array.isArray(deletedIds) ? deletedIds : [];
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sh = getSheet_(SHEET_LAYOUT);
+    ensureHeaders_(sh, HEADERS.Layout);
+    const values = sh.getDataRange().getValues();
+    const deleteMap = {};
+    deletedIds.forEach(function (id) {
+      const key = String(id || '').trim();
+      if (key) deleteMap[key] = true;
+    });
+
+    const cleanItems = items.map(function (item, i) {
+      const clean = normalizeLayoutItem_(item);
+      if (!clean.item_id) clean.item_id = 'item_' + new Date().getTime() + '_' + i;
+      if (!clean.bind_ref) throw new Error('bind_ref is required');
+      return clean;
+    });
+    const itemMap = {};
+    cleanItems.forEach(function (item) { itemMap[item.item_id] = item; });
+
+    for (let r = values.length - 1; r >= 1; r--) {
+      const itemId = String(values[r][0] || '').trim();
+      if (deleteMap[itemId] || itemMap[itemId]) {
+        sh.deleteRow(r + 1);
+      }
+    }
+
+    cleanItems.forEach(function (item) {
+      sh.appendRow(layoutItemToRow_(item));
+    });
+    return getAdminSnapshot_();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function apiSaveDeviceLayoutSettings(deviceId, styleConfig) {
+  ensureIngestReady_();
+  const target = String(deviceId || '').trim();
+  if (!target) throw new Error('device_id is required');
+  const cleanStyle = normalizeStyleConfig_(styleConfig || {});
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sh = getSheet_(SHEET_LAYOUT);
+    ensureHeaders_(sh, HEADERS.Layout);
+    const values = sh.getDataRange().getValues();
+    for (let r = 1; r < values.length; r++) {
+      if (String(values[r][2] || '').trim() !== target) continue;
+      const item = normalizeLayoutItem_({
+        item_id: values[r][0],
+        bind_type: values[r][1] || 'device',
+        bind_ref: values[r][2],
+        x_norm: values[r][3],
+        y_norm: values[r][4],
+        label: values[r][5],
+        style_config: cleanStyle,
+        enabled: values[r][7]
+      });
+      sh.getRange(r + 1, 1, 1, 8).setValues([layoutItemToRow_(item)]);
+    }
+    return getAdminSnapshot_();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function apiDeleteLayoutItem(itemId) {
   ensureIngestReady_();
   const target = String(itemId || '').trim();

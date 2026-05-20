@@ -588,6 +588,36 @@
       font-weight: 700;
       pointer-events: none;
     }
+    .map-edit-note {
+      margin-top: 16px;
+      padding: 12px 13px;
+      border: 1px solid var(--card-border);
+      border-radius: var(--r-sm);
+      background: var(--panel-2);
+      color: var(--ink-dim);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+    .map-save-state {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 3px 9px;
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      color: var(--muted);
+      background: var(--panel-2);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .map-save-state.dirty {
+      color: var(--warn);
+      border-color: rgba(251,191,36,.35);
+      background: var(--warn-soft);
+    }
+    .map-preview.dirty {
+      box-shadow: 0 24px 60px -24px rgba(0,0,0,.75), 0 0 0 2px rgba(251,191,36,.42);
+    }
     /* quick-add popover anchored at the clicked point */
     .map-add-popover {
       position: absolute;
@@ -742,6 +772,7 @@
     .drawer-actions button { flex: 1; }
     input[readonly] { opacity: .65; cursor: not-allowed; background: rgba(127,127,127,.08); }
     .lock-hint { font-size: 10px; color: var(--muted-2); font-weight: 700; text-transform: none; letter-spacing: 0; }
+    .hint { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
 
     /* --- toast --- */
     #toastWrap { position: fixed; right: 18px; bottom: 18px; z-index: 60; display: grid; gap: 8px; }
@@ -850,36 +881,20 @@
             <button type="submit" data-i18n="data.dashboard.saveSettings"></button>
           </div>
         </form>
-        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
-        <form id="layoutForm" class="form-grid">
-          <label data-i18n-label="data.layout.itemId"><input id="layout_item_id"></label>
-          <label data-i18n-label="data.layout.device"><select id="layout_bind_ref"></select></label>
-          <label data-i18n-label="data.layout.label"><input id="layout_label"></label>
-          <label data-i18n-label="data.layout.x"><input id="layout_x" type="number" step="0.001" min="0" max="1" value="0.5"></label>
-          <label data-i18n-label="data.layout.y"><input id="layout_y" type="number" step="0.001" min="0" max="1" value="0.5"></label>
-          <label data-i18n-label="data.layout.displayMode"><select id="layout_display_mode"><option value="card">カード固定</option><option value="popup">クリック表示</option></select></label>
-          <label class="check"><input id="layout_enabled" type="checkbox" checked> <span data-i18n="common.enabled"></span></label>
-          <label class="full" data-i18n-label="data.layout.metrics"><input id="layout_metrics_text" placeholder="temperature, humidity, battery"></label>
-          <div id="metricChoices" class="metric-picks full"></div>
-          <div class="row full">
-            <button type="submit" data-i18n="common.actions.save"></button>
-            <button id="newLayoutBtn" type="button" class="secondary" data-i18n="common.actions.new"></button>
-            <button id="deleteLayoutBtn" type="button" class="danger" data-i18n="common.actions.delete"></button>
-          </div>
-        </form>
+        <div class="map-edit-note">
+          空き位置をクリックしてデバイスを追加、配置済みカードをドラッグして移動、×で削除します。変更は「マップを保存」でまとめて反映されます。
+        </div>
       </section>
 
       <section class="stack">
-        <h2 data-i18n="data.layout.title"></h2>
-        <div style="overflow:auto">
-          <table>
-            <thead>
-              <tr><th>ID</th><th data-i18n="data.layout.device"></th><th data-i18n="data.layout.displayMode"></th><th data-i18n="data.layout.metrics"></th><th></th></tr>
-            </thead>
-            <tbody id="layoutRows"></tbody>
-          </table>
+        <div class="section-head">
+          <h2 data-i18n="data.layout.preview"></h2>
+          <div class="row">
+            <span id="mapDirtyStatus" class="map-save-state">保存済み</span>
+            <button id="resetMapBtn" type="button" class="secondary">戻す</button>
+            <button id="saveMapBtn" type="button">マップを保存</button>
+          </div>
         </div>
-        <h2 data-i18n="data.layout.preview"></h2>
         <div id="mapPreview" class="map-preview"></div>
       </section>
     </div>
@@ -1014,6 +1029,14 @@
             <label class="full" data-i18n-label="data.deviceEdit.note"><textarea id="device_note"></textarea></label>
           </div>
         </div>
+        <div class="field-group">
+          <h3>マップ表示</h3>
+          <div class="form-grid">
+            <label data-i18n-label="data.layout.displayMode"><select id="device_map_display_mode"><option value="card">カード固定</option><option value="popup">クリック表示</option></select></label>
+            <label class="full" data-i18n-label="data.layout.metrics"><input id="device_map_metrics" placeholder="temperature, humidity, battery"></label>
+            <p class="hint full">マップに配置済みのデバイスだけ反映されます。配置の追加・削除・移動はマップ設定で行います。</p>
+          </div>
+        </div>
         <div class="drawer-actions">
           <button type="submit" data-i18n="common.actions.save"></button>
           <button id="deleteDeviceBtn" type="button" class="danger">削除</button>
@@ -1062,7 +1085,7 @@
     const DATA_THEME_KEY = 'iotData.theme';
     const DATA_ALLOWED_STORAGE_KEYS = [DATA_CACHE_KEY, DATA_PAGE_KEY, DATA_QUERY_KEY, DATA_LATEST_DEVICE_KEY, DATA_MENU_KEY, DATA_THEME_KEY];
     const DATA_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-    const state = { snapshot: null, deviceMap: {}, deviceQuery: '', latestDeviceId: '', editingDeviceId: '' };
+    const state = { snapshot: null, deviceMap: {}, deviceQuery: '', latestDeviceId: '', editingDeviceId: '', mapDraft: null };
     const $ = (id) => document.getElementById(id);
 
     function t(path) {
@@ -1111,11 +1134,10 @@
       $('build').textContent = t('data.header.build') + ' ' + (state.snapshot.build || '');
       $('bgUrl').value = (state.snapshot.dashboard && state.snapshot.dashboard.config && state.snapshot.dashboard.config.background_image_url) || '';
       $('refreshInterval').value = String((state.snapshot.dashboard && state.snapshot.dashboard.config && state.snapshot.dashboard.config.refresh_interval_sec) || 60);
+      resetMapDraft();
       renderDevices();
       renderDeviceKpis();
       renderDeviceDatalists();
-      renderDeviceSelects();
-      renderMetricChoices();
       renderLayout();
       renderMapPreview();
       renderDefinitions();
@@ -1220,13 +1242,7 @@
         </tr>`).join('') || `<tr><td colspan="5" class="muted">${esc(t('data.devices.none'))}</td></tr>`;
     }
 
-    function renderDeviceSelects() {
-      const options = (state.snapshot.devices || []).map((d) => {
-        const label = d.area_id || d.name ? (d.area_id || d.name) + ' (' + d.device_id + ')' : d.device_id;
-        return `<option value="${esc(d.device_id)}">${esc(label)}</option>`;
-      }).join('');
-      $('layout_bind_ref').innerHTML = options || '<option value="">--</option>';
-    }
+    function renderDeviceSelects() {}
 
     function isDeviceOnline(device) {
       if (!device) return false;
@@ -1243,27 +1259,10 @@
       return [interval, shortDate(device.last_seen)].filter(Boolean).join(' / ') + after;
     }
 
-    function renderMetricChoices(selectedMetrics) {
-      const device = deviceMap()[$('layout_bind_ref').value] || {};
-      const selected = selectedMetrics || metricsFromText();
-      const keys = (device.metricKeys || []).slice().sort();
-      $('metricChoices').innerHTML = keys.map((key) => `
-        <label class="check"><input type="checkbox" value="${esc(key)}" ${selected.indexOf(key) > -1 ? 'checked' : ''}> ${esc(metricLabel(key))}</label>
-      `).join('');
-    }
+    function renderMetricChoices() {}
 
     function renderLayout() {
-      const rows = ((state.snapshot.dashboard && state.snapshot.dashboard.layout) || []);
-      $('layoutRows').innerHTML = rows.map((item) => {
-        const cfg = item.style_config || parseStyle(item.style);
-        return `<tr>
-          <td><code>${esc(item.item_id)}</code></td>
-          <td>${esc(item.bind_ref)}</td>
-          <td>${esc(cfg.displayMode === 'popup' ? 'クリック表示' : 'カード固定')}</td>
-          <td>${esc((cfg.metrics || []).join(', '))}</td>
-          <td><button class="secondary" type="button" onclick='editLayout(${jsonAttr(item)})'>編集</button></td>
-        </tr>`;
-      }).join('') || '<tr><td colspan="5" class="muted">配置がありません</td></tr>';
+      updateMapDirtyUi();
     }
 
     function renderMapPreview() {
@@ -1275,7 +1274,7 @@
       const h = Number(config.map_height || 800);
       el.style.setProperty('--map-aspect', String(w && h ? w / h : 1.5));
       el.style.backgroundImage = bg ? 'url("' + bg + '")' : '';
-      const layout = (dashboard.layout || []).filter((item) => item.enabled !== false);
+      const layout = getMapDraftItems();
       const devices = deviceMap();
       const items = layout.map((item) => {
         const device = devices[item.bind_ref] || {};
@@ -1289,8 +1288,9 @@
           '<div class="map-preview-metrics">' + metrics.map((m) => previewMetricLine(device, m)).join('') + '</div>' +
           '</div>';
       }).join('');
-      const hint = bg ? '<div class="map-hint">空き位置をクリックしてセンサーを追加</div>' : '';
+      const hint = bg ? '<div class="map-hint">クリックで追加、ドラッグで移動、最後に保存</div>' : '';
       el.innerHTML = items + hint;
+      updateMapDirtyUi();
     }
 
     function previewMetricLine(device, metric) {
@@ -1427,6 +1427,10 @@
       $('device_report_interval_min').value = d.report_interval_min || '';
       $('device_note').value = d.note || '';
       $('device_enabled').checked = d.enabled !== false;
+      const layout = findLayoutForDevice(d.device_id);
+      const cfg = layout ? (layout.style_config || parseStyle(layout.style)) : { metrics: [], displayMode: 'card' };
+      $('device_map_display_mode').value = cfg.displayMode === 'popup' ? 'popup' : 'card';
+      $('device_map_metrics').value = (cfg.metrics || []).join(', ');
       $('device_id').readOnly = isEdit;
       $('deviceIdHint').textContent = isEdit ? '（変更不可）' : '';
       $('deviceDrawerTitle').textContent = isEdit ? 'デバイス編集' : 'デバイス追加';
@@ -1489,17 +1493,8 @@
       });
     };
 
-    window.editLayout = function (item) {
-      const cfg = item.style_config || parseStyle(item.style);
-      $('layout_item_id').value = item.item_id || '';
-      $('layout_bind_ref').value = item.bind_ref || '';
-      $('layout_label').value = item.label || '';
-      $('layout_x').value = item.x_norm == null ? 0.5 : item.x_norm;
-      $('layout_y').value = item.y_norm == null ? 0.5 : item.y_norm;
-      $('layout_display_mode').value = (cfg.displayMode === 'popup') ? 'popup' : 'card';
-      $('layout_enabled').checked = item.enabled !== false;
-      $('layout_metrics_text').value = (cfg.metrics || []).join(', ');
-      renderMetricChoices(cfg.metrics || []);
+    window.editLayout = function () {
+      showToast('マップ上で位置だけ編集します。デバイス設定はデバイス画面で変更してください。');
     };
 
     window.editDefinition = function (d) {
@@ -1535,16 +1530,17 @@
       };
     }
 
-    function collectLayout() {
+    function findLayoutForDevice(deviceId) {
+      const target = String(deviceId || '').trim();
+      if (!target || !state.snapshot || !state.snapshot.dashboard) return null;
+      const rows = state.snapshot.dashboard.layout || [];
+      return rows.find((item) => String(item.bind_ref || '').trim() === target) || null;
+    }
+
+    function collectDeviceLayoutSettings() {
       return {
-        item_id: $('layout_item_id').value,
-        bind_type: 'device',
-        bind_ref: $('layout_bind_ref').value,
-        x_norm: Number($('layout_x').value),
-        y_norm: Number($('layout_y').value),
-        label: $('layout_label').value,
-        style_config: { metrics: metricsFromText().slice(0, 3), displayMode: $('layout_display_mode').value },
-        enabled: $('layout_enabled').checked
+        displayMode: $('device_map_display_mode').value === 'popup' ? 'popup' : 'card',
+        metrics: $('device_map_metrics').value.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 3)
       };
     }
 
@@ -1562,8 +1558,10 @@
     }
 
     function metricsFromText() {
-      const fromText = $('layout_metrics_text').value.split(',').map((s) => s.trim()).filter(Boolean);
-      const checked = Array.from($('metricChoices').querySelectorAll('input:checked')).map((i) => i.value);
+      const textEl = $('layout_metrics_text');
+      const pickEl = $('metricChoices');
+      const fromText = textEl ? textEl.value.split(',').map((s) => s.trim()).filter(Boolean) : [];
+      const checked = pickEl ? Array.from(pickEl.querySelectorAll('input:checked')).map((i) => i.value) : [];
       return Array.from(new Set(fromText.concat(checked))).slice(0, 3);
     }
 
@@ -1592,23 +1590,80 @@
       return key === 'battery' || key === 'battery_level' || key === 'battery_percent' || key === 'battery_percentage' || /(^|_)battery($|_)/.test(key);
     }
 
+    function resetMapDraft() {
+      const rows = (((state.snapshot || {}).dashboard || {}).layout || []).filter((item) => item.enabled !== false);
+      state.mapDraft = {
+        items: rows.map(cloneLayoutItem),
+        deletedIds: {},
+        dirty: false
+      };
+      updateMapDirtyUi();
+    }
+
+    function cloneLayoutItem(item) {
+      const cfg = item.style_config || parseStyle(item.style);
+      return {
+        item_id: String(item.item_id || ''),
+        bind_type: item.bind_type || 'device',
+        bind_ref: item.bind_ref || '',
+        x_norm: Number(item.x_norm) || 0,
+        y_norm: Number(item.y_norm) || 0,
+        label: item.label || '',
+        style_config: { metrics: (cfg.metrics || []).slice(0, 3), displayMode: cfg.displayMode === 'popup' ? 'popup' : 'card' },
+        enabled: item.enabled !== false
+      };
+    }
+
+    function getMapDraftItems() {
+      if (!state.mapDraft) resetMapDraft();
+      return (state.mapDraft && state.mapDraft.items) || [];
+    }
+
+    function markMapDirty() {
+      if (!state.mapDraft) resetMapDraft();
+      state.mapDraft.dirty = true;
+      updateMapDirtyUi();
+    }
+
+    function updateMapDirtyUi() {
+      const status = $('mapDirtyStatus');
+      const preview = $('mapPreview');
+      if (!status || !preview || !state.mapDraft) return;
+      const dirty = !!state.mapDraft.dirty;
+      status.textContent = dirty ? '未保存' : '保存済み';
+      status.classList.toggle('dirty', dirty);
+      preview.classList.toggle('dirty', dirty);
+    }
+
+    function removeDraftLayout(itemId) {
+      if (!state.mapDraft) resetMapDraft();
+      const id = String(itemId || '').trim();
+      if (!id) return;
+      state.mapDraft.items = state.mapDraft.items.filter((item) => item.item_id !== id);
+      state.mapDraft.deletedIds[id] = true;
+      markMapDirty();
+      renderMapPreview();
+    }
+
+    function saveMapDraft() {
+      if (!state.mapDraft || !state.mapDraft.dirty) {
+        showToast('保存する変更はありません');
+        return;
+      }
+      const items = getMapDraftItems().map(cloneLayoutItem);
+      const deletedIds = Object.keys(state.mapDraft.deletedIds || {});
+      callServer('apiSaveMapLayout', [items, deletedIds], toastRender('マップを保存しました'));
+    }
+
     function layoutById(itemId) {
-      const rows = ((state.snapshot.dashboard && state.snapshot.dashboard.layout) || []);
+      const rows = getMapDraftItems();
       return rows.find((item) => item.item_id === itemId) || null;
     }
 
     function saveDraggedLayout(item, x, y) {
-      const cfg = item.style_config || parseStyle(item.style);
-      callServer('apiSaveLayoutItem', [{
-        item_id: item.item_id,
-        bind_type: item.bind_type || 'device',
-        bind_ref: item.bind_ref,
-        x_norm: x,
-        y_norm: y,
-        label: item.label || '',
-        style_config: cfg,
-        enabled: item.enabled !== false
-      }], render);
+      item.x_norm = x;
+      item.y_norm = y;
+      markMapDirty();
     }
 
     function pointToNorm(ev) {
@@ -1627,8 +1682,12 @@
 
     function openMapAddPopover(x, y) {
       closeMapAddPopover();
-      const devices = state.snapshot.devices || [];
-      if (!devices.length) { showToast('先にデバイスを登録してください', true); return; }
+      const placed = {};
+      getMapDraftItems().forEach((item) => {
+        if (item.bind_ref) placed[item.bind_ref] = true;
+      });
+      const devices = (state.snapshot.devices || []).filter((d) => !placed[d.device_id]);
+      if (!devices.length) { showToast('配置できる未配置デバイスがありません', true); return; }
       const map = $('mapPreview');
       const dot = document.createElement('div');
       dot.className = 'map-dot';
@@ -1647,7 +1706,6 @@
       pop.innerHTML =
         '<div class="map-add-title">センサーを配置</div>' +
         '<select class="map-add-device">' + opts + '</select>' +
-        '<select class="map-add-mode"><option value="card">カード固定</option><option value="popup">クリック表示</option></select>' +
         '<div class="map-add-actions">' +
         '<button type="button" class="map-add-cancel secondary">キャンセル</button>' +
         '<button type="button" class="map-add-ok">追加</button>' +
@@ -1656,24 +1714,29 @@
       pop.addEventListener('click', (e) => e.stopPropagation());
       pop.querySelector('.map-add-cancel').addEventListener('click', closeMapAddPopover);
       pop.querySelector('.map-add-ok').addEventListener('click', () => {
-        addLayoutAt(pop.querySelector('.map-add-device').value, x, y, pop.querySelector('.map-add-mode').value);
+        addLayoutAt(pop.querySelector('.map-add-device').value, x, y);
       });
     }
 
-    function addLayoutAt(deviceId, x, y, mode) {
+    function addLayoutAt(deviceId, x, y) {
       if (!deviceId) { showToast('デバイスを選択してください', true); return; }
       const dev = deviceMap()[deviceId] || {};
       const metrics = (dev.metricKeys || []).filter((m) => !isBatteryMetric(m)).slice(0, 3);
-      callServer('apiSaveLayoutItem', [{
-        item_id: '',
+      const item = {
+        item_id: 'item_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
         bind_type: 'device',
         bind_ref: deviceId,
         x_norm: x,
         y_norm: y,
         label: '',
-        style_config: { metrics: metrics, displayMode: mode === 'popup' ? 'popup' : 'card' },
+        style_config: { metrics: metrics, displayMode: 'card' },
         enabled: true
-      }], (snapshot) => { render(snapshot); closeMapAddPopover(); showToast('マップに追加しました'); });
+      };
+      getMapDraftItems().push(item);
+      markMapDirty();
+      renderMapPreview();
+      closeMapAddPopover();
+      showToast('マップに追加しました');
     }
 
     function parseStyle(style) {
@@ -1718,9 +1781,13 @@
       const dev = collectDevice();
       if (!String(dev.device_id || '').trim()) { showToast('Device ID を入力してください', true); return; }
       callServer('apiSaveDevice', [dev], (snapshot) => {
-        render(snapshot);
-        closeDeviceDrawer();
-        showToast('デバイスを保存しました');
+        state.snapshot = snapshot;
+        state.deviceMap = buildDeviceMap(snapshot.devices || []);
+        callServer('apiSaveDeviceLayoutSettings', [dev.device_id, collectDeviceLayoutSettings()], (nextSnapshot) => {
+          render(nextSnapshot);
+          closeDeviceDrawer();
+          showToast('デバイスを保存しました');
+        });
       });
     });
     $('addDeviceBtn').addEventListener('click', () => openDeviceDrawer('add'));
@@ -1747,26 +1814,11 @@
       img.onerror = () => save(0, 0);
       img.src = url;
     });
-    $('layoutForm').addEventListener('submit', (ev) => {
-      ev.preventDefault();
-      callServer('apiSaveLayoutItem', [collectLayout()], toastRender('配置を保存しました'));
-    });
-    $('layout_bind_ref').addEventListener('change', () => {
-      const dev = deviceMap()[$('layout_bind_ref').value] || {};
-      const auto = (dev.metricKeys || []).filter((m) => !isBatteryMetric(m)).slice(0, 3);
-      $('layout_metrics_text').value = auto.join(', ');
-      renderMetricChoices(auto);
-    });
-    $('metricChoices').addEventListener('change', () => {
-      $('layout_metrics_text').value = metricsFromText().join(', ');
-    });
-    $('newLayoutBtn').addEventListener('click', () => {
-      $('layoutForm').reset();
-      $('layout_x').value = 0.5;
-      $('layout_y').value = 0.5;
-      $('layout_display_mode').value = 'card';
-      $('layout_enabled').checked = true;
-      renderMetricChoices([]);
+    $('saveMapBtn').addEventListener('click', saveMapDraft);
+    $('resetMapBtn').addEventListener('click', () => {
+      resetMapDraft();
+      renderMapPreview();
+      showToast('マップ編集を戻しました');
     });
     $('mapPreview').addEventListener('pointerdown', (ev) => {
       if (ev.target.closest('.map-del') || ev.target.closest('.map-add-popover')) return;
@@ -1775,18 +1827,19 @@
       const item = layoutById(target.getAttribute('data-item-id'));
       if (!item) return;
       ev.preventDefault();
-      editLayout(item);
       target.classList.add('dragging');
       target.setPointerCapture(ev.pointerId);
       const box = $('mapPreview').getBoundingClientRect();
       let moved = false;
+      let lastX = Number(item.x_norm || 0.5);
+      let lastY = Number(item.y_norm || 0.5);
       const move = (moveEv) => {
         const x = Math.max(0, Math.min(1, (moveEv.clientX - box.left) / box.width));
         const y = Math.max(0, Math.min(1, (moveEv.clientY - box.top) / box.height));
         target.style.left = (x * 100) + '%';
         target.style.top = (y * 100) + '%';
-        $('layout_x').value = x.toFixed(3);
-        $('layout_y').value = y.toFixed(3);
+        lastX = Number(x.toFixed(3));
+        lastY = Number(y.toFixed(3));
         moved = true;
       };
       const up = (upEv) => {
@@ -1794,7 +1847,7 @@
         target.removeEventListener('pointermove', move);
         target.removeEventListener('pointerup', up);
         target.removeEventListener('pointercancel', up);
-        if (moved) saveDraggedLayout(item, Number($('layout_x').value), Number($('layout_y').value));
+        if (moved) saveDraggedLayout(item, lastX, lastY);
       };
       target.addEventListener('pointermove', move);
       target.addEventListener('pointerup', up);
@@ -1806,7 +1859,8 @@
         ev.stopPropagation();
         const id = del.getAttribute('data-del-id');
         if (id && confirm('この配置を削除しますか?\n' + id)) {
-          callServer('apiDeleteLayoutItem', [id], toastRender('配置を削除しました'));
+          removeDraftLayout(id);
+          showToast('配置を削除しました');
         }
         return;
       }
@@ -1816,11 +1870,6 @@
     });
     document.addEventListener('click', (ev) => {
       if (!ev.target.closest('.map-add-popover') && !ev.target.closest('#mapPreview')) closeMapAddPopover();
-    });
-    $('deleteLayoutBtn').addEventListener('click', () => {
-      const id = $('layout_item_id').value.trim();
-      if (!id || !confirm('配置 "' + id + '" を削除しますか?')) return;
-      callServer('apiDeleteLayoutItem', [id], toastRender('配置を削除しました'));
     });
     $('definitionForm').addEventListener('submit', (ev) => {
       ev.preventDefault();

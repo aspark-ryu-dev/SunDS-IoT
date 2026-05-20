@@ -347,10 +347,11 @@
     .nav-subgroup.collapsed { display: none; }
     .nav-item.sub {
       padding: 8px 11px;
-      grid-template-columns: 20px minmax(0, 1fr);
+      grid-template-columns: 20px minmax(0, 1fr) auto;
       gap: 10px;
       font-size: 13px;
     }
+    .nav-badge { justify-self: end; }
     .nav-item.sub .nav-icon {
       width: 20px;
       height: 20px;

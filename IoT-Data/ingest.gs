@@ -93,10 +93,7 @@ function handlePost_(e) {
     const ts = new Date();
 
     // 6. writes
-    const enabled = touchDevice_(parsed.device_id, parsed.device_name, ts);
-    if (!enabled) {
-      return { ok: true, device_id: parsed.device_id, metrics: 0, ts: ts.toISOString(), note: 'device disabled' };
-    }
+    const deviceState = touchDevice_(parsed.device_id, parsed.device_name, ts);
     appendReadings_(parsed.device_id, parsed.metrics, ts);
     upsertLatest_(parsed.device_id, parsed.metrics, ts);
     const derived = applyDefinitionsForDevice_(parsed.device_id, ts);
@@ -107,6 +104,8 @@ function handlePost_(e) {
       device_id: parsed.device_id,
       device_key: parsed.device_key,
       device_name: parsed.device_name,
+      device_enabled: deviceState.enabled,
+      device_registered: deviceState.registered,
       metrics: parsed.metrics.length,
       derived: derived.length,
       ts: ts.toISOString()
@@ -380,8 +379,8 @@ function upsertLatest_(device_id, metrics, ts) {
 }
 
 /**
- * Update Devices.last_seen, or auto-register an unknown device (enabled=true).
- * Returns false if the device exists and is disabled (caller skips ingestion).
+ * Update Devices.last_seen, or auto-register an unknown device as disabled.
+ * Disabled devices still store readings; Dashboard only displays enabled devices.
  */
 function touchDevice_(device_id, deviceName, ts) {
   const sh = getSheet_(SHEET_DEVICES);
@@ -392,10 +391,10 @@ function touchDevice_(device_id, deviceName, ts) {
   if (cachedRow > 1) {
     const cachedValues = sh.getRange(cachedRow, 1, 1, sh.getLastColumn()).getValues()[0];
     if (String(valueByHeader_(cachedValues, idx, 'device_id')) === device_id) {
-      if (!parseBool_(valueByHeader_(cachedValues, idx, 'enabled'))) return false;
+      const enabled = parseBool_(valueByHeader_(cachedValues, idx, 'enabled'));
       updateDeviceNameIfBlank_(sh, cachedRow, idx, cachedValues, deviceName);
       sh.getRange(cachedRow, idx.last_seen + 1).setValue(ts);
-      return true;
+      return { enabled: enabled, registered: true };
     }
   }
 
@@ -407,17 +406,17 @@ function touchDevice_(device_id, deviceName, ts) {
       if (String(ids[i][0]) === device_id) {
         const row = i + 2;
         cache.put(cacheKey, String(row), 21600);
-        if (!parseBool_(enabled[i][0])) return false;
         const current = sh.getRange(row, 1, 1, sh.getLastColumn()).getValues()[0];
+        const isEnabled = parseBool_(enabled[i][0]);
         updateDeviceNameIfBlank_(sh, row, idx, current, deviceName);
         sh.getRange(row, idx.last_seen + 1).setValue(ts);
-        return true;
+        return { enabled: isEnabled, registered: true };
       }
     }
   }
   sh.appendRow(deviceRow_(idx, device_id, deviceName, ts));
   cache.put(cacheKey, String(sh.getLastRow()), 21600);
-  return true;
+  return { enabled: false, registered: false };
 }
 
 function updateDeviceNameIfBlank_(sheet, row, idx, current, deviceName) {
@@ -488,7 +487,7 @@ function deviceRow_(idx, deviceId, deviceName, ts) {
   const row = new Array(width).fill('');
   row[idx.device_id] = deviceId;
   if (idx.name !== undefined) row[idx.name] = deviceName || '';
-  if (idx.enabled !== undefined) row[idx.enabled] = true;
+  if (idx.enabled !== undefined) row[idx.enabled] = false;
   if (idx.last_seen !== undefined) row[idx.last_seen] = ts;
   if (idx.first_seen !== undefined) row[idx.first_seen] = ts;
   return row;

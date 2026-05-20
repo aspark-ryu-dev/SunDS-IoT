@@ -32,6 +32,13 @@ function apiGetDashboardState() {
     } catch (err) {}
   }
   const config = getConfigMap_();
+  const devices = readDevicesWithMetrics_(normalizeOfflineTimeout_(config.offline_timeout_min));
+  const visibleDeviceIds = {};
+  devices.forEach(function (device) { visibleDeviceIds[device.device_id] = true; });
+  const layout = readLayout_().filter(function (item) {
+    return item.enabled !== false && (!item.bind_ref || visibleDeviceIds[item.bind_ref]);
+  });
+
   const state = {
     build: BUILD_VERSION,
     config: {
@@ -44,8 +51,8 @@ function apiGetDashboardState() {
       background_image_file_id: String(config.background_image_file_id || ''),
       background_url: getBackgroundUrlFromConfig_(config)
     },
-    layout: readLayout_(),
-    devices: readDevicesWithMetrics_(normalizeOfflineTimeout_(config.offline_timeout_min)),
+    layout: layout,
+    devices: devices,
     metricMeta: readMetricMeta_()
   };
   const json = JSON.stringify(state);
@@ -107,15 +114,17 @@ function readDevicesWithMetrics_(offlineTimeoutMin) {
   for (let r = 1; r < values.length; r++) {
     const deviceId = String(valueByHeader_(values[r], idx, 'device_id') || '').trim();
     if (!deviceId) continue;
+    const enabled = parseBool_(valueByHeader_(values[r], idx, 'enabled'));
+    if (!enabled) continue;
     const metrics = latest[deviceId] || {};
     const lastSeenValue = valueByHeader_(values[r], idx, 'last_seen');
     const reportIntervalMin = normalizeReportIntervalMin_(valueByHeader_(values[r], idx, 'report_interval_min'), offlineTimeoutMin);
-    const status = deviceOnlineStatus_(parseBool_(valueByHeader_(values[r], idx, 'enabled')), lastSeenValue, now, reportIntervalMin);
+    const status = deviceOnlineStatus_(enabled, lastSeenValue, now, reportIntervalMin);
     out.push({
       device_id: deviceId,
       name: String(valueByHeader_(values[r], idx, 'name') || ''),
       note: String(valueByHeader_(values[r], idx, 'note') || ''),
-      enabled: parseBool_(valueByHeader_(values[r], idx, 'enabled')),
+      enabled: enabled,
       online: status.online,
       offline_reason: status.reason,
       last_seen: dateOut_(lastSeenValue),

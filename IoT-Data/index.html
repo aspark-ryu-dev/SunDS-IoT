@@ -1686,8 +1686,8 @@
       getMapDraftItems().forEach((item) => {
         if (item.bind_ref) placed[item.bind_ref] = true;
       });
-      const devices = (state.snapshot.devices || []).filter((d) => !placed[d.device_id]);
-      if (!devices.length) { showToast('配置できる未配置デバイスがありません', true); return; }
+      const devices = (state.snapshot.devices || []).filter((d) => d.enabled !== false && !placed[d.device_id]);
+      if (!devices.length) { showToast('配置できる有効デバイスがありません', true); return; }
       const map = $('mapPreview');
       const dot = document.createElement('div');
       dot.className = 'map-dot';

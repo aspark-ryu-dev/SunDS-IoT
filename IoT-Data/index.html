@@ -685,6 +685,7 @@
           <div class="row full">
             <button type="submit" data-i18n="common.actions.save"></button>
             <button id="newDeviceBtn" type="button" class="secondary" data-i18n="common.actions.new"></button>
+            <button id="deleteDeviceBtn" type="button" class="danger">削除</button>
           </div>
         </form>
       </section>
@@ -1011,7 +1012,7 @@
           <td>${esc([d.area_id, d.location].filter(Boolean).join(' / '))}</td>
           <td>${esc([d.sensor_type, d.type].filter(Boolean).join(' / '))}</td>
           <td><span class="pill ${isDeviceOnline(d) ? '' : 'off'}">${isDeviceOnline(d) ? 'Online' : 'Offline'}</span><div class="muted">${esc(statusDetail(d))}</div></td>
-          <td><button class="secondary" type="button" onclick='editDevice(${jsonAttr(d)})'>編集</button></td>
+          <td><div class="row"><button class="secondary" type="button" onclick='editDevice(${jsonAttr(d)})'>編集</button><button class="danger" type="button" onclick='deleteDevice(${jsonAttr(d.device_id)})'>削除</button></div></td>
         </tr>`).join('') || `<tr><td colspan="5" class="muted">${esc(t('data.devices.none'))}</td></tr>`;
     }
 
@@ -1169,6 +1170,23 @@
       $('device_report_interval_min').value = d.report_interval_min || '';
       $('device_note').value = d.note || '';
       $('device_enabled').checked = d.enabled !== false;
+    };
+
+    window.deleteDevice = function (deviceId) {
+      const target = String(deviceId || '').trim();
+      if (!target) return;
+      if (!confirm('このデバイスを削除しますか？\n' + target + '\n\n関連するマップ配置も削除されます。')) return;
+      callServer('apiDeleteDevice', [target], function (snapshot) {
+        if ($('device_id').value === target) {
+          $('deviceForm').reset();
+          $('device_enabled').checked = true;
+        }
+        if (state.latestDeviceId === target) {
+          state.latestDeviceId = '';
+          setStored(DATA_LATEST_DEVICE_KEY, '');
+        }
+        render(snapshot);
+      });
     };
 
     window.editLayout = function (item) {
@@ -1337,6 +1355,9 @@
     $('newDeviceBtn').addEventListener('click', () => {
       $('deviceForm').reset();
       $('device_enabled').checked = true;
+    });
+    $('deleteDeviceBtn').addEventListener('click', () => {
+      deleteDevice($('device_id').value);
     });
     $('dashboardForm').addEventListener('submit', (ev) => {
       ev.preventDefault();

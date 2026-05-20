@@ -312,6 +312,45 @@ function apiSaveDevice(device) {
   }
 }
 
+function apiDeleteDevice(deviceId) {
+  ensureIngestReady_();
+  const target = String(deviceId || '').trim();
+  if (!target) throw new Error('device_id is required');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const deviceSheet = getSheet_(SHEET_DEVICES);
+    ensureHeaders_(deviceSheet, HEADERS.Devices);
+    const deviceIdx = headerIndex_(deviceSheet);
+    const deviceValues = deviceSheet.getDataRange().getValues();
+    let deleted = false;
+    for (let r = deviceValues.length - 1; r >= 1; r--) {
+      if (String(valueByHeader_(deviceValues[r], deviceIdx, 'device_id') || '').trim() === target) {
+        deviceSheet.deleteRow(r + 1);
+        deleted = true;
+      }
+    }
+    if (!deleted) throw new Error('Device not found: ' + target);
+
+    const layoutSheet = getSheet_(SHEET_LAYOUT);
+    ensureHeaders_(layoutSheet, HEADERS.Layout);
+    const layoutIdx = headerIndex_(layoutSheet);
+    const layoutValues = layoutSheet.getDataRange().getValues();
+    for (let lr = layoutValues.length - 1; lr >= 1; lr--) {
+      const bindType = String(valueByHeader_(layoutValues[lr], layoutIdx, 'bind_type') || 'device').trim() || 'device';
+      const bindRef = String(valueByHeader_(layoutValues[lr], layoutIdx, 'bind_ref') || '').trim();
+      if (bindType === 'device' && bindRef === target) {
+        layoutSheet.deleteRow(lr + 1);
+      }
+    }
+
+    return getAdminSnapshot_();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function apiSaveDefinition(definition) {
   ensureIngestReady_();
   const clean = normalizeDefinitionInput_(definition);

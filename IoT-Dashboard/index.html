@@ -228,7 +228,8 @@
       letter-spacing: .04em;
       margin-top: 2px;
     }
-    .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+    .header-right .header-control { border-left: 1px solid var(--line); padding-left: 14px; }
     .clock {
       display: flex;
       flex-direction: column;
@@ -415,6 +416,20 @@
     .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
     .page-title { margin: 0; font: 800 22px/1.15 var(--font-display); letter-spacing: 0; }
     .page-desc { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+    .page-head .status {
+      align-self: center;
+      min-height: 0;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .page-head .status:empty { display: none; }
+    .page-head .status.error { color: var(--bad); border-color: rgba(251,113,133,.3); background: var(--bad-soft); }
     .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; margin-bottom: 18px; }
     .kpi {
       position: relative;
@@ -564,6 +579,12 @@
       color: var(--muted);
       max-width: 560px;
     }
+    .placeholder .ph-ico {
+      width: 60px; height: 60px; display: grid; place-items: center;
+      border-radius: 18px; background: var(--grad-soft); color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .placeholder .ph-ico svg { width: 28px; height: 28px; }
     .sidebar-backdrop {
       position: fixed;
       inset: 0;
@@ -1024,15 +1045,15 @@
       </div>
 
       <div class="page camera-page hidden" data-page="lpr">
-        <div class="page-wrap"><section class="placeholder"><span class="ph-tag">COMING SOON</span><h2 data-i18n="dashboard.camera.lprTitle"></h2><p data-i18n="dashboard.camera.lprText"></p></section></div>
+        <div class="page-wrap"><section class="placeholder"><span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><circle cx="12" cy="14" r="3"/></svg></span><span class="ph-tag">COMING SOON</span><h2 data-i18n="dashboard.camera.lprTitle"></h2><p data-i18n="dashboard.camera.lprText"></p></section></div>
       </div>
 
       <div class="page camera-page hidden" data-page="meeting">
-        <div class="page-wrap"><section class="placeholder"><span class="ph-tag">COMING SOON</span><h2 data-i18n="dashboard.meeting.title"></h2><p data-i18n="dashboard.meeting.text"></p></section></div>
+        <div class="page-wrap"><section class="placeholder"><span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/></svg></span><span class="ph-tag">COMING SOON</span><h2 data-i18n="dashboard.meeting.title"></h2><p data-i18n="dashboard.meeting.text"></p></section></div>
       </div>
 
       <div class="page camera-page hidden" data-page="pmc">
-        <div class="page-wrap"><section class="placeholder"><span class="ph-tag">COMING SOON</span><h2 data-i18n="dashboard.camera.parkingTitle"></h2><p data-i18n="dashboard.camera.parkingText"></p></section></div>
+        <div class="page-wrap"><section class="placeholder"><span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg></span><span class="ph-tag">COMING SOON</span><h2 data-i18n="dashboard.camera.parkingTitle"></h2><p data-i18n="dashboard.camera.parkingText"></p></section></div>
       </div>
     </main>
   </div>

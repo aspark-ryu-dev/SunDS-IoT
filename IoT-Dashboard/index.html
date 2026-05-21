@@ -627,6 +627,10 @@
     }
     .dev:hover { border-color: var(--card-border-2); background: var(--panel-hi); transform: translateY(-1px); }
     .dev.off { opacity: .82; }
+    .dev.compact { gap: 7px; padding: 10px 12px; }
+    .dev.compact .metrics { grid-template-columns: repeat(auto-fill, minmax(96px,1fr)); gap: 6px; }
+    .dev.compact .metric { padding: 6px 7px; }
+    .dev.wide { border-color: var(--card-border-2); background: linear-gradient(135deg, var(--panel-2), var(--panel)); }
     .dev-head { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: center; }
     .dev-name { font: 800 16px/1.25 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }
     .dev-id { font: 600 11px var(--font-mono); color: var(--muted); margin-top: 2px; }
@@ -1726,19 +1730,19 @@
       });
       const html = Object.keys(grouped).sort().map((area) => {
         const devices = grouped[area].sort((a, b) =>
-          dashboardMetricCount(a) - dashboardMetricCount(b) ||
+          dashboardSortOrder(a) - dashboardSortOrder(b) ||
           String(deviceDisplayTitle(a) || a.device_id).localeCompare(String(deviceDisplayTitle(b) || b.device_id))
         );
         return '<div class="dev-area-group">' +
           '<div class="dev-area-title">' + esc(area) + '</div>' +
           devices.map((d) => {
         const selectedKeys = deviceDisplayMetrics(d).slice(0, 12);
-        return '<div class="dev ' + (!isOnline(d) ? 'off' : '') + '">' +
+        const cardType = dashboardCardType(d);
+        return '<div class="dev ' + cardType + ' ' + (!isOnline(d) ? 'off' : '') + '">' +
           '<div class="dev-head">' +
           '<div><div class="dev-name">' + esc(deviceDisplayTitle(d) || d.device_id) + '</div><div class="dev-id">' + esc(d.device_id) + '</div></div>' +
           '<div class="dev-actions">' +
           renderBatteryBadge(d, 'device-battery') +
-          '<button class="icon-btn metric-edit-toggle" type="button" title="表示項目" onclick="toggleDeviceMetricEditor(\'' + esc(attrEscape(d.device_id)) + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button>' +
           '<span class="pill ' + (!isOnline(d) ? 'off' : '') + '">' + esc(isOnline(d) ? t('dashboard.label.on') : t('dashboard.label.off')) + '</span>' +
           '</div>' +
           '</div>' +
@@ -1756,8 +1760,18 @@
       return deviceDisplayMetrics(device).filter((m) => isDisplayMetric(m) && !isBatteryMetric(m)).length;
     }
 
+    function dashboardSortOrder(device) {
+      const n = Number(device && device.dashboard_order);
+      return isFinite(n) ? n : 999999;
+    }
+
+    function dashboardCardType(device) {
+      const type = String((device && device.dashboard_card_type) || 'standard').toLowerCase();
+      return type === 'compact' || type === 'wide' ? type : 'standard';
+    }
+
     function renderDeviceMetricPage(device, selectedKeys) {
-      const pageSize = 6;
+      const pageSize = dashboardCardType(device) === 'compact' ? 4 : 6;
       const total = selectedKeys.length;
       const totalPages = Math.max(1, Math.ceil(total / pageSize));
       const deviceId = device.device_id;
@@ -1874,9 +1888,8 @@
 
     function deviceDisplayMetrics(device) {
       const keys = ((device && device.metricKeys) || []).filter((m) => isDisplayMetric(m) && !isBatteryMetric(m));
-      const prefs = getMetricPrefs();
-      if (Object.prototype.hasOwnProperty.call(prefs, device.device_id)) {
-        return Array.isArray(prefs[device.device_id]) ? prefs[device.device_id].filter((key) => keys.indexOf(key) > -1) : [];
+      if (Array.isArray(device && device.dashboard_metrics) && device.dashboard_metrics.length) {
+        return device.dashboard_metrics.filter((key) => keys.indexOf(key) > -1);
       }
       return keys;
     }

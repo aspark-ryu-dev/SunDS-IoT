@@ -194,6 +194,9 @@ function readDevicesWithMetrics_(offlineTimeoutMin, visibleMetricKeys) {
       sensor_type: String(valueByHeader_(values[r], idx, 'sensor_type') || ''),
       power_source: String(valueByHeader_(values[r], idx, 'power_source') || ''),
       report_interval_min: reportIntervalMin,
+      dashboard_order: normalizeDashboardOrder_(valueByHeader_(values[r], idx, 'dashboard_order')),
+      dashboard_card_type: normalizeDashboardCardType_(valueByHeader_(values[r], idx, 'dashboard_card_type')),
+      dashboard_metrics: normalizeDashboardMetrics_(valueByHeader_(values[r], idx, 'dashboard_metrics'), visibleMetricKeys),
       offline_after_min: Math.round(reportIntervalMin * OFFLINE_INTERVAL_MULTIPLIER * 100) / 100,
       metrics: metrics,
       metricKeys: Object.keys(metrics).filter(function (key) {
@@ -202,6 +205,33 @@ function readDevicesWithMetrics_(offlineTimeoutMin, visibleMetricKeys) {
     });
   }
   return out;
+}
+
+function normalizeDashboardOrder_(value) {
+  const n = Number(value);
+  return isFinite(n) ? n : 999999;
+}
+
+function normalizeDashboardCardType_(value) {
+  const type = String(value || 'standard').trim().toLowerCase();
+  return type === 'compact' || type === 'wide' ? type : 'standard';
+}
+
+function normalizeDashboardMetrics_(value, visibleMetricKeys) {
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  let arr;
+  try {
+    const parsed = JSON.parse(raw);
+    arr = Array.isArray(parsed) ? parsed : raw.split(',');
+  } catch (err) {
+    arr = raw.split(',');
+  }
+  return arr.map(function (key) {
+    return String(key || '').trim();
+  }).filter(function (key) {
+    return key && !isSystemMetadataKey_(key) && isVisibleMetricKey_(key, visibleMetricKeys);
+  }).slice(0, 12);
 }
 
 function latestByDevice_() {

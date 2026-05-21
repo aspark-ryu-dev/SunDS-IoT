@@ -1455,10 +1455,12 @@
           </div>
         </div>
         <div class="field-group device-data-fields">
-          <h3>マップ表示</h3>
+          <h3>Dashboard カード表示</h3>
           <div class="form-grid">
+            <label>表示順<input id="device_dashboard_order" type="number" step="1" placeholder="10"></label>
+            <label>カードタイプ<select id="device_dashboard_card_type"><option value="standard">標準</option><option value="compact">コンパクト</option><option value="wide">ワイド</option></select></label>
             <div id="deviceMetricToggles" class="metric-toggle-list full"></div>
-            <p class="hint full">実際に受信した key だけ表示します。点灯している key がカードに表示され、ドラッグで表示順を変更できます。</p>
+            <p class="hint full">Dashboard のデバイスカード用です。Map 上のカード/クリック表示の項目と順序は「マップ設定」で変更します。</p>
           </div>
         </div>
       </form>
@@ -1719,12 +1721,17 @@
           sensor_type: d.sensor_type || '',
           power_source: d.power_source || '',
           report_interval_min: d.report_interval_min || '',
+          dashboard_order: d.dashboard_order || '',
+          dashboard_card_type: d.dashboard_card_type || 'standard',
+          dashboard_metrics: Array.isArray(d.dashboard_metrics) ? d.dashboard_metrics.slice(0, 12) : [],
           note: d.note || '',
           enabled: d.enabled !== false
         };
-        const layout = findLayoutForDevice(d.device_id);
-        const cfg = layout ? (layout.style_config || parseStyle(layout.style)) : { metrics: [] };
-        state.deviceMetricDrafts[d.device_id] = { metrics: (cfg.metrics || []).filter((m) => isDashboardMetric(m) && !isBatteryMetric(m)).slice(0, 12) };
+        state.deviceMetricDrafts[d.device_id] = {
+          metrics: (Array.isArray(d.dashboard_metrics) ? d.dashboard_metrics : []).filter((m) => isDashboardMetric(m) && !isBatteryMetric(m)).slice(0, 12),
+          dashboard_order: d.dashboard_order || '',
+          dashboard_card_type: d.dashboard_card_type || 'standard'
+        };
       });
       state.deviceDraftDirty = false;
       state.deviceMetricDraftDirty = false;
@@ -2094,12 +2101,12 @@
       $('device_sensor_type').value = d.sensor_type || '';
       $('device_power_source').value = d.power_source || '';
       $('device_report_interval_min').value = d.report_interval_min || '';
+      $('device_dashboard_order').value = d.dashboard_order || '';
+      $('device_dashboard_card_type').value = d.dashboard_card_type || 'standard';
       $('device_note').value = d.note || '';
       $('device_enabled').checked = d.enabled !== false;
-      const layout = findLayoutForDevice(d.device_id);
-      const cfg = layout ? (layout.style_config || parseStyle(layout.style)) : { metrics: [], displayMode: 'card' };
       const draftMetrics = state.deviceMetricDrafts[d.device_id] && state.deviceMetricDrafts[d.device_id].metrics;
-      renderDeviceMetricToggles(d, draftMetrics || cfg.metrics || []);
+      renderDeviceMetricToggles(d, draftMetrics || d.dashboard_metrics || []);
       $('device_id').readOnly = isEdit;
       $('deviceIdHint').textContent = isEdit ? '（変更不可）' : '';
       $('deviceDrawerTitle').textContent = isEdit ? '表示データ選択' : 'デバイス追加';
@@ -2224,6 +2231,9 @@
         sensor_type: $('device_sensor_type').value,
         power_source: $('device_power_source').value,
         report_interval_min: $('device_report_interval_min').value,
+        dashboard_order: $('device_dashboard_order').value,
+        dashboard_card_type: $('device_dashboard_card_type').value,
+        dashboard_metrics: collectDashboardMetricKeys(),
         note: $('device_note').value,
         enabled: $('device_enabled').checked
       };
@@ -2233,10 +2243,15 @@
       return (state.snapshot.devices || []).map((d) => state.deviceDrafts[d.device_id] || d).filter((d) => String(d.device_id || '').trim());
     }
 
-    function collectDeviceLayoutDrafts() {
+    function collectDeviceDashboardDrafts() {
       const out = {};
       Object.keys(state.deviceMetricDrafts || {}).forEach((deviceId) => {
-        out[deviceId] = { metrics: (state.deviceMetricDrafts[deviceId].metrics || []).slice(0, 12) };
+        const draft = state.deviceMetricDrafts[deviceId] || {};
+        out[deviceId] = {
+          dashboard_order: draft.dashboard_order || '',
+          dashboard_card_type: draft.dashboard_card_type || 'standard',
+          dashboard_metrics: (draft.metrics || []).slice(0, 12)
+        };
       });
       return out;
     }
@@ -2254,11 +2269,21 @@
       };
     }
 
+    function collectDashboardMetricKeys() {
+      return Array.from($('deviceMetricToggles').querySelectorAll('.metric-chip.active')).map((chip) => chip.getAttribute('data-key')).filter(Boolean).slice(0, 12);
+    }
+
     function syncEditingDeviceMetrics() {
       const id = state.editingDeviceId || $('device_id').value;
       if (!id) return;
-      state.deviceMetricDrafts[id] = collectDeviceLayoutSettings();
+      state.deviceMetricDrafts[id] = {
+        metrics: collectDashboardMetricKeys(),
+        dashboard_order: $('device_dashboard_order') ? $('device_dashboard_order').value : '',
+        dashboard_card_type: $('device_dashboard_card_type') ? $('device_dashboard_card_type').value : 'standard'
+      };
+      state.deviceDrafts[id] = Object.assign({}, state.deviceDrafts[id] || {}, collectDevice());
       state.deviceMetricDraftDirty = true;
+      state.deviceDraftDirty = true;
     }
 
     function collectDefinition() {
@@ -2545,7 +2570,7 @@
     $('saveAllDevicesBtn').addEventListener('click', () => {
       if (state.editingDeviceId) syncEditingDeviceMetrics();
       const devices = collectDeviceDrafts();
-      callServer('apiSaveDevices', [devices, collectDeviceLayoutDrafts()], (snapshot) => {
+      callServer('apiSaveDevices', [devices, collectDeviceDashboardDrafts()], (snapshot) => {
         render(snapshot);
         showToast('全デバイス情報を保存しました');
       });
@@ -2561,13 +2586,9 @@
         return;
       }
       callServer('apiSaveDevice', [dev], (snapshot) => {
-        state.snapshot = snapshot;
-        state.deviceMap = buildDeviceMap(snapshot.devices || []);
-        callServer('apiSaveDeviceLayoutSettings', [dev.device_id, collectDeviceLayoutSettings()], (nextSnapshot) => {
-          render(nextSnapshot);
-          closeDeviceDrawer();
-          showToast('デバイスを保存しました');
-        });
+        render(snapshot);
+        closeDeviceDrawer();
+        showToast('デバイスを保存しました');
       });
     });
     $('deviceMetricToggles').addEventListener('click', (ev) => {

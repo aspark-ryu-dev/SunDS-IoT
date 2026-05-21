@@ -15,7 +15,7 @@ const DEFAULT_SPREADSHEET_ID = '1HZwK5W8Yhd15sNypNO9Ydfx4G0NSehvEoTm8ZmKRygE';
 const HEADERS = {
   Readings: ['ts', 'device_id', 'metric', 'value', 'raw_json'],
   Latest: ['device_id', 'metric', 'value', 'ts', 'latest_key'],
-  Devices: ['device_id', 'name', 'note', 'enabled', 'last_seen', 'first_seen', 'area_id', 'location', 'type', 'sensor_type', 'power_source', 'report_interval_min'],
+  Devices: ['device_id', 'name', 'note', 'enabled', 'last_seen', 'first_seen', 'area_id', 'location', 'type', 'sensor_type', 'power_source', 'report_interval_min', 'dashboard_order', 'dashboard_card_type', 'dashboard_metrics'],
   Definitions: ['id', 'type', 'name', 'unit', 'source', 'expression', 'params', 'enabled'],
   KeyCatalog: ['key', 'label_ja', 'data_type', 'unit', 'source', 'models', 'note', 'enabled'],
   Config: ['key', 'value'],

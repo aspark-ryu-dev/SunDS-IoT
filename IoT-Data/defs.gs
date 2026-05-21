@@ -513,10 +513,10 @@ function apiSaveDevice(device) {
   }
 }
 
-function apiSaveDevices(devices, layoutSettingsByDevice) {
+function apiSaveDevices(devices, dashboardSettingsByDevice) {
   ensureIngestReady_();
   devices = Array.isArray(devices) ? devices : [];
-  layoutSettingsByDevice = layoutSettingsByDevice || {};
+  dashboardSettingsByDevice = dashboardSettingsByDevice || {};
   const cleaned = devices.map(normalizeDeviceInput_).filter(function (device) {
     return !!device.device_id;
   });
@@ -540,8 +540,9 @@ function apiSaveDevices(devices, layoutSettingsByDevice) {
         sh.appendRow(deviceToRow_(device, idx));
       }
     });
-    Object.keys(layoutSettingsByDevice).forEach(function (deviceId) {
-      saveDeviceLayoutSettingsRows_(deviceId, layoutSettingsByDevice[deviceId]);
+    Object.keys(dashboardSettingsByDevice).forEach(function (deviceId) {
+      if (!rowById[deviceId]) return;
+      saveDeviceDashboardSettingsRow_(sh, rowById[deviceId], idx, dashboardSettingsByDevice[deviceId]);
     });
     return getAdminSnapshot_();
   } finally {
@@ -909,7 +910,10 @@ function normalizeDeviceInput_(device) {
     type: String(device.type || '').trim(),
     sensor_type: String(device.sensor_type || '').trim(),
     power_source: String(device.power_source || '').trim(),
-    report_interval_min: normalizeReportIntervalMin_(device.report_interval_min)
+    report_interval_min: normalizeReportIntervalMin_(device.report_interval_min),
+    dashboard_order: normalizeDashboardOrder_(device.dashboard_order),
+    dashboard_card_type: normalizeDashboardCardType_(device.dashboard_card_type),
+    dashboard_metrics: normalizeDashboardMetricsString_(device.dashboard_metrics || device.dashboardMetrics)
   };
 }
 
@@ -925,6 +929,9 @@ function writeDeviceRow_(sheet, rowNumber, idx, device, isNew) {
   setByHeader_(current, idx, 'sensor_type', device.sensor_type);
   setByHeader_(current, idx, 'power_source', device.power_source);
   setByHeader_(current, idx, 'report_interval_min', device.report_interval_min);
+  setByHeader_(current, idx, 'dashboard_order', device.dashboard_order);
+  setByHeader_(current, idx, 'dashboard_card_type', device.dashboard_card_type);
+  setByHeader_(current, idx, 'dashboard_metrics', device.dashboard_metrics);
   if (isNew) setByHeader_(current, idx, 'first_seen', new Date());
   sheet.getRange(rowNumber, 1, 1, current.length).setValues([current]);
 }
@@ -943,7 +950,53 @@ function deviceToRow_(device, idx) {
   setByHeader_(row, idx, 'sensor_type', device.sensor_type);
   setByHeader_(row, idx, 'power_source', device.power_source);
   setByHeader_(row, idx, 'report_interval_min', device.report_interval_min);
+  setByHeader_(row, idx, 'dashboard_order', device.dashboard_order);
+  setByHeader_(row, idx, 'dashboard_card_type', device.dashboard_card_type);
+  setByHeader_(row, idx, 'dashboard_metrics', device.dashboard_metrics);
   return row;
+}
+
+function saveDeviceDashboardSettingsRow_(sheet, rowNumber, idx, settings) {
+  const current = sheet.getRange(rowNumber, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (Object.prototype.hasOwnProperty.call(settings || {}, 'dashboard_order')) {
+    setByHeader_(current, idx, 'dashboard_order', normalizeDashboardOrder_(settings.dashboard_order));
+  }
+  if (Object.prototype.hasOwnProperty.call(settings || {}, 'dashboard_card_type')) {
+    setByHeader_(current, idx, 'dashboard_card_type', normalizeDashboardCardType_(settings.dashboard_card_type));
+  }
+  if (Object.prototype.hasOwnProperty.call(settings || {}, 'dashboard_metrics') || Object.prototype.hasOwnProperty.call(settings || {}, 'metrics')) {
+    setByHeader_(current, idx, 'dashboard_metrics', normalizeDashboardMetricsString_(settings.dashboard_metrics || settings.metrics));
+  }
+  sheet.getRange(rowNumber, 1, 1, current.length).setValues([current]);
+}
+
+function normalizeDashboardOrder_(value) {
+  const n = Number(value);
+  return isFinite(n) ? n : '';
+}
+
+function normalizeDashboardCardType_(value) {
+  const type = String(value || 'standard').trim().toLowerCase();
+  return type === 'compact' || type === 'wide' ? type : 'standard';
+}
+
+function normalizeDashboardMetricsString_(value) {
+  let arr = [];
+  if (Array.isArray(value)) {
+    arr = value;
+  } else if (typeof value === 'string') {
+    const raw = value.trim();
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        arr = Array.isArray(parsed) ? parsed : raw.split(',');
+      } catch (err) {
+        arr = raw.split(',');
+      }
+    }
+  }
+  arr = arr.map(function (key) { return String(key || '').trim(); }).filter(Boolean).slice(0, 12);
+  return JSON.stringify(arr);
 }
 
 function setByHeader_(row, idx, key, value) {
@@ -1289,10 +1342,24 @@ function readDevices_() {
       sensor_type: String(valueByHeader_(values[r], idx, 'sensor_type') || ''),
       power_source: String(valueByHeader_(values[r], idx, 'power_source') || ''),
       report_interval_min: reportIntervalMin,
+      dashboard_order: valueByHeader_(values[r], idx, 'dashboard_order'),
+      dashboard_card_type: normalizeDashboardCardType_(valueByHeader_(values[r], idx, 'dashboard_card_type')),
+      dashboard_metrics: parseDashboardMetrics_(valueByHeader_(values[r], idx, 'dashboard_metrics')),
       offline_after_min: Math.round(reportIntervalMin * OFFLINE_INTERVAL_MULTIPLIER * 100) / 100
     });
   }
   return out;
+}
+
+function parseDashboardMetrics_(value) {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean).slice(0, 12);
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean).slice(0, 12);
+  } catch (err) {}
+  return raw.split(',').map(function (key) { return key.trim(); }).filter(Boolean).slice(0, 12);
 }
 
 function valueByHeader_(row, idx, key) {

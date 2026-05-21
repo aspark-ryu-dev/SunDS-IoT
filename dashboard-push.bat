@@ -1,4 +1,4 @@
 @echo off
 cd /d "%~dp0"
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0dashboard-push.ps1"
+node "%~dp0tools\gas-clasp.js" dashboard push
 exit /b %ERRORLEVEL%

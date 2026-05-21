@@ -3,7 +3,7 @@
  * Backend project: HTTP POST ingestion and internal management UI.
  */
 
-const BUILD_VERSION = 'v2026-05-21-device-batch-layout-sync';
+const BUILD_VERSION = 'v2026-05-21-vs125p-keys';
 
 function doGet(e) {
   if (isLightweightCallback_(e)) {

@@ -522,6 +522,28 @@
     .metric-v u { font-size: 11px; color: var(--muted); font-weight: 700; text-decoration: none; margin-left: 1px; }
     .mbar { height: 3px; border-radius: 99px; background: var(--panel-hi); margin-top: 6px; overflow: hidden; }
     .mbar > i { display: block; height: 100%; border-radius: 99px; background: var(--grad); }
+    .metric-edit-toggle { width: 32px; height: 32px; padding: 0; display: grid; place-items: center; }
+    .metric-editor {
+      display: grid;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      padding: 9px;
+      background: var(--panel);
+    }
+    .metric-editor-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; font-weight: 800; }
+    .metric-editor-actions { display: flex; gap: 6px; }
+    .metric-chip-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .metric-chip {
+      padding: 5px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      line-height: 1.2;
+      color: var(--muted);
+      background: var(--panel-2);
+    }
+    .metric-chip.active { color: var(--ink); border-color: rgba(45,212,191,.5); background: rgba(45,212,191,.13); }
+    .metric-chip.dragging { opacity: .45; }
     .batt {
       --bc: #94a3b8;
       --bp: 0%;
@@ -1182,9 +1204,10 @@
     const DASHBOARD_REFRESH_KEY = 'iotDashboard.refreshIntervalSec';
     const DASHBOARD_IOT_GROUP_KEY = 'iotDashboard.iotGroupCollapsed';
     const DASHBOARD_THEME_KEY = 'iotDashboard.theme';
-    const DASHBOARD_ALLOWED_STORAGE_KEYS = [DASHBOARD_CACHE_KEY, DASHBOARD_PAGE_KEY, DASHBOARD_QUERY_KEY, DASHBOARD_MENU_KEY, DASHBOARD_REFRESH_KEY, DASHBOARD_IOT_GROUP_KEY, DASHBOARD_THEME_KEY];
+    const DASHBOARD_METRIC_PREFS_KEY = 'iotDashboard.deviceMetricPrefs';
+    const DASHBOARD_ALLOWED_STORAGE_KEYS = [DASHBOARD_CACHE_KEY, DASHBOARD_PAGE_KEY, DASHBOARD_QUERY_KEY, DASHBOARD_MENU_KEY, DASHBOARD_REFRESH_KEY, DASHBOARD_IOT_GROUP_KEY, DASHBOARD_THEME_KEY, DASHBOARD_METRIC_PREFS_KEY];
     const DASHBOARD_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-    const state = { data: null, deviceMap: {}, query: '', filter: 'all', timer: 0 };
+    const state = { data: null, deviceMap: {}, query: '', filter: 'all', timer: 0, metricEditorDeviceId: '' };
     const $ = (id) => document.getElementById(id);
 
     function t(path) {
@@ -1441,7 +1464,8 @@
       }).sort((a, b) => String(a.area_id || a.device_id).localeCompare(String(b.area_id || b.device_id)));
 
       $('deviceList').innerHTML = rows.map((d) => {
-        const metrics = (d.metricKeys || []).filter((m) => isDisplayMetric(m) && !isBatteryMetric(m)).slice(0, 6).map((m) => {
+        const selectedKeys = deviceDisplayMetrics(d).slice(0, 12);
+        const metrics = selectedKeys.slice(0, 6).map((m) => {
           const hit = d.metrics && d.metrics[m];
           const meta = metricMeta(m);
           const raw = hit ? Number(hit.value) : NaN;
@@ -1457,11 +1481,13 @@
           '<div><div class="dev-name">' + esc(displayLocation(d) || d.device_id) + '</div><div class="dev-id">' + esc([d.device_id, d.name].filter(Boolean).join(' / ')) + '</div></div>' +
           '<div class="dev-actions">' +
           renderBatteryBadge(d, 'device-battery') +
+          '<button class="icon-btn metric-edit-toggle" type="button" title="表示項目" onclick="toggleDeviceMetricEditor(\'' + esc(attrEscape(d.device_id)) + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button>' +
           '<span class="pill ' + (!isOnline(d) ? 'off' : '') + '">' + esc(isOnline(d) ? t('dashboard.label.on') : t('dashboard.label.off')) + '</span>' +
           '</div>' +
           '</div>' +
           '<div class="dev-meta">' + esc([d.type, d.sensor_type].filter(Boolean).join(' / ') || t('dashboard.label.unknown')) + '<span class="dot"></span>' + esc(t('dashboard.label.lastSeen') + ': ' + (shortDate(d.last_seen) || t('dashboard.label.unknown'))) + '</div>' +
           '<div class="metrics">' + metrics + '</div>' +
+          renderDeviceMetricEditor(d, selectedKeys) +
           '</div>';
       }).join('') || '<div class="muted">' + esc(t('dashboard.status.noDevices')) + '</div>';
     }
@@ -1509,6 +1535,60 @@
       if (!device) return '';
       return [device.area_id, device.location].filter(Boolean).join(' / ');
     }
+
+    function deviceDisplayMetrics(device) {
+      const keys = ((device && device.metricKeys) || []).filter((m) => isDisplayMetric(m) && !isBatteryMetric(m));
+      const prefs = getMetricPrefs();
+      if (Object.prototype.hasOwnProperty.call(prefs, device.device_id)) {
+        return Array.isArray(prefs[device.device_id]) ? prefs[device.device_id].filter((key) => keys.indexOf(key) > -1) : [];
+      }
+      return keys;
+    }
+
+    function renderDeviceMetricEditor(device, selectedKeys) {
+      if (!device || state.metricEditorDeviceId !== device.device_id) return '';
+      const keys = (device.metricKeys || []).filter((m) => isDisplayMetric(m) && !isBatteryMetric(m));
+      const selected = selectedKeys || deviceDisplayMetrics(device);
+      const ordered = selected.concat(keys.filter((key) => selected.indexOf(key) < 0));
+      return '<div class="metric-editor" data-device-id="' + esc(attrEscape(device.device_id)) + '">' +
+        '<div class="metric-editor-head"><span>表示項目 / 順序</span><span class="metric-editor-actions"><button class="secondary" type="button" onclick="resetDeviceMetricPrefs(\'' + esc(attrEscape(device.device_id)) + '\')">Reset</button><button class="secondary" type="button" onclick="toggleDeviceMetricEditor(\'\')">閉じる</button></span></div>' +
+        '<div class="metric-chip-list">' + ordered.map((key) => {
+          const active = selected.indexOf(key) > -1;
+          return '<button type="button" class="metric-chip ' + (active ? 'active' : '') + '" draggable="' + (active ? 'true' : 'false') + '" data-key="' + esc(attrEscape(key)) + '">' + esc(metricMeta(key).label || key) + '</button>';
+        }).join('') + '</div>' +
+        '</div>';
+    }
+
+    function getMetricPrefs() {
+      try {
+        return JSON.parse(localStorage.getItem(DASHBOARD_METRIC_PREFS_KEY) || '{}') || {};
+      } catch (err) {
+        localStorage.removeItem(DASHBOARD_METRIC_PREFS_KEY);
+        return {};
+      }
+    }
+
+    function setMetricPrefs(prefs) {
+      try { localStorage.setItem(DASHBOARD_METRIC_PREFS_KEY, JSON.stringify(prefs || {})); } catch (err) {}
+    }
+
+    function saveDeviceMetricPrefs(deviceId, keys) {
+      const prefs = getMetricPrefs();
+      prefs[deviceId] = (keys || []).filter(Boolean).slice(0, 12);
+      setMetricPrefs(prefs);
+    }
+
+    window.toggleDeviceMetricEditor = function (deviceId) {
+      state.metricEditorDeviceId = state.metricEditorDeviceId === deviceId ? '' : (deviceId || '');
+      renderDeviceList();
+    };
+
+    window.resetDeviceMetricPrefs = function (deviceId) {
+      const prefs = getMetricPrefs();
+      delete prefs[deviceId];
+      setMetricPrefs(prefs);
+      renderDeviceList();
+    };
 
     function metricMeta(metric) {
       return (state.data.metricMeta && state.data.metricMeta[metric]) || inferMetricMeta(metric);
@@ -1804,6 +1884,10 @@
       }[ch]));
     }
 
+    function attrEscape(v) {
+      return String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
+
     $('refreshInterval').addEventListener('change', () => {
       setStored(DASHBOARD_REFRESH_KEY, String(selectedRefreshIntervalSec()));
       scheduleRefresh();
@@ -1817,6 +1901,40 @@
       setIotGroupCollapsed($('iotMenuParent').getAttribute('aria-expanded') !== 'false');
     });
     $('collapsePopupsBtn').addEventListener('click', closeAllMapPopups);
+    $('deviceList').addEventListener('click', (ev) => {
+      const chip = ev.target.closest('.metric-chip');
+      if (!chip) return;
+      const editor = chip.closest('.metric-editor');
+      if (!editor) return;
+      chip.classList.toggle('active');
+      chip.setAttribute('draggable', chip.classList.contains('active') ? 'true' : 'false');
+      saveDeviceMetricPrefs(editor.getAttribute('data-device-id'), Array.from(editor.querySelectorAll('.metric-chip.active')).map((n) => n.getAttribute('data-key')));
+      renderDeviceList();
+    });
+    $('deviceList').addEventListener('dragstart', (ev) => {
+      const chip = ev.target.closest('.metric-chip.active');
+      if (!chip) return;
+      chip.classList.add('dragging');
+    });
+    $('deviceList').addEventListener('dragend', (ev) => {
+      const chip = ev.target.closest('.metric-chip');
+      if (chip) chip.classList.remove('dragging');
+      const editor = ev.target.closest('.metric-editor');
+      if (!editor) return;
+      saveDeviceMetricPrefs(editor.getAttribute('data-device-id'), Array.from(editor.querySelectorAll('.metric-chip.active')).map((n) => n.getAttribute('data-key')));
+      renderDeviceList();
+    });
+    $('deviceList').addEventListener('dragover', (ev) => {
+      const editor = ev.target.closest('.metric-editor');
+      if (!editor) return;
+      const dragging = editor.querySelector('.metric-chip.dragging');
+      const over = ev.target.closest('.metric-chip.active');
+      if (!dragging || !over || dragging === over) return;
+      ev.preventDefault();
+      const box = over.getBoundingClientRect();
+      const before = ev.clientX < box.left + box.width / 2;
+      over.parentNode.insertBefore(dragging, before ? over : over.nextSibling);
+    });
     window.addEventListener('resize', fitStageToWrap);
     $('stage').addEventListener('click', (ev) => {
       if (ev.target.closest('.popup-close')) {

@@ -74,7 +74,8 @@ function apiGetDashboardState() {
     } catch (err) {}
   }
   const config = getConfigMap_();
-  const devices = readDevicesWithMetrics_(normalizeOfflineTimeout_(config.offline_timeout_min));
+  const visibleMetricKeys = readVisibleMetricKeys_();
+  const devices = readDevicesWithMetrics_(normalizeOfflineTimeout_(config.offline_timeout_min), visibleMetricKeys);
   const visibleDeviceIds = {};
   devices.forEach(function (device) { visibleDeviceIds[device.device_id] = true; });
   const layout = readLayout_().filter(function (item) {
@@ -95,14 +96,14 @@ function apiGetDashboardState() {
     },
     layout: layout,
     devices: devices,
-    metricMeta: readMetricMeta_()
+    metricMeta: readMetricMeta_(visibleMetricKeys)
   };
   const json = JSON.stringify(state);
   if (json.length < 95000) cache.put(DASHBOARD_STATE_CACHE_KEY, json, DASHBOARD_STATE_CACHE_SEC);
   return state;
 }
 
-function readMetricMeta_() {
+function readMetricMeta_(visibleMetricKeys) {
   const meta = JSON.parse(JSON.stringify(METRIC_META));
   try {
     const sh = getSheet_(SHEET_DEFINITIONS);
@@ -113,6 +114,7 @@ function readMetricMeta_() {
       const id = String(values[r][0] || '').trim();
       if (!id) continue;
       if (isSystemMetadataKey_(id)) continue;
+      if (!isVisibleMetricKey_(id, visibleMetricKeys)) continue;
       const name = String(values[r][2] || '').trim();
       const unit = normalizeMetricUnit_(id, String(values[r][3] || '').trim());
       if (name || unit) meta[id] = { label: name || id, unit: unit };
@@ -147,7 +149,7 @@ function readLayout_() {
   return out;
 }
 
-function readDevicesWithMetrics_(offlineTimeoutMin) {
+function readDevicesWithMetrics_(offlineTimeoutMin, visibleMetricKeys) {
   const sh = getSheet_(SHEET_DEVICES);
   const values = sh.getDataRange().getValues();
   const idx = headerIndex_(sh);
@@ -159,7 +161,7 @@ function readDevicesWithMetrics_(offlineTimeoutMin) {
     if (!deviceId) continue;
     const enabled = parseBool_(valueByHeader_(values[r], idx, 'enabled'));
     if (!enabled) continue;
-    const metrics = filterDisplayMetrics_(latest[deviceId] || {});
+    const metrics = filterDisplayMetrics_(latest[deviceId] || {}, visibleMetricKeys);
     const lastSeenValue = valueByHeader_(values[r], idx, 'last_seen');
     const reportIntervalMin = normalizeReportIntervalMin_(valueByHeader_(values[r], idx, 'report_interval_min'), offlineTimeoutMin);
     const status = deviceOnlineStatus_(enabled, lastSeenValue, now, reportIntervalMin);
@@ -181,7 +183,7 @@ function readDevicesWithMetrics_(offlineTimeoutMin) {
       offline_after_min: Math.round(reportIntervalMin * OFFLINE_INTERVAL_MULTIPLIER * 100) / 100,
       metrics: metrics,
       metricKeys: Object.keys(metrics).filter(function (key) {
-        return !isSystemMetadataKey_(key);
+        return !isSystemMetadataKey_(key) && isVisibleMetricKey_(key, visibleMetricKeys);
       }).sort()
     });
   }
@@ -208,12 +210,44 @@ function latestByDevice_() {
   return out;
 }
 
-function filterDisplayMetrics_(metrics) {
+function filterDisplayMetrics_(metrics, visibleMetricKeys) {
   const out = {};
   Object.keys(metrics || {}).forEach(function (key) {
-    if (!isSystemMetadataKey_(key)) out[key] = metrics[key];
+    if (!isSystemMetadataKey_(key) && isVisibleMetricKey_(key, visibleMetricKeys)) out[key] = metrics[key];
   });
   return out;
+}
+
+function readVisibleMetricKeys_() {
+  try {
+    const sh = getSheet_(SHEET_KEY_CATALOG);
+    const values = sh.getDataRange().getValues();
+    if (values.length <= 1) return null;
+    const header = values[0].map(function (v) { return String(v || '').trim().toLowerCase(); });
+    const keyCol = header.indexOf('key');
+    const enabledCol = header.indexOf('enabled');
+    if (keyCol < 0 || enabledCol < 0) return null;
+    const out = {};
+    let foundEnabledRows = false;
+    for (let r = 1; r < values.length; r++) {
+      const key = String(values[r][keyCol] || '').trim();
+      if (!key || isSystemMetadataKey_(key)) continue;
+      const enabled = parseBool_(values[r][enabledCol]);
+      if (enabled) {
+        out[normalizeSystemMetadataKey_(key)] = true;
+        foundEnabledRows = true;
+      }
+    }
+    return foundEnabledRows ? out : null;
+  } catch (err) {
+    Logger.log('readVisibleMetricKeys_ skipped: ' + err.message);
+    return null;
+  }
+}
+
+function isVisibleMetricKey_(key, visibleMetricKeys) {
+  if (!visibleMetricKeys) return true;
+  return !!visibleMetricKeys[normalizeSystemMetadataKey_(key)];
 }
 
 function isSystemMetadataKey_(key) {

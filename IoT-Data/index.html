@@ -1123,7 +1123,7 @@
         <div style="overflow:auto;max-height:320px;margin-top:12px">
           <table>
             <thead>
-              <tr><th>Key</th><th>日本語</th><th>型</th><th>単位</th><th>モデル</th><th></th></tr>
+              <tr><th>Key</th><th>日本語</th><th>型</th><th>単位</th><th>モデル</th><th>表示</th><th></th></tr>
             </thead>
             <tbody id="keyCatalogRows"></tbody>
           </table>
@@ -1661,7 +1661,7 @@
     }
 
     function renderKeyCatalog() {
-      const rows = (state.snapshot.keyCatalog || []).filter((row) => row.enabled !== false && isDisplayMetric(row.key));
+      const rows = (state.snapshot.keyCatalog || []).filter((row) => isDisplayMetric(row.key));
       const q = String(state.keyCatalogQuery || '').trim().toLowerCase();
       const filtered = q ? rows.filter((row) => {
         return [row.key, row.label_ja, row.data_type, row.unit, row.models, row.source]
@@ -1676,9 +1676,10 @@
           <td>${esc(row.data_type)}</td>
           <td>${esc(row.unit)}</td>
           <td class="muted">${esc(modelText)}</td>
+          <td><button class="secondary" type="button" onclick='toggleKeyCatalogVisibility(${jsonAttr(row.key)}, ${row.enabled === false ? 'true' : 'false'})'>${row.enabled === false ? '非表示' : '表示'}</button></td>
           <td><button class="secondary" type="button" onclick='applyKeyCatalog(${jsonAttr(row)})'>定義へ反映</button></td>
         </tr>`;
-      }).join('') || '<tr><td colspan="6" class="muted">キーDBがありません</td></tr>';
+      }).join('') || '<tr><td colspan="7" class="muted">キーDBがありません</td></tr>';
     }
 
     function renderLatest() {
@@ -1885,6 +1886,10 @@
       }, null, 2);
       $('def_enabled').checked = row.enabled !== false;
       $('testResult').textContent = '';
+    };
+
+    window.toggleKeyCatalogVisibility = function (key, enabled) {
+      callServer('apiSaveKeyCatalogVisibility', [key, enabled], toastRender(enabled ? '表示対象にしました' : '非表示にしました'));
     };
 
     window.selectLatestDevice = function (deviceId) {

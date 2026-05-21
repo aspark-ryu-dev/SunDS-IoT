@@ -544,6 +544,35 @@ function apiSeedKeyCatalog() {
   return getAdminSnapshot_();
 }
 
+function apiSaveKeyCatalogVisibility(key, enabled) {
+  ensureIngestReady_();
+  const target = String(key || '').trim();
+  if (!target) throw new Error('key is required');
+  if (isSystemMetadataKey_(target)) throw new Error('system metadata key cannot be displayed');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sh = getSheet_(SHEET_KEY_CATALOG);
+    ensureHeaders_(sh, HEADERS.KeyCatalog);
+    const idx = headerIndex_(sh);
+    const values = sh.getDataRange().getValues();
+    for (let r = 1; r < values.length; r++) {
+      if (String(valueByHeader_(values[r], idx, 'key') || '').trim() === target) {
+        if (idx.enabled !== undefined) sh.getRange(r + 1, idx.enabled + 1).setValue(parseBool_(enabled));
+        return getAdminSnapshot_();
+      }
+    }
+    const meta = keyCatalogMetaForKey_(target);
+    meta.source = meta.source || 'manual';
+    meta.enabled = parseBool_(enabled);
+    sh.appendRow(keyCatalogToRow_(meta, idx));
+    return getAdminSnapshot_();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function apiTestExpression(expression, scopeJson) {
   let scope = {};
   if (String(scopeJson || '').trim()) {

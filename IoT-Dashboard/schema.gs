@@ -6,6 +6,7 @@
 const SHEET_DEVICES = 'Devices';
 const SHEET_LATEST = 'Latest';
 const SHEET_DEFINITIONS = 'Definitions';
+const SHEET_KEY_CATALOG = 'KeyCatalog';
 const SHEET_CONFIG = 'Config';
 const SHEET_LAYOUT = 'Layout';
 const DEFAULT_SPREADSHEET_ID = '1HZwK5W8Yhd15sNypNO9Ydfx4G0NSehvEoTm8ZmKRygE';

@@ -93,7 +93,7 @@ function apiGetDashboardState() {
       background_image_url: String(config.background_image_url || ''),
       background_image_file_id: String(config.background_image_file_id || ''),
       background_url: getBackgroundUrlFromConfig_(config),
-      logo_url: String(config.logo_url || config.logo_dark_url || config.logo_light_url || '')
+      logo_url: String(config.logo_url || '')
     },
     layout: layout,
     devices: devices,

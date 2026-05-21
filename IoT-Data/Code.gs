@@ -3,7 +3,7 @@
  * Backend project: HTTP POST ingestion and internal management UI.
  */
 
-const BUILD_VERSION = 'v2026-05-21-single-logo-dashboard-settings';
+const BUILD_VERSION = 'v2026-05-21-logo-url-only';
 
 function doGet(e) {
   if (isLightweightCallback_(e)) {

@@ -1692,8 +1692,7 @@
     function applyLogoConfig(config) {
       config = config || {};
       const hasLogo = Object.prototype.hasOwnProperty.call(config, 'logo_url');
-      const compatLogo = config.logo_dark_url || config.logo_light_url || '';
-      const url = hasLogo ? (config.logo_url || DEFAULT_LOGO_URL) : (compatLogo || getStored(DASHBOARD_LOGO_KEY, DEFAULT_LOGO_URL));
+      const url = hasLogo ? (config.logo_url || DEFAULT_LOGO_URL) : getStored(DASHBOARD_LOGO_KEY, DEFAULT_LOGO_URL);
       document.querySelectorAll('.logo-img').forEach((img) => img.src = url);
       setStored(DASHBOARD_LOGO_KEY, url);
     }

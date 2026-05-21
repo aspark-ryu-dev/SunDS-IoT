@@ -8,6 +8,19 @@
 const DEF_TYPES = { metric: true, expr: true, expression: true, formula: true };
 const DEF_TYPES_EXPR = { expr: true, expression: true, formula: true };
 const OFFLINE_INTERVAL_MULTIPLIER = 1.1;
+const SYSTEM_METADATA_KEYS = [
+  'applicationID', 'applicationName', 'application_id', 'application_name',
+  'adr', 'confirmed', 'dataRate', 'data_rate', 'devAddr', 'devaddr',
+  'deviceAddress', 'device_address', 'deviceName', 'device_name', 'devName',
+  'dev_name', 'name', 'model', 'device_model', 'gatewayID', 'gateway_id', 'gatewayTime', 'gateway_time',
+  'fCnt', 'fcnt', 'fPort', 'fport', 'frequency', 'rssi', 'snr', 'token',
+  'ts', 'timestamp', 'time', 'datetime', 'date', 'event', 'report_type',
+  'snapshot', 'device_info.device', 'device_info.device_sn',
+  'device_info.device_mac', 'device_info.ip_address', 'time_info.time',
+  'time_info.timezone', 'time_info.dst_status', 'time_info.start_time',
+  'time_info.end_time', 'regions_name[]', 'dwell_time_data[].dwell_start_time',
+  'dwell_time_data[].dwell_end_time'
+];
 
 const DEVICE_EXAMPLE_KEYS = {
   am102: ["battery", "humidity", "temperature"],
@@ -477,6 +490,7 @@ function apiSaveDefinition(definition) {
   ensureIngestReady_();
   const clean = normalizeDefinitionInput_(definition);
   if (!clean.id) throw new Error('id is required');
+  if (isSystemMetadataKey_(clean.id)) throw new Error('system metadata key cannot be added as a definition');
   if (!DEF_TYPES[clean.type]) throw new Error('type must be metric or expr');
   if (DEF_TYPES_EXPR[clean.type] && !clean.expression) throw new Error('expression is required');
 
@@ -827,6 +841,9 @@ function seedKeyCatalog_() {
   for (let r = 1; r < values.length; r++) {
     const key = String(valueByHeader_(values[r], idx, 'key') || '').trim();
     if (key) existing[key] = r + 1;
+    if (key && isSystemMetadataKey_(key) && idx.enabled !== undefined) {
+      sh.getRange(r + 1, idx.enabled + 1).setValue(false);
+    }
   }
 
   const rows = [];
@@ -909,10 +926,38 @@ function knownMetricKeys_() {
   const found = {};
   Object.keys(DEVICE_EXAMPLE_KEYS).forEach(function (model) {
     (DEVICE_EXAMPLE_KEYS[model] || []).forEach(function (key) {
+      if (isSystemMetadataKey_(key)) return;
       found[key] = true;
     });
   });
   return Object.keys(found).sort();
+}
+
+function isSystemMetadataKey_(key) {
+  const normalized = normalizeSystemMetadataKey_(key);
+  if (!normalized) return false;
+  const keys = systemMetadataKeySet_();
+  if (keys[normalized]) return true;
+  if (/^(application|gateway|deviceaddress|devaddr|fcnt|fport|datarate|frequency|rssi|snr|adr|confirmed|token)$/.test(normalized)) return true;
+  if (/^(ts|timestamp|time|datetime|date)$/.test(normalized)) return true;
+  if (/^(event|reporttype|snapshot)$/.test(normalized)) return true;
+  if (/^deviceinfo(device|devicesn|devicemac|ipaddress)$/.test(normalized)) return true;
+  if (/^timeinfo(time|timezone|dststatus|starttime|endtime)$/.test(normalized)) return true;
+  if (/^regionsname\d*$/.test(normalized)) return true;
+  if (/^dwelltimedata\d*(dwellstarttime|dwellendtime)$/.test(normalized)) return true;
+  return false;
+}
+
+function systemMetadataKeySet_() {
+  const out = {};
+  SYSTEM_METADATA_KEYS.forEach(function (key) {
+    out[normalizeSystemMetadataKey_(key)] = true;
+  });
+  return out;
+}
+
+function normalizeSystemMetadataKey_(key) {
+  return String(key || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 function metricMetaForKey_(key) {
@@ -1018,6 +1063,7 @@ function readDefinitions_() {
   const out = [];
   for (let r = 1; r < values.length; r++) {
     if (String(values[r][0]).trim() === '') continue;
+    if (isSystemMetadataKey_(values[r][0])) continue;
     out.push({
       id: String(values[r][0]),
       type: String(values[r][1] || 'expr').toLowerCase(),
@@ -1038,6 +1084,7 @@ function readLatestRows_() {
   const out = [];
   for (let r = 1; r < values.length; r++) {
     if (String(values[r][0]).trim() === '' || String(values[r][1]).trim() === '') continue;
+    if (isSystemMetadataKey_(values[r][1])) continue;
     out.push({
       device_id: String(values[r][0]),
       metric: String(values[r][1]),
@@ -1057,6 +1104,7 @@ function readKeyCatalog_() {
   for (let r = 1; r < values.length; r++) {
     const key = String(valueByHeader_(values[r], idx, 'key') || '').trim();
     if (!key) continue;
+    if (isSystemMetadataKey_(key)) continue;
     out.push({
       key: key,
       label_ja: String(valueByHeader_(values[r], idx, 'label_ja') || ''),
@@ -1074,12 +1122,15 @@ function readKeyCatalog_() {
 function attachMetricsToDevices_(devices, latest) {
   const byDevice = {};
   latest.forEach(function (row) {
+    if (isSystemMetadataKey_(row.metric)) return;
     if (!byDevice[row.device_id]) byDevice[row.device_id] = {};
     byDevice[row.device_id][row.metric] = { value: row.value, ts: row.ts };
   });
   devices.forEach(function (d) {
     d.metrics = byDevice[d.device_id] || {};
-    d.metricKeys = Object.keys(d.metrics).sort();
+    d.metricKeys = Object.keys(d.metrics).filter(function (key) {
+      return !isSystemMetadataKey_(key);
+    }).sort();
   });
 }
 

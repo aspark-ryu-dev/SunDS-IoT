@@ -1477,7 +1477,7 @@
       const items = layout.map((item) => {
         const device = devices[item.bind_ref] || {};
         const cfg = item.style_config || parseStyle(item.style);
-        const metrics = (cfg.metrics || []).filter((m) => !isBatteryMetric(m)).slice(0, 2);
+        const metrics = (cfg.metrics || []).filter((m) => isDisplayMetric(m) && !isBatteryMetric(m)).slice(0, 2);
         const title = item.label || device.area_id || device.name || item.bind_ref;
         const mode = cfg.displayMode === 'popup' ? 'popup' : 'card';
         const selected = item.item_id === state.mapEditorItemId ? ' selected' : '';
@@ -1561,7 +1561,7 @@
     function renderMapEditorMetricChips(item) {
       const cfg = item.style_config || parseStyle(item.style);
       const device = deviceMap()[item.bind_ref] || {};
-      const keys = (device.metricKeys || []).filter((m) => !isBatteryMetric(m));
+      const keys = (device.metricKeys || []).filter((m) => isDisplayMetric(m) && !isBatteryMetric(m));
       const selected = [];
       (cfg.metrics || []).forEach((key) => {
         if (keys.indexOf(key) > -1 && selected.indexOf(key) < 0) selected.push(key);
@@ -1605,7 +1605,7 @@
       let metrics = Array.from(document.querySelectorAll('#mapEditMetrics .metric-chip.active')).map((chip) => chip.getAttribute('data-key')).filter(Boolean);
       if (oldRef !== item.bind_ref || (options && options.resetMetrics)) {
         const dev = deviceMap()[item.bind_ref] || {};
-        metrics = (dev.metricKeys || []).filter((m) => !isBatteryMetric(m));
+        metrics = (dev.metricKeys || []).filter((m) => isDisplayMetric(m) && !isBatteryMetric(m));
       }
       item.style_config = {
         metrics: metrics.slice(0, 12),
@@ -1621,7 +1621,7 @@
     function renderDeviceMetricToggles(device, selectedMetrics) {
       const el = $('deviceMetricToggles');
       if (!el) return;
-      const keys = ((device && device.metricKeys) || []).filter((m) => !isBatteryMetric(m));
+      const keys = ((device && device.metricKeys) || []).filter((m) => isDisplayMetric(m) && !isBatteryMetric(m));
       const selected = [];
       (selectedMetrics || []).forEach((key) => {
         if (keys.indexOf(key) > -1 && selected.indexOf(key) < 0) selected.push(key);
@@ -1661,7 +1661,7 @@
     }
 
     function renderKeyCatalog() {
-      const rows = (state.snapshot.keyCatalog || []).filter((row) => row.enabled !== false);
+      const rows = (state.snapshot.keyCatalog || []).filter((row) => row.enabled !== false && isDisplayMetric(row.key));
       const q = String(state.keyCatalogQuery || '').trim().toLowerCase();
       const filtered = q ? rows.filter((row) => {
         return [row.key, row.label_ja, row.data_type, row.unit, row.models, row.source]
@@ -1685,6 +1685,7 @@
       const latest = (state.snapshot.latest || []).slice();
       const byDevice = {};
       latest.forEach((row) => {
+        if (!isDisplayMetric(row.metric)) return;
         const id = String(row.device_id || '').trim();
         if (!id) return;
         if (!byDevice[id]) byDevice[id] = [];
@@ -1709,7 +1710,7 @@
 
       const selected = state.latestDeviceId;
       const selectedDevice = deviceMap()[selected] || { device_id: selected };
-      const rows = (byDevice[selected] || []).slice().sort((a, b) => String(a.metric).localeCompare(String(b.metric)));
+      const rows = (byDevice[selected] || []).filter((row) => isDisplayMetric(row.metric)).slice().sort((a, b) => String(a.metric).localeCompare(String(b.metric)));
       $('latestDetailTitle').textContent = selected ? (selectedDevice.area_id || selectedDevice.name || selected) : t('data.latest.detailTitle');
       $('latestDetailMeta').textContent = selected ? [selectedDevice.location, selectedDevice.sensor_type || selectedDevice.type, selected].filter(Boolean).join(' / ') : t('data.latest.selectDevice');
       $('latestRows').innerHTML = rows.map((r) => {
@@ -1966,6 +1967,20 @@
       return key === 'battery' || key === 'battery_level' || key === 'battery_percent' || key === 'battery_percentage' || /(^|_)battery($|_)/.test(key);
     }
 
+    function isDisplayMetric(metric) {
+      const key = String(metric || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!key) return false;
+      if (/^(application|gateway|deviceaddress|devaddr|fcnt|fport|datarate|frequency|rssi|snr|adr|confirmed|token)$/.test(key)) return false;
+      if (/^(name|model|devicename|devname|devicemodel)$/.test(key)) return false;
+      if (/^(ts|timestamp|time|datetime|date)$/.test(key)) return false;
+      if (/^(event|reporttype|snapshot)$/.test(key)) return false;
+      if (/^deviceinfo(device|devicesn|devicemac|ipaddress)$/.test(key)) return false;
+      if (/^timeinfo(time|timezone|dststatus|starttime|endtime)$/.test(key)) return false;
+      if (/^regionsname\d*$/.test(key)) return false;
+      if (/^dwelltimedata\d*(dwellstarttime|dwellendtime)$/.test(key)) return false;
+      return true;
+    }
+
     function resetMapDraft() {
       const rows = (((state.snapshot || {}).dashboard || {}).layout || []).filter((item) => item.enabled !== false);
       state.mapDraft = {
@@ -2078,7 +2093,7 @@
     function addLayoutAt(deviceId, x, y) {
       if (!deviceId) { showToast('デバイスを選択してください', true); return; }
       const dev = deviceMap()[deviceId] || {};
-      const metrics = (dev.metricKeys || []).filter((m) => !isBatteryMetric(m));
+      const metrics = (dev.metricKeys || []).filter((m) => isDisplayMetric(m) && !isBatteryMetric(m));
       const displayMode = $('mapAddDisplayMode').value === 'popup' ? 'popup' : 'card';
       const item = {
         item_id: 'item_' + Date.now() + '_' + Math.floor(Math.random() * 1000),

@@ -325,7 +325,16 @@ function makeReservedIngestKeys_() {
     rssi: true,
     snr: true,
     adr: true,
-    confirmed: true
+    confirmed: true,
+    event: true,
+    reporttype: true,
+    snapshot: true,
+    dststatus: true,
+    timezone: true,
+    starttime: true,
+    endtime: true,
+    ipaddress: true,
+    devicemac: true
   };
   DEVICE_ID_KEYS.forEach(function (key) {
     out[normalizeKey_(key)] = true;

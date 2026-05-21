@@ -1400,7 +1400,7 @@
 
     function renderWidgetMetrics(device, metrics) {
       const configured = metrics || [];
-      metrics = configured.filter((metric) => !isBatteryMetric(metric));
+      metrics = configured.filter((metric) => isDisplayMetric(metric) && !isBatteryMetric(metric));
       if (!metrics.length) {
         if (configured.length && batteryMetricKey(device)) return '';
         return '<div class="metric-line"><span class="metric-name">' + esc(t('dashboard.status.noMetric')) + '</span><span class="metric-value">--</span></div>';
@@ -1425,7 +1425,7 @@
       }).sort((a, b) => String(a.area_id || a.device_id).localeCompare(String(b.area_id || b.device_id)));
 
       $('deviceList').innerHTML = rows.map((d) => {
-        const metrics = (d.metricKeys || []).filter((m) => !isBatteryMetric(m)).slice(0, 6).map((m) => {
+        const metrics = (d.metricKeys || []).filter((m) => isDisplayMetric(m) && !isBatteryMetric(m)).slice(0, 6).map((m) => {
           const hit = d.metrics && d.metrics[m];
           const meta = metricMeta(m);
           const raw = hit ? Number(hit.value) : NaN;
@@ -1574,6 +1574,20 @@
     function isBatteryMetric(metric) {
       const key = String(metric || '').toLowerCase().replace(/[^a-z0-9]+/g, '_');
       return key === 'battery' || key === 'battery_level' || key === 'battery_percent' || key === 'battery_percentage' || /(^|_)battery($|_)/.test(key);
+    }
+
+    function isDisplayMetric(metric) {
+      const key = String(metric || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!key) return false;
+      if (/^(application|gateway|deviceaddress|devaddr|fcnt|fport|datarate|frequency|rssi|snr|adr|confirmed|token)$/.test(key)) return false;
+      if (/^(name|model|devicename|devname|devicemodel)$/.test(key)) return false;
+      if (/^(ts|timestamp|time|datetime|date)$/.test(key)) return false;
+      if (/^(event|reporttype|snapshot)$/.test(key)) return false;
+      if (/^deviceinfo(device|devicesn|devicemac|ipaddress)$/.test(key)) return false;
+      if (/^timeinfo(time|timezone|dststatus|starttime|endtime)$/.test(key)) return false;
+      if (/^regionsname\d*$/.test(key)) return false;
+      if (/^dwelltimedata\d*(dwellstarttime|dwellendtime)$/.test(key)) return false;
+      return true;
     }
 
     function batteryClass(pct, hasValue) {

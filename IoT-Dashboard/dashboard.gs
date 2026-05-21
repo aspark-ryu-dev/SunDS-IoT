@@ -48,9 +48,22 @@ const METRIC_META = {
   power_consumption: { label: '電力量', unit: 'kWh' },
   power_factor: { label: '力率', unit: '' }
 };
-const DASHBOARD_STATE_CACHE_KEY = 'iot_dashboard_state_v2';
+const DASHBOARD_STATE_CACHE_KEY = 'iot_dashboard_state_v3';
 const DASHBOARD_STATE_CACHE_SEC = 20;
 const OFFLINE_INTERVAL_MULTIPLIER = 1.1;
+const SYSTEM_METADATA_KEYS = [
+  'applicationID', 'applicationName', 'application_id', 'application_name',
+  'adr', 'confirmed', 'dataRate', 'data_rate', 'devAddr', 'devaddr',
+  'deviceAddress', 'device_address', 'deviceName', 'device_name', 'devName',
+  'dev_name', 'name', 'model', 'device_model', 'gatewayID', 'gateway_id', 'gatewayTime', 'gateway_time',
+  'fCnt', 'fcnt', 'fPort', 'fport', 'frequency', 'rssi', 'snr', 'token',
+  'ts', 'timestamp', 'time', 'datetime', 'date', 'event', 'report_type',
+  'snapshot', 'device_info.device', 'device_info.device_sn',
+  'device_info.device_mac', 'device_info.ip_address', 'time_info.time',
+  'time_info.timezone', 'time_info.dst_status', 'time_info.start_time',
+  'time_info.end_time', 'regions_name[]', 'dwell_time_data[].dwell_start_time',
+  'dwell_time_data[].dwell_end_time'
+];
 
 function apiGetDashboardState() {
   const cache = CacheService.getScriptCache();
@@ -99,6 +112,7 @@ function readMetricMeta_() {
     for (let r = 0; r < values.length; r++) {
       const id = String(values[r][0] || '').trim();
       if (!id) continue;
+      if (isSystemMetadataKey_(id)) continue;
       const name = String(values[r][2] || '').trim();
       const unit = normalizeMetricUnit_(id, String(values[r][3] || '').trim());
       if (name || unit) meta[id] = { label: name || id, unit: unit };
@@ -145,7 +159,7 @@ function readDevicesWithMetrics_(offlineTimeoutMin) {
     if (!deviceId) continue;
     const enabled = parseBool_(valueByHeader_(values[r], idx, 'enabled'));
     if (!enabled) continue;
-    const metrics = latest[deviceId] || {};
+    const metrics = filterDisplayMetrics_(latest[deviceId] || {});
     const lastSeenValue = valueByHeader_(values[r], idx, 'last_seen');
     const reportIntervalMin = normalizeReportIntervalMin_(valueByHeader_(values[r], idx, 'report_interval_min'), offlineTimeoutMin);
     const status = deviceOnlineStatus_(enabled, lastSeenValue, now, reportIntervalMin);
@@ -166,7 +180,9 @@ function readDevicesWithMetrics_(offlineTimeoutMin) {
       report_interval_min: reportIntervalMin,
       offline_after_min: Math.round(reportIntervalMin * OFFLINE_INTERVAL_MULTIPLIER * 100) / 100,
       metrics: metrics,
-      metricKeys: Object.keys(metrics).sort()
+      metricKeys: Object.keys(metrics).filter(function (key) {
+        return !isSystemMetadataKey_(key);
+      }).sort()
     });
   }
   return out;
@@ -182,6 +198,7 @@ function latestByDevice_() {
     const deviceId = String(values[r][0] || '').trim();
     const metric = String(values[r][1] || '').trim();
     if (!deviceId || !metric) continue;
+    if (isSystemMetadataKey_(metric)) continue;
     if (!out[deviceId]) out[deviceId] = {};
     out[deviceId][metric] = {
       value: values[r][2],
@@ -189,6 +206,41 @@ function latestByDevice_() {
     };
   }
   return out;
+}
+
+function filterDisplayMetrics_(metrics) {
+  const out = {};
+  Object.keys(metrics || {}).forEach(function (key) {
+    if (!isSystemMetadataKey_(key)) out[key] = metrics[key];
+  });
+  return out;
+}
+
+function isSystemMetadataKey_(key) {
+  const normalized = normalizeSystemMetadataKey_(key);
+  if (!normalized) return false;
+  const keys = systemMetadataKeySet_();
+  if (keys[normalized]) return true;
+  if (/^(application|gateway|deviceaddress|devaddr|fcnt|fport|datarate|frequency|rssi|snr|adr|confirmed|token)$/.test(normalized)) return true;
+  if (/^(ts|timestamp|time|datetime|date)$/.test(normalized)) return true;
+  if (/^(event|reporttype|snapshot)$/.test(normalized)) return true;
+  if (/^deviceinfo(device|devicesn|devicemac|ipaddress)$/.test(normalized)) return true;
+  if (/^timeinfo(time|timezone|dststatus|starttime|endtime)$/.test(normalized)) return true;
+  if (/^regionsname\d*$/.test(normalized)) return true;
+  if (/^dwelltimedata\d*(dwellstarttime|dwellendtime)$/.test(normalized)) return true;
+  return false;
+}
+
+function systemMetadataKeySet_() {
+  const out = {};
+  SYSTEM_METADATA_KEYS.forEach(function (key) {
+    out[normalizeSystemMetadataKey_(key)] = true;
+  });
+  return out;
+}
+
+function normalizeSystemMetadataKey_(key) {
+  return String(key || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 function valueByHeader_(row, idx, key) {

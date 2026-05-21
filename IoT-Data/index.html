@@ -299,6 +299,7 @@
     }
     .content {
       display: grid;
+      align-content: start;
       gap: 18px;
       padding: 20px;
       max-width: 1440px;
@@ -306,7 +307,7 @@
       margin: 0 auto;
       grid-column: 2;
     }
-    .page { display: grid; gap: 18px; animation: fade .26s ease; }
+    .page { display: grid; align-content: start; gap: 18px; animation: fade .26s ease; }
     .page.hidden { display: none; }
     @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
     .sidebar-backdrop {

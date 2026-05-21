@@ -23,6 +23,7 @@ const DEVICE_ID_KEYS = [
   'device_eui',
   'deviceeui',
   // Normal devices identify by SN only.
+  'device_sn',
   'sn'
 ];
 const DEVICE_NAME_KEYS = [
@@ -31,6 +32,7 @@ const DEVICE_NAME_KEYS = [
   'name',
   'dev_name',
   'devname',
+  'device',
   'model',
   'device_model'
 ];
@@ -293,6 +295,7 @@ function normalizeDeviceId_(value) {
 
 function normalizeDeviceName_(value) {
   if (value === null || value === undefined) return '';
+  if (typeof value === 'object') return '';
   return String(value).trim();
 }
 

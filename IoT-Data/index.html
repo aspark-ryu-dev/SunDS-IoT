@@ -550,6 +550,11 @@
       z-index: 2;
     }
     .map-preview-item.dragging { cursor: grabbing; opacity: .86; z-index: 5; }
+    .map-preview-item.selected {
+      outline: 2px solid rgba(45,212,191,.78);
+      outline-offset: 3px;
+      z-index: 7;
+    }
     .map-preview-item.popup {
       width: auto;
       min-width: 86px;
@@ -593,6 +598,66 @@
       border-bottom: 2px solid #64748b;
     }
     .map-preview-item.popup .map-resize { display: none; }
+    .map-item-editor {
+      position: absolute;
+      z-index: 20;
+      width: min(360px, calc(100% - 24px));
+      transform: translate(-50%, 14px);
+      padding: 14px;
+      border-radius: var(--r-md);
+      border: 1px solid var(--card-border-2);
+      background: var(--glass);
+      backdrop-filter: blur(22px) saturate(145%);
+      box-shadow: var(--shadow-2);
+      color: var(--ink);
+    }
+    .map-item-editor::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: -7px;
+      width: 12px;
+      height: 12px;
+      transform: translateX(-50%) rotate(45deg);
+      border-left: 1px solid var(--card-border-2);
+      border-top: 1px solid var(--card-border-2);
+      background: var(--glass);
+    }
+    .map-editor-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .map-editor-head b { font: 800 13px var(--font-display); }
+    .map-editor-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .map-editor-grid .full { grid-column: 1 / -1; }
+    .map-editor-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      background: var(--panel);
+      min-height: 48px;
+    }
+    .map-editor-metrics:empty::before {
+      content: "受信済み key がありません";
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .map-editor-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
     .map-preview-title {
       color: #64708a;
       font-weight: 800;
@@ -1216,7 +1281,7 @@
     const DATA_THEME_KEY = 'iotData.theme';
     const DATA_ALLOWED_STORAGE_KEYS = [DATA_CACHE_KEY, DATA_PAGE_KEY, DATA_QUERY_KEY, DATA_LATEST_DEVICE_KEY, DATA_MENU_KEY, DATA_THEME_KEY];
     const DATA_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-    const state = { snapshot: null, deviceMap: {}, deviceQuery: '', latestDeviceId: '', editingDeviceId: '', keyCatalogQuery: '', mapDraft: null, mapAddPoint: null };
+    const state = { snapshot: null, deviceMap: {}, deviceQuery: '', latestDeviceId: '', editingDeviceId: '', keyCatalogQuery: '', mapDraft: null, mapAddPoint: null, mapEditorItemId: '', mapSuppressClick: false };
     const $ = (id) => document.getElementById(id);
 
     function t(path) {
@@ -1415,10 +1480,11 @@
         const metrics = (cfg.metrics || []).filter((m) => !isBatteryMetric(m)).slice(0, 2);
         const title = item.label || device.area_id || device.name || item.bind_ref;
         const mode = cfg.displayMode === 'popup' ? 'popup' : 'card';
+        const selected = item.item_id === state.mapEditorItemId ? ' selected' : '';
         const sizeStyle = mode === 'card'
           ? ';--card-w:' + (Number(cfg.cardWidth) || 150) + 'px;height:' + (Number(cfg.cardHeight) || 0 || 'auto') + (Number(cfg.cardHeight) ? 'px' : '')
           : '';
-        return '<div class="map-preview-item ' + mode + '" data-item-id="' + esc(attrEscape(item.item_id)) + '" style="left:' + (Number(item.x_norm) * 100) + '%;top:' + (Number(item.y_norm) * 100) + '%' + sizeStyle + '">' +
+        return '<div class="map-preview-item ' + mode + selected + '" data-item-id="' + esc(attrEscape(item.item_id)) + '" style="left:' + (Number(item.x_norm) * 100) + '%;top:' + (Number(item.y_norm) * 100) + '%' + sizeStyle + '">' +
           '<button class="map-del" type="button" title="削除" data-del-id="' + esc(attrEscape(item.item_id)) + '">×</button>' +
           '<div class="map-preview-title">' + esc(title) + '</div>' +
           '<div class="map-preview-metrics">' + metrics.map((m) => previewMetricLine(device, m)).join('') + '</div>' +
@@ -1429,8 +1495,37 @@
       const target = state.mapAddPoint
         ? '<div class="map-target-dot" style="left:' + (state.mapAddPoint.x * 100) + '%;top:' + (state.mapAddPoint.y * 100) + '%"></div>'
         : '';
-      el.innerHTML = items + target + hint;
+      el.innerHTML = items + renderMapItemEditor() + target + hint;
       updateMapDirtyUi();
+    }
+
+    function renderMapItemEditor() {
+      const item = layoutById(state.mapEditorItemId);
+      if (!item) return '';
+      const cfg = item.style_config || parseStyle(item.style);
+      const mode = cfg.displayMode === 'popup' ? 'popup' : 'card';
+      const x = Number(item.x_norm || 0.5);
+      const y = Number(item.y_norm || 0.5);
+      const left = Math.max(18, Math.min(82, x * 100));
+      const top = Math.min(82, y * 100);
+      const devices = mapEditorDeviceOptions(item.bind_ref);
+      const metrics = renderMapEditorMetricChips(item);
+      const width = Number(cfg.cardWidth) || 150;
+      const height = Number(cfg.cardHeight) || '';
+      return '<div class="map-item-editor" data-editor-id="' + esc(attrEscape(item.item_id)) + '" style="left:' + left + '%;top:' + top + '%">' +
+        '<div class="map-editor-head"><b>配置編集</b><button class="icon-btn map-editor-close" type="button" aria-label="閉じる">×</button></div>' +
+        '<div class="map-editor-grid">' +
+        '<label class="full">デバイス<select id="mapEditDevice">' + devices + '</select></label>' +
+        '<label>表示方式<select id="mapEditDisplayMode"><option value="card" ' + (mode === 'card' ? 'selected' : '') + '>カード固定</option><option value="popup" ' + (mode === 'popup' ? 'selected' : '') + '>クリック表示</option></select></label>' +
+        '<label>表示名<input id="mapEditLabel" value="' + esc(attrEscape(item.label || '')) + '"></label>' +
+        '<label>X<input id="mapEditX" type="number" min="0" max="1" step="0.001" value="' + x.toFixed(3) + '"></label>' +
+        '<label>Y<input id="mapEditY" type="number" min="0" max="1" step="0.001" value="' + y.toFixed(3) + '"></label>' +
+        '<label>幅<input id="mapEditWidth" type="number" min="100" max="360" step="1" value="' + esc(attrEscape(String(width))) + '"></label>' +
+        '<label>高さ<input id="mapEditHeight" type="number" min="54" max="260" step="1" value="' + esc(attrEscape(String(height))) + '"></label>' +
+        '<div class="full"><div class="hint" style="margin-bottom:6px">点灯した key が表示されます。ドラッグで順序を変更できます。</div><div id="mapEditMetrics" class="map-editor-metrics">' + metrics + '</div></div>' +
+        '</div>' +
+        '<div class="map-editor-actions"><button type="button" class="secondary map-editor-close">閉じる</button><button type="button" class="danger map-editor-delete">削除</button></div>' +
+        '</div>';
     }
 
     function renderMapAddControls() {
@@ -1450,6 +1545,77 @@
       const p = state.mapAddPoint || { x: 0.5, y: 0.5 };
       $('mapAddX').value = Number(p.x).toFixed(3);
       $('mapAddY').value = Number(p.y).toFixed(3);
+    }
+
+    function mapEditorDeviceOptions(currentDeviceId) {
+      const placed = {};
+      getMapDraftItems().forEach((item) => {
+        if (item.bind_ref && item.bind_ref !== currentDeviceId) placed[item.bind_ref] = true;
+      });
+      return (state.snapshot.devices || []).filter((d) => d.enabled !== false && (!placed[d.device_id] || d.device_id === currentDeviceId)).map((d) => {
+        const label = (d.area_id || d.name) ? (d.area_id || d.name) + ' (' + d.device_id + ')' : d.device_id;
+        return '<option value="' + esc(attrEscape(d.device_id)) + '" ' + (d.device_id === currentDeviceId ? 'selected' : '') + '>' + esc(label) + '</option>';
+      }).join('');
+    }
+
+    function renderMapEditorMetricChips(item) {
+      const cfg = item.style_config || parseStyle(item.style);
+      const device = deviceMap()[item.bind_ref] || {};
+      const keys = (device.metricKeys || []).filter((m) => !isBatteryMetric(m));
+      const selected = [];
+      (cfg.metrics || []).forEach((key) => {
+        if (keys.indexOf(key) > -1 && selected.indexOf(key) < 0) selected.push(key);
+      });
+      const ordered = selected.concat(keys.filter((key) => selected.indexOf(key) < 0));
+      return ordered.map((key) => {
+        const active = selected.indexOf(key) > -1;
+        return '<button type="button" class="metric-chip map-editor-chip ' + (active ? 'active' : '') + '" draggable="' + (active ? 'true' : 'false') + '" data-key="' + esc(attrEscape(key)) + '">' + esc(metricLabel(key)) + '</button>';
+      }).join('');
+    }
+
+    function selectedMapEditorItem() {
+      return layoutById(state.mapEditorItemId);
+    }
+
+    function openMapItemEditor(itemId) {
+      state.mapEditorItemId = itemId || '';
+      state.mapAddPoint = null;
+      renderMapPreview();
+    }
+
+    function closeMapItemEditor() {
+      state.mapEditorItemId = '';
+      renderMapPreview();
+    }
+
+    function updateMapEditorDraft(options) {
+      const item = selectedMapEditorItem();
+      if (!item) return;
+      const cfg = item.style_config || parseStyle(item.style);
+      const oldRef = item.bind_ref;
+      const nextRef = $('mapEditDevice') ? $('mapEditDevice').value : item.bind_ref;
+      item.bind_ref = nextRef || item.bind_ref;
+      item.label = $('mapEditLabel') ? $('mapEditLabel').value : item.label;
+      item.x_norm = Math.max(0, Math.min(1, Number(($('mapEditX') && $('mapEditX').value) || item.x_norm || 0.5)));
+      item.y_norm = Math.max(0, Math.min(1, Number(($('mapEditY') && $('mapEditY').value) || item.y_norm || 0.5)));
+      const mode = $('mapEditDisplayMode') && $('mapEditDisplayMode').value === 'popup' ? 'popup' : 'card';
+      const width = Math.max(100, Math.min(360, Number(($('mapEditWidth') && $('mapEditWidth').value) || cfg.cardWidth || 150)));
+      const heightRaw = Number(($('mapEditHeight') && $('mapEditHeight').value) || cfg.cardHeight || 0);
+      const height = heightRaw ? Math.max(54, Math.min(260, heightRaw)) : 0;
+      let metrics = Array.from(document.querySelectorAll('#mapEditMetrics .metric-chip.active')).map((chip) => chip.getAttribute('data-key')).filter(Boolean);
+      if (oldRef !== item.bind_ref || (options && options.resetMetrics)) {
+        const dev = deviceMap()[item.bind_ref] || {};
+        metrics = (dev.metricKeys || []).filter((m) => !isBatteryMetric(m));
+      }
+      item.style_config = {
+        metrics: metrics.slice(0, 12),
+        displayMode: mode,
+        cardWidth: mode === 'card' ? Math.round(width) : 0,
+        cardHeight: mode === 'card' ? Math.round(height) : 0
+      };
+      markMapDirty();
+      renderMapPreview();
+      renderMapAddControls();
     }
 
     function renderDeviceMetricToggles(device, selectedMetrics) {
@@ -1926,6 +2092,7 @@
       };
       getMapDraftItems().push(item);
       state.mapAddPoint = null;
+      state.mapEditorItemId = item.item_id;
       markMapDirty();
       renderMapPreview();
       renderMapAddControls();
@@ -2060,7 +2227,7 @@
       });
     });
     $('mapPreview').addEventListener('pointerdown', (ev) => {
-      if (ev.target.closest('.map-del') || ev.target.closest('.map-add-popover')) return;
+      if (ev.target.closest('.map-del') || ev.target.closest('.map-add-popover') || ev.target.closest('.map-item-editor')) return;
       const target = ev.target.closest('.map-preview-item');
       if (!target) return;
       const item = layoutById(target.getAttribute('data-item-id'));
@@ -2089,6 +2256,8 @@
           target.removeEventListener('pointerup', upResize);
           target.removeEventListener('pointercancel', upResize);
           saveResizedLayout(item, nextW, nextH);
+          state.mapSuppressClick = true;
+          setTimeout(() => state.mapSuppressClick = false, 0);
         };
         target.addEventListener('pointermove', moveResize);
         target.addEventListener('pointerup', upResize);
@@ -2115,13 +2284,77 @@
         target.removeEventListener('pointermove', move);
         target.removeEventListener('pointerup', up);
         target.removeEventListener('pointercancel', up);
-        if (moved) saveDraggedLayout(item, lastX, lastY);
+        if (moved) {
+          saveDraggedLayout(item, lastX, lastY);
+          state.mapSuppressClick = true;
+          setTimeout(() => state.mapSuppressClick = false, 0);
+        }
       };
       target.addEventListener('pointermove', move);
       target.addEventListener('pointerup', up);
       target.addEventListener('pointercancel', up);
     });
+    $('mapPreview').addEventListener('input', (ev) => {
+      if (!ev.target.closest('.map-item-editor')) return;
+      if (ev.target.closest('#mapEditMetrics')) return;
+      if (ev.target.id === 'mapEditLabel') return;
+      updateMapEditorDraft();
+    });
+    $('mapPreview').addEventListener('change', (ev) => {
+      if (!ev.target.closest('.map-item-editor')) return;
+      updateMapEditorDraft({ resetMetrics: ev.target.id === 'mapEditDevice' });
+    });
+    $('mapPreview').addEventListener('dragstart', (ev) => {
+      const chip = ev.target.closest('#mapEditMetrics .metric-chip.active');
+      if (!chip) return;
+      chip.classList.add('dragging');
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.setData('text/plain', chip.getAttribute('data-key') || '');
+    });
+    $('mapPreview').addEventListener('dragend', (ev) => {
+      const chip = ev.target.closest('#mapEditMetrics .metric-chip');
+      if (chip) chip.classList.remove('dragging');
+      updateMapEditorDraft();
+    });
+    $('mapPreview').addEventListener('dragover', (ev) => {
+      const dragging = $('mapPreview').querySelector('#mapEditMetrics .metric-chip.dragging');
+      const over = ev.target.closest('#mapEditMetrics .metric-chip.active');
+      if (!dragging || !over || dragging === over) return;
+      ev.preventDefault();
+      const box = over.getBoundingClientRect();
+      const before = ev.clientX < box.left + box.width / 2;
+      over.parentNode.insertBefore(dragging, before ? over : over.nextSibling);
+    });
     $('mapPreview').addEventListener('click', (ev) => {
+      if (state.mapSuppressClick) {
+        ev.stopPropagation();
+        return;
+      }
+      const editor = ev.target.closest('.map-item-editor');
+      if (editor) {
+        ev.stopPropagation();
+        const chip = ev.target.closest('#mapEditMetrics .metric-chip');
+        if (chip) {
+          chip.classList.toggle('active');
+          chip.draggable = chip.classList.contains('active');
+          updateMapEditorDraft();
+          return;
+        }
+        if (ev.target.closest('.map-editor-close')) {
+          closeMapItemEditor();
+          return;
+        }
+        if (ev.target.closest('.map-editor-delete')) {
+          const item = selectedMapEditorItem();
+          if (item && confirm('この配置を削除しますか?\n' + item.item_id)) {
+            removeDraftLayout(item.item_id);
+            state.mapEditorItemId = '';
+            showToast('配置を削除しました');
+          }
+          return;
+        }
+        return;
+      }
       const del = ev.target.closest('.map-del');
       if (del) {
         ev.stopPropagation();
@@ -2132,7 +2365,13 @@
         }
         return;
       }
-      if (ev.target.closest('.map-preview-item') || ev.target.closest('.map-add-popover')) return;
+      const itemNode = ev.target.closest('.map-preview-item');
+      if (itemNode) {
+        ev.stopPropagation();
+        openMapItemEditor(itemNode.getAttribute('data-item-id'));
+        return;
+      }
+      if (ev.target.closest('.map-add-popover')) return;
       const p = pointToNorm(ev);
       openMapAddPopover(p.x, p.y);
     });

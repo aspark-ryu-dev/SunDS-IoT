@@ -414,6 +414,13 @@
     .page.hidden { display: none; }
     @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
     .page-wrap { padding: 20px; max-width: 1320px; margin: 0 auto; }
+    .map-page .page-wrap {
+      max-width: none;
+      min-height: calc(100vh - var(--header-h));
+      padding: 14px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
     .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
     .page-title { margin: 0; font: 800 22px/1.15 var(--font-display); letter-spacing: 0; }
     .page-desc { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
@@ -609,13 +616,16 @@
       border: 1px solid var(--card-border);
       border-radius: var(--r-lg);
       overflow: hidden;
-      padding: 20px;
+      padding: 10px;
       box-shadow: var(--shadow-2);
+      height: calc(100vh - var(--header-h) - 98px);
     }
     #stage {
       position: relative;
       width: 100%;
-      max-width: 1320px;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
       aspect-ratio: var(--aspect, 1.5);
       background-color: #0d1422;
       background-size: contain;
@@ -625,6 +635,25 @@
       box-shadow: 0 24px 60px -24px rgba(0,0,0,.75), 0 0 0 1px var(--line);
       overflow: hidden;
     }
+    .map-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .map-tools button {
+      padding: 7px 11px;
+      min-height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--ink-dim);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .map-tools button:hover { color: var(--ink); border-color: var(--card-border-2); }
     .empty {
       position: absolute;
       inset: 0;
@@ -725,6 +754,23 @@
       position: absolute;
       transform: translate(-50%, calc(-100% - 18px));
       z-index: 10;
+    }
+    .popup-close {
+      position: absolute;
+      top: -9px;
+      right: -9px;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      border-radius: 50%;
+      border: 1.5px solid #fff;
+      background: var(--bad);
+      color: #fff;
+      font: 800 13px/1 var(--font-display);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 4px 10px -3px rgba(0,0,0,.5);
     }
     .map-popup::after {
       content: "";
@@ -946,6 +992,8 @@
       }
       body.menu-open .sidebar { transform: translateX(0); }
       body.menu-open .sidebar-backdrop { display: block; }
+      .map-page .page-wrap { min-height: auto; padding: 16px; }
+      #stageWrap { height: auto; min-height: 420px; }
       #stage { width: 100%; }
     }
   </style>
@@ -1006,6 +1054,9 @@
             <div>
               <h2 class="page-title" data-i18n="dashboard.menu.map"></h2>
               <div class="page-desc" data-i18n="dashboard.map.description"></div>
+            </div>
+            <div class="map-tools">
+              <button id="collapsePopupsBtn" type="button" data-i18n="dashboard.map.collapseAll"></button>
             </div>
           </div>
           <div id="stageWrap">
@@ -1092,7 +1143,7 @@
           menu: { label: 'Milesight IoT', dashboard: 'Dashboard', map: 'Map', meeting: '会議室Now', lpr: 'LPR', pmc: 'PMC' },
           summary: { title: 'サマリー', devices: 'デバイス', active: '有効', placed: '配置' },
           devices: { title: 'デバイス', searchPlaceholder: 'デバイス ID、エリア、場所、種別で検索', description: 'デバイスの稼働状態とセンサー指標をリアルタイムに俯瞰します。' },
-          map: { description: '平面図上に配置したデバイスの状態を表示します。' },
+          map: { description: '平面図上に配置したデバイスの状態を表示します。', collapseAll: 'すべて閉じる' },
           filter: { all: 'すべて' },
           insight: { onlineRatio: '稼働率', byArea: 'エリア別デバイス', byType: 'センサー種別' },
           status: { noMetric: '表示指標未設定', noValue: '--', noDevices: 'デバイスがありません', noPlaced: '配置済みデバイスがありません', noBackground: '背景画像が未設定です' },
@@ -1263,6 +1314,11 @@
 
     function renderWidgets() {
       const stage = $('stage');
+      const openPopups = {};
+      stage.querySelectorAll('.map-popup').forEach((n) => {
+        const id = n.getAttribute('data-popup-id');
+        if (id) openPopups[id] = true;
+      });
       stage.querySelectorAll('.widget,.map-point,.map-popup').forEach((n) => n.remove());
       const layout = (state.data.layout || []).filter((i) => i.enabled !== false && (i.bind_type || 'device') === 'device');
       const devices = state.deviceMap;
@@ -1288,6 +1344,7 @@
             showMapPopup(item, device, title, metrics);
           });
           stage.appendChild(point);
+          if (openPopups[item.item_id]) showMapPopup(item, device, title, metrics);
           return;
         }
         const el = document.createElement('div');
@@ -1310,13 +1367,19 @@
 
     function showMapPopup(item, device, title, metrics) {
       const stage = $('stage');
-      stage.querySelectorAll('.map-popup').forEach((n) => n.remove());
+      const existing = stage.querySelector('.map-popup[data-popup-id="' + cssEscape(item.item_id) + '"]');
+      if (existing) {
+        existing.remove();
+        return;
+      }
       const popup = document.createElement('div');
       popup.className = 'widget map-popup' + (!isOnline(device) ? ' off' : '');
+      popup.setAttribute('data-popup-id', item.item_id || '');
       popup.style.left = (Number(item.x_norm) * 100) + '%';
       popup.style.top = (Number(item.y_norm) * 100) + '%';
       const batteryBadge = renderBatteryBadge(device, 'widget-battery');
       popup.innerHTML =
+        '<button class="popup-close" type="button" aria-label="閉じる">×</button>' +
         '<div class="widget-head">' +
         '<div class="widget-title">' + esc(title) + '</div>' +
         batteryBadge +
@@ -1324,6 +1387,15 @@
         '<div class="metric-lines">' + renderWidgetMetrics(device, metrics) + '</div>' +
         '<div class="widget-time">' + esc(shortDate(device.last_seen) || item.bind_ref) + '</div>';
       stage.appendChild(popup);
+    }
+
+    function closeAllMapPopups() {
+      $('stage').querySelectorAll('.map-popup').forEach((n) => n.remove());
+    }
+
+    function cssEscape(value) {
+      if (window.CSS && CSS.escape) return CSS.escape(String(value || ''));
+      return String(value || '').replace(/["\\]/g, '\\$&');
     }
 
     function renderWidgetMetrics(device, metrics) {
@@ -1382,8 +1454,29 @@
       const w = Number(config.map_width || 1200);
       const h = Number(config.map_height || 800);
       const url = config.background_url || '';
-      $('stage').style.setProperty('--aspect', String(w / h));
+      $('stage').style.setProperty('--aspect', String(w && h ? w / h : 1.5));
       $('stage').style.backgroundImage = url ? 'url("' + url + '")' : '';
+      fitStageToWrap();
+    }
+
+    function fitStageToWrap() {
+      const wrap = $('stageWrap');
+      const stage = $('stage');
+      if (!wrap || !stage) return;
+      const aspect = Number(getComputedStyle(stage).getPropertyValue('--aspect')) || 1.5;
+      const box = wrap.getBoundingClientRect();
+      const padX = 20;
+      const padY = 20;
+      const maxW = Math.max(240, box.width - padX);
+      const maxH = Math.max(180, box.height - padY);
+      let width = maxW;
+      let height = width / aspect;
+      if (height > maxH) {
+        height = maxH;
+        width = height * aspect;
+      }
+      stage.style.width = Math.floor(width) + 'px';
+      stage.style.height = Math.floor(height) + 'px';
     }
 
     function deviceMap() {
@@ -1554,6 +1647,7 @@
         section.classList.toggle('hidden', section.getAttribute('data-page') !== target);
       });
       if (persist !== false) setStored(DASHBOARD_PAGE_KEY, target);
+      if (target === 'map') setTimeout(fitStageToWrap, 0);
     }
 
     function normalizePage(page) {
@@ -1636,8 +1730,15 @@
     $('iotMenuParent').addEventListener('click', () => {
       setIotGroupCollapsed($('iotMenuParent').getAttribute('aria-expanded') !== 'false');
     });
-    $('stage').addEventListener('click', () => {
-      $('stage').querySelectorAll('.map-popup').forEach((n) => n.remove());
+    $('collapsePopupsBtn').addEventListener('click', closeAllMapPopups);
+    window.addEventListener('resize', fitStageToWrap);
+    $('stage').addEventListener('click', (ev) => {
+      if (ev.target.closest('.popup-close')) {
+        ev.stopPropagation();
+        ev.target.closest('.map-popup').remove();
+        return;
+      }
+      if (ev.target.closest('.map-popup')) ev.stopPropagation();
     });
     $('menuToggle').addEventListener('click', () => {
       if (window.matchMedia('(max-width: 920px)').matches) {

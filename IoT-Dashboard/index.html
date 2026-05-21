@@ -1319,14 +1319,14 @@
         const key = batteryMetricKey(d);
         const hit = key && d.metrics && d.metrics[key];
         const n = hit ? Number(hit.value) : NaN;
-        return isFinite(n) && n < 30;
+        return isFinite(n) && n < 20;
       }).length;
       const ratio = devices.length ? Math.round(online / devices.length * 100) : 0;
       const cards = [
         { label: t('dashboard.summary.devices'), val: devices.length, unit: '', foot: 'enabled ' + devices.filter((d) => d.enabled !== false).length, tone: 'flat' },
         { label: t('dashboard.summary.active'), val: online, unit: '/' + devices.length, foot: ratio + '% online', tone: ratio >= 70 ? 'up' : 'down' },
         { label: t('dashboard.summary.placed'), val: placed, unit: '', foot: 'map widgets', tone: 'flat' },
-        { label: '低バッテリー', val: lowBatt, unit: '', foot: '< 30%', tone: lowBatt ? 'down' : 'up' }
+        { label: '低バッテリー', val: lowBatt, unit: '', foot: '< 20%', tone: lowBatt ? 'down' : 'up' }
       ];
       $('kpiGrid').innerHTML = cards.map((c, idx) => {
         const icon = ['M3 13h8V3H3zM13 21h8V11h-8zM13 3v6h8V3zM3 17v4h8v-4z', 'M22 12h-4l-3 9L9 3l-3 9H2', 'M9 3 4 5v16l5-2 6 2 5-2V3l-5 2-6-2z', 'M2 8h16v8H2zM20 11v2'][idx];
@@ -1733,8 +1733,8 @@
 
     function batteryClass(pct, hasValue) {
       if (!hasValue) return 'b-un';
-      if (pct >= 75) return 'b-hi';
-      if (pct >= 40) return 'b-mid';
+      if (pct >= 50) return 'b-hi';
+      if (pct >= 20) return 'b-mid';
       return 'b-lo';
     }
 

@@ -180,10 +180,10 @@
     }
     .header-control select {
       width: auto;
-      min-width: 96px;
+      min-width: 66px;
       border: 1px solid var(--card-border-2);
       border-radius: var(--r-sm);
-      padding: 8px 10px;
+      padding: 6px 7px;
       font: inherit;
       background: var(--field);
       color: var(--ink);
@@ -417,9 +417,9 @@
     .map-page .page-wrap {
       max-width: none;
       min-height: calc(100vh - var(--header-h));
-      padding: 14px;
+      padding: 8px;
       display: grid;
-      grid-template-rows: auto minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
     }
     .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
     .page-title { margin: 0; font: 800 22px/1.15 var(--font-display); letter-spacing: 0; }
@@ -638,6 +638,7 @@
       display: none;
     }
     #stageWrap {
+      position: relative;
       min-width: 0;
       min-height: 0;
       display: grid;
@@ -646,10 +647,47 @@
       border: 1px solid var(--card-border);
       border-radius: var(--r-lg);
       overflow: hidden;
-      padding: 10px;
+      padding: 6px;
       box-shadow: var(--shadow-2);
-      height: calc(100vh - var(--header-h) - 98px);
+      height: calc(100vh - var(--header-h) - 16px);
     }
+    body.map-fullscreen #stageWrap {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      height: 100vh;
+      padding: 8px;
+      border-radius: 0;
+      border: 0;
+      background: #05070d;
+    }
+    body.map-fullscreen header,
+    body.map-fullscreen .sidebar {
+      display: none;
+    }
+    body.map-fullscreen .app {
+      display: block;
+      padding-top: 0;
+    }
+    body.map-fullscreen .content {
+      grid-column: auto;
+    }
+    .stage-fullscreen-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 18;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border-radius: var(--r-sm);
+      background: rgba(8,12,22,.72);
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+    }
+    .stage-fullscreen-btn svg { width: 18px; height: 18px; }
     #stage {
       position: relative;
       width: 100%;
@@ -1063,6 +1101,9 @@
         <option value="300">5m</option>
         <option value="600">10m</option>
       </select></label>
+      <button class="icon-btn" id="fullscreenBtn" type="button" aria-label="fullscreen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+      </button>
       <button class="icon-btn" id="themeToggle" type="button" aria-label="theme">
         <svg id="themeIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
       </button>
@@ -1088,16 +1129,10 @@
     <main class="content">
       <div class="page map-page hidden" data-page="map">
         <div class="page-wrap">
-          <div class="page-head">
-            <div>
-              <h2 class="page-title" data-i18n="dashboard.menu.map"></h2>
-              <div class="page-desc" data-i18n="dashboard.map.description"></div>
-            </div>
-            <div class="map-tools">
-              <button id="collapsePopupsBtn" type="button" data-i18n="dashboard.map.collapseAll"></button>
-            </div>
-          </div>
           <div id="stageWrap">
+            <button class="stage-fullscreen-btn" id="stageFullscreenBtn" type="button" aria-label="fullscreen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+            </button>
             <div id="stage"><div id="empty" class="empty"></div></div>
           </div>
         </div>
@@ -1521,6 +1556,11 @@
       stage.style.height = Math.floor(height) + 'px';
     }
 
+    function toggleMapFullscreen() {
+      document.body.classList.toggle('map-fullscreen');
+      setTimeout(fitStageToWrap, 40);
+    }
+
     function deviceMap() {
       return state.deviceMap || {};
     }
@@ -1900,7 +1940,12 @@
     $('iotMenuParent').addEventListener('click', () => {
       setIotGroupCollapsed($('iotMenuParent').getAttribute('aria-expanded') !== 'false');
     });
-    $('collapsePopupsBtn').addEventListener('click', closeAllMapPopups);
+    if ($('collapsePopupsBtn')) $('collapsePopupsBtn').addEventListener('click', closeAllMapPopups);
+    $('fullscreenBtn').addEventListener('click', toggleMapFullscreen);
+    $('stageFullscreenBtn').addEventListener('click', toggleMapFullscreen);
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && document.body.classList.contains('map-fullscreen')) toggleMapFullscreen();
+    });
     $('deviceList').addEventListener('click', (ev) => {
       const chip = ev.target.closest('.metric-chip');
       if (!chip) return;

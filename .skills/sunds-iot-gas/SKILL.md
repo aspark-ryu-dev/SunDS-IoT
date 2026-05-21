@@ -35,6 +35,8 @@ description: SunDS IoT の Google Apps Script プロジェクト（IoT-Data、Io
 
 ## Version Control
 
+- 変更を実装して検証が通ったら、ユーザーが明示的に止めない限り、そのターン内で commit して GitHub へ push する。
+
 - UI、RPC、schema、Config、deploy ID、表示ロジックを変更したら、同じ変更セットで `IoT-Data/Code.gs` と `IoT-Dashboard/Code.gs` の `BUILD_VERSION` を見直す。
 - `BUILD_VERSION` は `vYYYY-MM-DD-short-scope` 形式にする。例: `v2026-05-21-logo-config-visible-metrics`。
 - 片方だけを変更した場合も、もう片方の古い version 名が誤解を生まないか確認する。

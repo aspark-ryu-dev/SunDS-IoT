@@ -35,6 +35,6 @@
 
 ## Deployment
 
-- Do not run `push.bat`, `push.ps1`, `clasp push`, or deploy commands unless the user explicitly asks.
-- If push/deploy is requested, inspect the changed files first and summarize the scope in Chinese or Japanese.
+- After code changes are implemented and checks pass, commit and push to GitHub by default unless the user explicitly says not to.
+- Do not run `clasp push` or deploy commands unless the user explicitly asks.
 - Keep `BUILD_VERSION` current. Any UI/RPC/schema/Config/deploy-visible change must update the relevant `IoT-Data/Code.gs` or `IoT-Dashboard/Code.gs` version using `vYYYY-MM-DD-short-scope`.

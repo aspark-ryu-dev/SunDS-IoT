@@ -525,6 +525,7 @@
     .batt {
       --bc: #94a3b8;
       --bp: 0%;
+      --battery-text: #f8fafc;
       position: relative;
       display: inline-grid;
       place-items: center;
@@ -534,20 +535,27 @@
       border: 1.5px solid var(--bc);
       border-radius: 6px;
       background: var(--panel);
-      color: var(--ink);
+      color: var(--battery-text);
       font: 800 10.5px var(--font-mono);
       overflow: visible;
     }
     .batt::after { content: ""; position: absolute; right: -5px; top: 6px; width: 3.5px; height: 9px; border-radius: 0 3px 3px 0; background: var(--bc); }
-    .batt > i { position: absolute; left: 2.5px; top: 2.5px; bottom: 2.5px; width: var(--bp); max-width: calc(100% - 5px); border-radius: 3px; background: var(--bc); opacity: .85; }
-    .batt > span { position: relative; z-index: 1; color: #06111f; text-shadow: 0 1px 1px rgba(255,255,255,.5); }
-    .batt.b-lo > span {
-      color: #fff;
-      text-shadow: 0 1px 2px rgba(0,0,0,.75);
-      background: rgba(127,29,29,.42);
-      border-radius: 3px;
-      padding: 1px 3px;
+    .batt > i { position: absolute; left: 2.5px; top: 2.5px; bottom: 2.5px; width: var(--bp); max-width: calc(100% - 5px); border-radius: 3px; background: var(--bc); opacity: .9; }
+    .batt > span { position: relative; z-index: 1; color: var(--battery-text); text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+    body.theme-light .batt {
+      --battery-text: #06111f;
     }
+    body.theme-light .batt > span {
+      text-shadow: 0 1px 1px rgba(255,255,255,.75);
+    }
+    .batt.b-lo > span {
+      color: var(--battery-text);
+      text-shadow: 0 1px 2px rgba(0,0,0,.75);
+      background: transparent;
+      border-radius: 0;
+      padding: 0;
+    }
+    body.theme-light .batt.b-lo > span { text-shadow: 0 1px 1px rgba(255,255,255,.7); }
     .batt.b-hi { --bc: var(--ok); }
     .batt.b-mid { --bc: var(--warn); }
     .batt.b-lo { --bc: var(--bad); }
@@ -883,6 +891,7 @@
     }
     .battery-badge {
       --battery-color: #94a3b8;
+      --battery-text-color: #f8fafc;
       position: relative;
       display: inline-grid;
       place-items: center;
@@ -893,7 +902,7 @@
       border-radius: 6px;
       background:
         linear-gradient(180deg, rgba(255,255,255,0.98), rgba(241,245,249,0.95));
-      color: #0f172a;
+      color: var(--battery-text-color);
       font: 800 10px/1 "Outfit", sans-serif;
       overflow: visible;
       box-shadow: 0 6px 14px -8px rgba(15,23,42,0.55), inset 0 1px 0 rgba(255,255,255,0.95);
@@ -923,15 +932,22 @@
       position: relative;
       z-index: 1;
       letter-spacing: 0;
+      text-shadow: 0 1px 2px rgba(0,0,0,.5);
+    }
+    body.theme-light .battery-badge {
+      --battery-text-color: #0f172a;
+    }
+    body.theme-light .battery-text {
       text-shadow: 0 1px 1px rgba(255,255,255,0.72);
     }
     .battery-low .battery-text {
-      color: #fff;
+      color: var(--battery-text-color);
       text-shadow: 0 1px 2px rgba(0,0,0,.75);
-      background: rgba(127,29,29,.42);
-      border-radius: 3px;
-      padding: 1px 3px;
+      background: transparent;
+      border-radius: 0;
+      padding: 0;
     }
+    body.theme-light .battery-low .battery-text { text-shadow: 0 1px 1px rgba(255,255,255,.7); }
     .battery-high { --battery-color: #10b981; }
     .battery-mid { --battery-color: #f59e0b; }
     .battery-low { --battery-color: #ef4444; }
@@ -1597,8 +1613,8 @@
 
     function batteryClass(pct, hasValue) {
       if (!hasValue) return 'b-un';
-      if (pct >= 60) return 'b-hi';
-      if (pct >= 30) return 'b-mid';
+      if (pct >= 75) return 'b-hi';
+      if (pct >= 40) return 'b-mid';
       return 'b-lo';
     }
 

@@ -2318,6 +2318,15 @@
       if (/^timeinfo(time|timezone|dststatus|starttime|endtime)$/.test(key)) return false;
       if (/^regionsname\d*$/.test(key)) return false;
       if (/^dwelltimedata\d*(dwellstarttime|dwellendtime)$/.test(key)) return false;
+      if (/^deviceinfo(cusdeviceid|cussiteid|devicemac|devicename|devicesn|firmwareversion|hardwareversion|ipaddress|wlanmac)$/.test(key)) return false;
+      if (/^networkinfo(networkstatus|iccid|imei|cellid|lac)$/.test(key)) return false;
+      if (/^timeinfo(dststatus|enabledst|time|timezone|starttime|endtime)$/.test(key)) return false;
+      if (/^linetriggerdata\d*line(name|uuid)$/.test(key)) return false;
+      if (/^regiontriggerdata(regioncountdata|dwelltimedata)\d*region(name|uuid)$/.test(key)) return false;
+      if (/^regiontriggerdatadwelltimedata\d*dwell(start|end)time$/.test(key)) return false;
+      if (/^attentionregiontriggerdataregionattentiontimedata\d*regionuuid$/.test(key)) return false;
+      if (/^ditriggerdataditriggereventname$/.test(key)) return false;
+      if (/^isretransmission$/.test(key)) return false;
       return true;
     }
 

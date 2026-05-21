@@ -1906,6 +1906,8 @@
         line_trigger_data_out: { label: '退場トリガー', unit: '人' }
       };
       if (direct[raw]) return direct[raw];
+      const vs125 = inferVs125MetricMeta(raw);
+      if (vs125) return vs125;
 
       let m = raw.match(/^flow_data_([A-D])_([A-D])$/);
       if (m) return { label: m[1] + '-' + m[2] + ' 人流', unit: '人' };
@@ -1934,6 +1936,88 @@
       }
 
       return { label: raw, unit: '' };
+    }
+
+    function inferVs125MetricMeta(metric) {
+      const raw = normalizeMetricPath(metric);
+      let m = raw.match(/^line_trigger_data(?:_(\d+))?_(children|group|staff|total)_(female_in|female_out|male_in|male_out|in|out)$/);
+      if (m) {
+        return { label: numberedMetricLabel('ライン', m[1], vs125GroupLabel(m[2]) + ' ' + vs125LineCountLabel(m[3])), unit: '人' };
+      }
+      m = raw.match(/^region_trigger_data_region_count_data(?:_(\d+))?_(total|children|staff)_(current_female|current_male|current_total)$/);
+      if (m) {
+        return { label: numberedMetricLabel('リージョン', m[1], vs125GroupLabel(m[2]) + ' ' + vs125RegionCountLabel(m[3])), unit: '人' };
+      }
+      m = raw.match(/^region_trigger_data_dwell_time_data(?:_(\d+))?_(children|duration|people_id|region|gender|staff)$/);
+      if (m) {
+        return { label: numberedMetricLabel('滞在', m[1], vs125DwellLabel(m[2])), unit: vs125LeafUnit(m[2]) };
+      }
+      m = raw.match(/^attention_region_trigger_data_region_attention_time_data(?:_(\d+))?_(region|children|attention_time_ms|people_id|gender|staff)$/);
+      if (m) {
+        return { label: numberedMetricLabel('注視', m[1], vs125DwellLabel(m[2])), unit: vs125LeafUnit(m[2]) };
+      }
+      const direct = {
+        device_info_running_time: { label: '稼働時間', unit: 's' },
+        device_info_cpu_cpu_temperature: { label: 'CPU温度', unit: '°C' },
+        device_info_cpu_cpu_usage: { label: 'CPU使用率', unit: '%' },
+        device_info_device_tilt_pitch_roll_pitch: { label: '傾き Pitch', unit: '°' },
+        device_info_device_tilt_pitch_roll_roll: { label: '傾き Roll', unit: '°' },
+        device_info_ram_memory_usage: { label: 'メモリ使用率', unit: '%' },
+        device_info_ram_total_memory_mb: { label: 'メモリ総量', unit: 'MB' },
+        device_info_ram_used_memory_mb: { label: 'メモリ使用量', unit: 'MB' },
+        device_info_storage_storage_usage: { label: 'ストレージ使用率', unit: '%' },
+        device_info_storage_total_space_gb: { label: 'ストレージ総量', unit: 'GB' },
+        device_info_storage_used_space_gb: { label: 'ストレージ使用量', unit: 'GB' },
+        di_trigger_data_di_trigger_count: { label: 'DIトリガー回数', unit: '回' }
+      };
+      return direct[raw] || null;
+    }
+
+    function normalizeMetricPath(metric) {
+      return String(metric || '').trim().replace(/\[\]/g, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase();
+    }
+
+    function numberedMetricLabel(prefix, index, label) {
+      return index === undefined || index === '' ? label : prefix + (Number(index) + 1) + ' ' + label;
+    }
+
+    function vs125GroupLabel(key) {
+      return { children: '子供', group: 'グループ', staff: 'スタッフ', total: '総計' }[key] || key;
+    }
+
+    function vs125LineCountLabel(key) {
+      return {
+        female_in: '女性入場人数',
+        female_out: '女性退場人数',
+        male_in: '男性入場人数',
+        male_out: '男性退場人数',
+        in: '入場人数',
+        out: '退場人数'
+      }[key] || key;
+    }
+
+    function vs125RegionCountLabel(key) {
+      return {
+        current_female: '現在女性人数',
+        current_male: '現在男性人数',
+        current_total: '現在総人数'
+      }[key] || key;
+    }
+
+    function vs125DwellLabel(key) {
+      return {
+        children: '子供判定',
+        duration: '滞在時間',
+        attention_time_ms: '注視時間',
+        people_id: '人物ID',
+        region: 'リージョン番号',
+        gender: '性別',
+        staff: 'スタッフ判定'
+      }[key] || key;
+    }
+
+    function vs125LeafUnit(key) {
+      return key === 'duration' || key === 'attention_time_ms' ? 'ms' : '';
     }
 
     function renderBatteryBadge(device, extraClass) {
@@ -1985,6 +2069,15 @@
       if (/^timeinfo(time|timezone|dststatus|starttime|endtime)$/.test(key)) return false;
       if (/^regionsname\d*$/.test(key)) return false;
       if (/^dwelltimedata\d*(dwellstarttime|dwellendtime)$/.test(key)) return false;
+      if (/^deviceinfo(cusdeviceid|cussiteid|devicemac|devicename|devicesn|firmwareversion|hardwareversion|ipaddress|wlanmac)$/.test(key)) return false;
+      if (/^networkinfo(networkstatus|iccid|imei|cellid|lac)$/.test(key)) return false;
+      if (/^timeinfo(dststatus|enabledst|time|timezone|starttime|endtime)$/.test(key)) return false;
+      if (/^linetriggerdata\d*line(name|uuid)$/.test(key)) return false;
+      if (/^regiontriggerdata(regioncountdata|dwelltimedata)\d*region(name|uuid)$/.test(key)) return false;
+      if (/^regiontriggerdatadwelltimedata\d*dwell(start|end)time$/.test(key)) return false;
+      if (/^attentionregiontriggerdataregionattentiontimedata\d*regionuuid$/.test(key)) return false;
+      if (/^ditriggerdataditriggereventname$/.test(key)) return false;
+      if (/^isretransmission$/.test(key)) return false;
       return true;
     }
 
@@ -2017,6 +2110,8 @@
       const key = String(metric || '').toLowerCase();
       const max = { temperature: 40, humidity: 100, co2: 2000, tvoc: 1000, pm2_5: 100, pressure: 1100, occupancy: 1, people_count_all: 20, current_total: 20, max_counted: 20, in_counted: 20, out_counted: 20, capacity_counted: 20, voltage: 240, power_consumption: 100 };
       if (/^(flow_data|current_counted|dwell_time_data)_/.test(key)) return 20;
+      if (/(female_in|female_out|male_in|male_out|current_female|current_male|current_total|_in|_out)$/.test(key)) return 20;
+      if (/(duration|attention_time_ms)$/.test(key)) return 600000;
       return max[key] || 100;
     }
 

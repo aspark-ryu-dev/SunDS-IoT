@@ -883,9 +883,18 @@ function getAdminSnapshot_() {
       layout: readLayout_()
     },
     deviceExamples: getDeviceExampleModels_(),
-    metricMeta: METRIC_META,
+    metricMeta: buildSnapshotMetricMeta_(latest),
     build: BUILD_VERSION
   };
+}
+
+function buildSnapshotMetricMeta_(latestRows) {
+  const out = JSON.parse(JSON.stringify(METRIC_META));
+  (latestRows || []).forEach(function (row) {
+    const key = String((row && row.metric) || '').trim();
+    if (key && !out[key] && !isSystemMetadataKey_(key)) out[key] = metricMetaForKey_(key);
+  });
+  return out;
 }
 
 function normalizeDeviceInput_(device) {
@@ -1083,6 +1092,15 @@ function isSystemMetadataKey_(key) {
   if (/^timeinfo(time|timezone|dststatus|starttime|endtime)$/.test(normalized)) return true;
   if (/^regionsname\d*$/.test(normalized)) return true;
   if (/^dwelltimedata\d*(dwellstarttime|dwellendtime)$/.test(normalized)) return true;
+  if (/^deviceinfo(cusdeviceid|cussiteid|devicemac|devicename|devicesn|firmwareversion|hardwareversion|ipaddress|wlanmac)$/.test(normalized)) return true;
+  if (/^networkinfo(networkstatus|iccid|imei|cellid|lac)$/.test(normalized)) return true;
+  if (/^timeinfo(dststatus|enabledst|time|timezone|starttime|endtime)$/.test(normalized)) return true;
+  if (/^linetriggerdata\d*line(name|uuid)$/.test(normalized)) return true;
+  if (/^regiontriggerdata(regioncountdata|dwelltimedata)\d*region(name|uuid)$/.test(normalized)) return true;
+  if (/^regiontriggerdatadwelltimedata\d*dwell(start|end)time$/.test(normalized)) return true;
+  if (/^attentionregiontriggerdataregionattentiontimedata\d*regionuuid$/.test(normalized)) return true;
+  if (/^ditriggerdataditriggereventname$/.test(normalized)) return true;
+  if (/^isretransmission$/.test(normalized)) return true;
   return false;
 }
 
@@ -1099,10 +1117,96 @@ function normalizeSystemMetadataKey_(key) {
 }
 
 function metricMetaForKey_(key) {
+  const vs125 = vs125MetricMetaForKey_(key);
+  if (vs125) return vs125;
   return {
     label: metricLabelJa_(key),
     unit: metricUnitForKey_(key)
   };
+}
+
+function vs125MetricMetaForKey_(key) {
+  const raw = normalizeMetricPathForPattern_(key);
+  let m = raw.match(/^line_trigger_data(?:_(\d+))?_(children|group|staff|total)_(female_in|female_out|male_in|male_out|in|out)$/);
+  if (m) {
+    return { label: prefixNumberedLabel_('ライン', m[1], vs125GroupLabel_(m[2]) + ' ' + vs125LineCountLabel_(m[3])), unit: '人' };
+  }
+  m = raw.match(/^region_trigger_data_region_count_data(?:_(\d+))?_(total|children|staff)_(current_female|current_male|current_total)$/);
+  if (m) {
+    return { label: prefixNumberedLabel_('リージョン', m[1], vs125GroupLabel_(m[2]) + ' ' + vs125RegionCountLabel_(m[3])), unit: '人' };
+  }
+  m = raw.match(/^region_trigger_data_dwell_time_data(?:_(\d+))?_(children|duration|people_id|region|gender|staff)$/);
+  if (m) {
+    return { label: prefixNumberedLabel_('滞在', m[1], vs125DwellLabel_(m[2])), unit: vs125UnitForLeaf_(m[2]) };
+  }
+  m = raw.match(/^attention_region_trigger_data_region_attention_time_data(?:_(\d+))?_(region|children|attention_time_ms|people_id|gender|staff)$/);
+  if (m) {
+    return { label: prefixNumberedLabel_('注視', m[1], vs125DwellLabel_(m[2])), unit: vs125UnitForLeaf_(m[2]) };
+  }
+  const direct = {
+    device_info_running_time: { label: '稼働時間', unit: 's' },
+    device_info_cpu_cpu_temperature: { label: 'CPU温度', unit: '°C' },
+    device_info_cpu_cpu_usage: { label: 'CPU使用率', unit: '%' },
+    device_info_device_tilt_pitch_roll_pitch: { label: '傾き Pitch', unit: '°' },
+    device_info_device_tilt_pitch_roll_roll: { label: '傾き Roll', unit: '°' },
+    device_info_ram_memory_usage: { label: 'メモリ使用率', unit: '%' },
+    device_info_ram_total_memory_mb: { label: 'メモリ総量', unit: 'MB' },
+    device_info_ram_used_memory_mb: { label: 'メモリ使用量', unit: 'MB' },
+    device_info_storage_storage_usage: { label: 'ストレージ使用率', unit: '%' },
+    device_info_storage_total_space_gb: { label: 'ストレージ総量', unit: 'GB' },
+    device_info_storage_used_space_gb: { label: 'ストレージ使用量', unit: 'GB' },
+    di_trigger_data_di_trigger_count: { label: 'DIトリガー回数', unit: '回' }
+  };
+  return direct[raw] || null;
+}
+
+function normalizeMetricPathForPattern_(key) {
+  return String(key || '').trim().replace(/\[\]/g, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase();
+}
+
+function prefixNumberedLabel_(prefix, index, label) {
+  if (index === undefined || index === '') return label;
+  return prefix + (Number(index) + 1) + ' ' + label;
+}
+
+function vs125GroupLabel_(key) {
+  return { children: '子供', group: 'グループ', staff: 'スタッフ', total: '総計' }[key] || key;
+}
+
+function vs125LineCountLabel_(key) {
+  return {
+    female_in: '女性入場人数',
+    female_out: '女性退場人数',
+    male_in: '男性入場人数',
+    male_out: '男性退場人数',
+    in: '入場人数',
+    out: '退場人数'
+  }[key] || key;
+}
+
+function vs125RegionCountLabel_(key) {
+  return {
+    current_female: '現在女性人数',
+    current_male: '現在男性人数',
+    current_total: '現在総人数'
+  }[key] || key;
+}
+
+function vs125DwellLabel_(key) {
+  return {
+    children: '子供判定',
+    duration: '滞在時間',
+    attention_time_ms: '注視時間',
+    people_id: '人物ID',
+    region: 'リージョン番号',
+    gender: '性別',
+    staff: 'スタッフ判定'
+  }[key] || key;
+}
+
+function vs125UnitForLeaf_(key) {
+  if (key === 'duration' || key === 'attention_time_ms') return 'ms';
+  return '';
 }
 
 function metricLabelJa_(key) {

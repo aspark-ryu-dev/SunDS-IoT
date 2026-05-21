@@ -980,11 +980,39 @@
       box-shadow: 0 7px 18px -7px rgba(0,0,0,.65), 0 0 0 0 rgba(45,212,191,.5);
       animation: pulse 2.4s infinite;
       cursor: pointer;
+      overflow: visible;
     }
     .map-point.off {
       background: var(--bad);
       animation: none;
       box-shadow: 0 7px 18px -7px rgba(0,0,0,.65), 0 0 0 2px rgba(251,113,133,.3);
+    }
+    .map-point-label {
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 7px);
+      transform: translateX(-50%);
+      max-width: 150px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(8,12,20,.78);
+      color: #fff;
+      font: 800 10px/1.25 var(--font-ui);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+      box-shadow: 0 9px 18px -12px rgba(0,0,0,.85);
+      transition: opacity .16s ease, transform .16s ease;
+    }
+    body[data-theme="light"] .map-point-label {
+      background: rgba(255,255,255,.9);
+      color: #111827;
+      border: 1px solid rgba(15,23,42,.12);
+    }
+    .map-point.open .map-point-label {
+      opacity: 0;
+      transform: translate(-50%, -4px);
     }
     .map-popup {
       position: absolute;
@@ -1594,9 +1622,12 @@
           const point = document.createElement('button');
           point.type = 'button';
           point.className = 'map-point' + (!isOnline(device) ? ' off' : '');
+          if (openPopups[item.item_id]) point.className += ' open';
+          point.setAttribute('data-point-id', item.item_id || '');
           point.style.left = (Number(item.x_norm) * 100) + '%';
           point.style.top = (Number(item.y_norm) * 100) + '%';
           point.setAttribute('aria-label', title);
+          point.innerHTML = '<span class="map-point-label">' + esc(title) + '</span>';
           point.addEventListener('click', (ev) => {
             ev.stopPropagation();
             showMapPopup(item, device, title, metrics);
@@ -1626,8 +1657,10 @@
     function showMapPopup(item, device, title, metrics) {
       const stage = $('stage');
       const existing = stage.querySelector('.map-popup[data-popup-id="' + cssEscape(item.item_id) + '"]');
+      const point = stage.querySelector('.map-point[data-point-id="' + cssEscape(item.item_id) + '"]');
       if (existing) {
         existing.remove();
+        if (point) point.classList.remove('open');
         return;
       }
       const popup = document.createElement('div');
@@ -1645,10 +1678,12 @@
         '<div class="metric-lines">' + renderWidgetMetrics(device, metrics) + '</div>' +
         '<div class="widget-time">' + esc(shortDate(device.last_seen) || item.bind_ref) + '</div>';
       stage.appendChild(popup);
+      if (point) point.classList.add('open');
     }
 
     function closeAllMapPopups() {
       $('stage').querySelectorAll('.map-popup').forEach((n) => n.remove());
+      $('stage').querySelectorAll('.map-point.open').forEach((n) => n.classList.remove('open'));
     }
 
     function cssEscape(value) {
@@ -2364,7 +2399,13 @@
     $('stage').addEventListener('click', (ev) => {
       if (ev.target.closest('.popup-close')) {
         ev.stopPropagation();
-        ev.target.closest('.map-popup').remove();
+        const popup = ev.target.closest('.map-popup');
+        const popupId = popup && popup.getAttribute('data-popup-id');
+        if (popup) popup.remove();
+        if (popupId) {
+          const point = $('stage').querySelector('.map-point[data-point-id="' + cssEscape(popupId) + '"]');
+          if (point) point.classList.remove('open');
+        }
         return;
       }
       if (ev.target.closest('.map-popup')) ev.stopPropagation();

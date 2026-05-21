@@ -582,18 +582,44 @@
     .metric-chip.dragging { opacity: .55; cursor: grabbing; }
     .map-preview {
       position: relative;
+      isolation: isolate;
       width: 100%;
       aspect-ratio: var(--map-aspect, 1.5);
       min-height: 560px;
       border: 1px solid var(--line);
       border-radius: var(--r-md);
-      background-color: #0d1422;
+      background-color: #f8fbff;
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
       overflow: hidden;
       touch-action: none;
-      box-shadow: 0 24px 60px -24px rgba(0,0,0,.75), 0 0 0 1px var(--line);
+      box-shadow:
+        0 30px 70px -28px rgba(5,10,20,.78),
+        0 0 0 1px rgba(59,130,246,.14),
+        0 0 42px -18px rgba(45,212,191,.55);
+    }
+    .map-preview::before {
+      content: "";
+      position: absolute;
+      inset: -2px;
+      z-index: 1;
+      pointer-events: none;
+      background:
+        radial-gradient(900px 360px at 52% 0%, rgba(91,157,246,.16), transparent 58%),
+        radial-gradient(520px 300px at 0% 100%, rgba(45,212,191,.13), transparent 62%),
+        linear-gradient(90deg, rgba(7,9,16,.1), transparent 8%, transparent 92%, rgba(7,9,16,.12)),
+        linear-gradient(180deg, rgba(7,9,16,.12), transparent 9%, transparent 90%, rgba(7,9,16,.1));
+      mix-blend-mode: multiply;
+    }
+    .map-preview::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      border-radius: inherit;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.72), inset 0 0 56px rgba(91,157,246,.12);
     }
     .map-preview:empty::before {
       content: "プレビューなし";
@@ -607,6 +633,7 @@
     .map-preview-item {
       position: absolute;
       transform: translate(-50%, -50%);
+      z-index: 3;
       width: var(--card-w, 150px);
       min-width: 100px;
       max-width: 360px;
@@ -699,31 +726,27 @@
       border-bottom: 2px solid #64748b;
     }
     .map-preview-item.popup .map-resize { display: none; }
+    .map-editor-panel {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .map-editor-panel:empty { display: none; }
     .map-item-editor {
-      position: absolute;
-      z-index: 20;
-      width: min(360px, calc(100% - 24px));
-      transform: translate(-50%, 14px);
+      position: relative;
+      width: 100%;
+      transform: none;
       padding: 14px;
       border-radius: var(--r-md);
       border: 1px solid var(--card-border-2);
-      background: var(--glass);
+      background:
+        linear-gradient(135deg, rgba(45,212,191,.08), rgba(91,157,246,.07)),
+        var(--glass);
       backdrop-filter: blur(22px) saturate(145%);
       box-shadow: var(--shadow-2);
       color: var(--ink);
     }
-    .map-item-editor::before {
-      content: "";
-      position: absolute;
-      left: 50%;
-      top: -7px;
-      width: 12px;
-      height: 12px;
-      transform: translateX(-50%) rotate(45deg);
-      border-left: 1px solid var(--card-border-2);
-      border-top: 1px solid var(--card-border-2);
-      background: var(--glass);
-    }
+    .map-item-editor::before { display: none; }
     .map-editor-head {
       display: flex;
       align-items: center;
@@ -849,7 +872,10 @@
       background: var(--warn-soft);
     }
     .map-preview.dirty {
-      box-shadow: 0 24px 60px -24px rgba(0,0,0,.75), 0 0 0 2px rgba(251,191,36,.42);
+      box-shadow:
+        0 30px 70px -28px rgba(5,10,20,.78),
+        0 0 0 2px rgba(251,191,36,.42),
+        0 0 42px -18px rgba(251,191,36,.55);
     }
     .map-control-grid {
       display: grid;
@@ -1268,6 +1294,7 @@
             </div>
           </div>
         </div>
+        <div id="mapEditorPanel" class="map-editor-panel"></div>
         <div class="map-edit-note">
           上のマップをクリックして追加位置を指定します。数値を微調整してから追加できます。配置済みカードはドラッグで移動、×で削除し、最後に「マップを保存」で反映します。
         </div>
@@ -1766,8 +1793,15 @@
       const target = state.mapAddPoint
         ? '<div class="map-target-dot" style="left:' + (state.mapAddPoint.x * 100) + '%;top:' + (state.mapAddPoint.y * 100) + '%"></div>'
         : '';
-      el.innerHTML = items + renderMapItemEditor() + target + hint;
+      el.innerHTML = items + target + hint;
+      renderMapEditorPanel();
       updateMapDirtyUi();
+    }
+
+    function renderMapEditorPanel() {
+      const panel = $('mapEditorPanel');
+      if (!panel) return;
+      panel.innerHTML = renderMapItemEditor();
     }
 
     function renderMapItemEditor() {
@@ -1777,13 +1811,11 @@
       const mode = cfg.displayMode === 'popup' ? 'popup' : 'card';
       const x = Number(item.x_norm || 0.5);
       const y = Number(item.y_norm || 0.5);
-      const left = Math.max(18, Math.min(82, x * 100));
-      const top = Math.min(82, y * 100);
       const devices = mapEditorDeviceOptions(item.bind_ref);
       const metrics = renderMapEditorMetricChips(item);
       const width = Number(cfg.cardWidth) || 150;
       const height = Number(cfg.cardHeight) || '';
-      return '<div class="map-item-editor" data-editor-id="' + esc(attrEscape(item.item_id)) + '" style="left:' + left + '%;top:' + top + '%">' +
+      return '<div class="map-item-editor" data-editor-id="' + esc(attrEscape(item.item_id)) + '">' +
         '<div class="map-editor-head"><b>配置編集</b><button class="icon-btn map-editor-close" type="button" aria-label="閉じる">×</button></div>' +
         '<div class="map-editor-grid">' +
         '<label class="full">デバイス<select id="mapEditDevice">' + devices + '</select></label>' +
@@ -1852,6 +1884,10 @@
       state.mapEditorItemId = itemId || '';
       state.mapAddPoint = null;
       renderMapPreview();
+      setTimeout(() => {
+        const panel = $('mapEditorPanel');
+        if (panel && panel.innerHTML) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 30);
     }
 
     function closeMapItemEditor() {
@@ -2672,36 +2708,59 @@
       target.addEventListener('pointerup', up);
       target.addEventListener('pointercancel', up);
     });
-    $('mapPreview').addEventListener('input', (ev) => {
+    $('mapEditorPanel').addEventListener('input', (ev) => {
       if (!ev.target.closest('.map-item-editor')) return;
       if (ev.target.closest('#mapEditMetrics')) return;
       if (ev.target.id === 'mapEditLabel') return;
       updateMapEditorDraft();
     });
-    $('mapPreview').addEventListener('change', (ev) => {
+    $('mapEditorPanel').addEventListener('change', (ev) => {
       if (!ev.target.closest('.map-item-editor')) return;
       updateMapEditorDraft({ resetMetrics: ev.target.id === 'mapEditDevice' });
     });
-    $('mapPreview').addEventListener('dragstart', (ev) => {
+    $('mapEditorPanel').addEventListener('dragstart', (ev) => {
       const chip = ev.target.closest('#mapEditMetrics .metric-chip.active');
       if (!chip) return;
       chip.classList.add('dragging');
       ev.dataTransfer.effectAllowed = 'move';
       ev.dataTransfer.setData('text/plain', chip.getAttribute('data-key') || '');
     });
-    $('mapPreview').addEventListener('dragend', (ev) => {
+    $('mapEditorPanel').addEventListener('dragend', (ev) => {
       const chip = ev.target.closest('#mapEditMetrics .metric-chip');
       if (chip) chip.classList.remove('dragging');
       updateMapEditorDraft();
     });
-    $('mapPreview').addEventListener('dragover', (ev) => {
-      const dragging = $('mapPreview').querySelector('#mapEditMetrics .metric-chip.dragging');
+    $('mapEditorPanel').addEventListener('dragover', (ev) => {
+      const dragging = $('mapEditorPanel').querySelector('#mapEditMetrics .metric-chip.dragging');
       const over = ev.target.closest('#mapEditMetrics .metric-chip.active');
       if (!dragging || !over || dragging === over) return;
       ev.preventDefault();
       const box = over.getBoundingClientRect();
       const before = ev.clientX < box.left + box.width / 2;
       over.parentNode.insertBefore(dragging, before ? over : over.nextSibling);
+    });
+    $('mapEditorPanel').addEventListener('click', (ev) => {
+      const editor = ev.target.closest('.map-item-editor');
+      if (!editor) return;
+      const chip = ev.target.closest('#mapEditMetrics .metric-chip');
+      if (chip) {
+        chip.classList.toggle('active');
+        chip.draggable = chip.classList.contains('active');
+        updateMapEditorDraft();
+        return;
+      }
+      if (ev.target.closest('.map-editor-close')) {
+        closeMapItemEditor();
+        return;
+      }
+      if (ev.target.closest('.map-editor-delete')) {
+        const item = selectedMapEditorItem();
+        if (item && confirm('この配置を削除しますか？\n' + item.item_id)) {
+          removeDraftLayout(item.item_id);
+          state.mapEditorItemId = '';
+          showToast('配置を削除しました');
+        }
+      }
     });
     $('mapPreview').addEventListener('click', (ev) => {
       if (state.mapSuppressClick) {

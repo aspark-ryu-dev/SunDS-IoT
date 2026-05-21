@@ -990,7 +990,7 @@
     .map-point-label {
       position: absolute;
       left: 50%;
-      top: calc(100% + 7px);
+      bottom: calc(100% + 8px);
       transform: translateX(-50%);
       max-width: 150px;
       padding: 3px 8px;
@@ -1012,7 +1012,7 @@
     }
     .map-point.open .map-point-label {
       opacity: 0;
-      transform: translate(-50%, -4px);
+      transform: translate(-50%, 4px);
     }
     .map-popup {
       position: absolute;
@@ -1615,6 +1615,7 @@
       layout.forEach((item) => {
         const device = devices[item.bind_ref] || {};
         const title = item.label || deviceDisplayTitle(device) || item.bind_ref;
+        const pointTitle = deviceClickTitle(device, item);
         const config = item.style_config || parseStyle(item.style);
         const metrics = (config.metrics || []).slice(0, 12);
         const mode = config.displayMode === 'popup' ? 'popup' : 'card';
@@ -1626,14 +1627,14 @@
           point.setAttribute('data-point-id', item.item_id || '');
           point.style.left = (Number(item.x_norm) * 100) + '%';
           point.style.top = (Number(item.y_norm) * 100) + '%';
-          point.setAttribute('aria-label', title);
-          point.innerHTML = '<span class="map-point-label">' + esc(title) + '</span>';
+          point.setAttribute('aria-label', pointTitle);
+          point.innerHTML = '<span class="map-point-label">' + esc(pointTitle) + '</span>';
           point.addEventListener('click', (ev) => {
             ev.stopPropagation();
-            showMapPopup(item, device, title, metrics);
+            showMapPopup(item, device, pointTitle, metrics);
           });
           stage.appendChild(point);
-          if (openPopups[item.item_id]) showMapPopup(item, device, title, metrics);
+          if (openPopups[item.item_id]) showMapPopup(item, device, pointTitle, metrics);
           return;
         }
         const el = document.createElement('div');
@@ -1864,6 +1865,11 @@
       const model = device.sensor_type || device.type || device.name || '';
       const place = displayLocation(device);
       return [model, place].filter(Boolean).join(' / ');
+    }
+
+    function deviceClickTitle(device, item) {
+      const name = device && String(device.name || '').trim();
+      return name || (item && item.bind_ref) || '';
     }
 
     function deviceDisplayMetrics(device) {

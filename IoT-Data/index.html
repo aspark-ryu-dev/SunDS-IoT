@@ -1015,6 +1015,18 @@
     .drawer-title { font: 800 17px var(--font-display); }
     .drawer-sub { color: var(--muted); font-size: 12px; margin-top: 3px; font-family: var(--font-mono); }
     .drawer-body { padding: 18px 20px 28px; }
+    .drawer-savebar {
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+      display: flex;
+      gap: 9px;
+      padding: 12px 20px 16px;
+      border-top: 1px solid var(--line);
+      background: var(--glass);
+      backdrop-filter: blur(18px) saturate(140%);
+    }
+    .drawer-savebar button { flex: 1; }
     .field-group { margin-bottom: 18px; }
     .field-group > h3 {
       margin: 0 0 10px; font-size: 11px; font-weight: 800; letter-spacing: .08em;
@@ -1361,11 +1373,11 @@
             <p class="hint full">実際に受信した key だけ表示します。点灯している key がカードに表示され、ドラッグで表示順を変更できます。</p>
           </div>
         </div>
-        <div class="drawer-actions">
-          <button type="submit" data-i18n="common.actions.save"></button>
-          <button id="deleteDeviceBtn" type="button" class="danger">削除</button>
-        </div>
       </form>
+    </div>
+    <div class="drawer-savebar">
+      <button id="saveDeviceBtn" type="submit" form="deviceForm" data-i18n="common.actions.save"></button>
+      <button id="deleteDeviceBtn" type="button" class="danger">削除</button>
     </div>
   </aside>
 

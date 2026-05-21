@@ -314,6 +314,27 @@
     }
     .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
     .header-right .header-control { border-left: 1px solid var(--line); padding-left: 14px; }
+    .exec-copy {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 260px;
+      max-width: min(420px, 38vw);
+    }
+    .exec-copy input {
+      height: 32px;
+      padding: 6px 9px;
+      font: 700 11px var(--font-mono);
+      color: var(--ink-dim);
+      background: var(--panel-2);
+      border-color: var(--card-border-2);
+    }
+    .exec-copy button {
+      height: 32px;
+      padding: 0 10px;
+      font-size: 11px;
+      white-space: nowrap;
+    }
     .clock {
       display: flex;
       flex-direction: column;
@@ -592,6 +613,29 @@
     .seg button { border: 0; border-radius: 6px; padding: 7px 12px; font: 700 12px var(--font-display); background: transparent; color: var(--muted); box-shadow: none; }
     .seg button.on { background: var(--panel-hi); color: var(--ink); }
     .dev-list { display: grid; gap: 10px; }
+    .dev-area-group {
+      display: grid;
+      gap: 9px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+    }
+    .dev-area-group:first-child { padding-top: 0; border-top: 0; }
+    .dev-area-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font: 800 11px var(--font-display);
+      letter-spacing: .04em;
+    }
+    .dev-area-title::before {
+      content: "";
+      width: 18px;
+      height: 2px;
+      border-radius: 999px;
+      background: var(--grad);
+      opacity: .75;
+    }
     .dev {
       position: relative;
       display: grid;
@@ -945,19 +989,17 @@
     }
     .popup-close {
       position: absolute;
-      top: -9px;
-      right: -9px;
-      width: 20px;
-      height: 20px;
+      top: -7px;
+      right: -7px;
+      width: 14px;
+      height: 14px;
       padding: 0;
       border-radius: 50%;
-      border: 1.5px solid #fff;
+      border: 2px solid #fff;
       background: var(--bad);
-      color: #fff;
-      font: 800 13px/1 var(--font-display);
+      color: transparent;
+      font-size: 0;
       cursor: pointer;
-      display: grid;
-      place-items: center;
       box-shadow: 0 4px 10px -3px rgba(0,0,0,.5);
     }
     .map-popup::after {
@@ -1211,6 +1253,10 @@
       </div>
     </div>
     <div class="row header-right">
+      <div class="exec-copy">
+        <input id="execUrl" type="text" readonly aria-label="Exec URL">
+        <button id="copyExecUrlBtn" type="button">Copy</button>
+      </div>
       <span class="live-dot"><i></i>LIVE</span>
       <div class="clock"><span class="clock-time" id="clkTime">--:--:--</span><span class="clock-date" id="clkDate">----</span></div>
       <button class="icon-btn" id="fullscreenBtn" type="button" aria-label="fullscreen">
@@ -1350,7 +1396,7 @@
           refresh: { label: '更新間隔' },
           menu: { label: 'Milesight IoT', dashboard: 'Dashboard', map: 'Map', meeting: '会議室Now', lpr: 'LPR', pmc: 'PMC' },
           summary: { title: 'サマリー', devices: 'デバイス', active: '有効', placed: '配置' },
-          devices: { title: 'デバイス', searchPlaceholder: 'デバイス ID、エリア、場所、種別で検索', description: 'デバイスの稼働状態とセンサー指標をリアルタイムに俯瞰します。' },
+          devices: { title: 'エリア別デバイス', searchPlaceholder: 'デバイス ID、エリア、場所、種別で検索', description: 'デバイスの稼働状態とセンサー指標をリアルタイムに俯瞰します。' },
           map: { description: '平面図上に配置したデバイスの状態を表示します。', collapseAll: 'すべて閉じる' },
           filter: { all: 'すべて' },
           insight: { onlineRatio: '稼働率', byArea: 'エリア別デバイス', byType: 'センサー種別' },
@@ -1379,6 +1425,7 @@
     const DASHBOARD_ALLOWED_STORAGE_KEYS = [DASHBOARD_CACHE_KEY, DASHBOARD_PAGE_KEY, DASHBOARD_QUERY_KEY, DASHBOARD_MENU_KEY, DASHBOARD_REFRESH_KEY, DASHBOARD_IOT_GROUP_KEY, DASHBOARD_THEME_KEY, DASHBOARD_METRIC_PREFS_KEY, DASHBOARD_LOGO_KEY];
     const DASHBOARD_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
     const DEFAULT_LOGO_URL = 'https://www.dropbox.com/scl/fi/bwxb55mrt1qg4aqih5bxt/icon_dark.png?rlkey=g2mb3yooo636lr4qfa8zg8dlb&st=icn9wq0m&dl=1';
+    const EXEC_URL = 'https://script.google.com/macros/s/AKfycbzxZWNWOwX-uX18wc-v3clWenFnE7eCXUUxYjOdmvAR6wCXeJISVISG6uPKeXVz6yrx/exec';
     const state = { data: null, deviceMap: {}, query: '', filter: 'all', timer: 0, metricEditorDeviceId: '', metricPages: {} };
     const $ = (id) => document.getElementById(id);
 
@@ -1388,6 +1435,7 @@
 
     function initText() {
       $('title').textContent = t('dashboard.header.title');
+      $('execUrl').value = EXEC_URL;
       $('search').placeholder = t('dashboard.devices.searchPlaceholder');
       state.query = getStored(DASHBOARD_QUERY_KEY, '');
       $('search').value = state.query;
@@ -1591,7 +1639,7 @@
       popup.style.top = (Number(item.y_norm) * 100) + '%';
       const batteryBadge = renderBatteryBadge(device, 'widget-battery');
       popup.innerHTML =
-        '<button class="popup-close" type="button" aria-label="閉じる">×</button>' +
+        '<button class="popup-close" type="button" aria-label="閉じる"></button>' +
         '<div class="widget-head">' +
         '<div class="widget-title">' + esc(title) + '</div>' +
         batteryBadge +
@@ -1634,9 +1682,22 @@
         const queryOk = !q || hay.indexOf(q) > -1;
         const filterOk = state.filter === 'all' || (state.filter === 'on' ? isOnline(d) : !isOnline(d));
         return queryOk && filterOk;
-      }).sort((a, b) => String(a.area_id || a.device_id).localeCompare(String(b.area_id || b.device_id)));
+      });
 
-      $('deviceList').innerHTML = rows.map((d) => {
+      const grouped = {};
+      rows.forEach((d) => {
+        const area = displayLocation(d) || t('dashboard.label.unknown');
+        if (!grouped[area]) grouped[area] = [];
+        grouped[area].push(d);
+      });
+      const html = Object.keys(grouped).sort().map((area) => {
+        const devices = grouped[area].sort((a, b) =>
+          dashboardMetricCount(a) - dashboardMetricCount(b) ||
+          String(deviceDisplayTitle(a) || a.device_id).localeCompare(String(deviceDisplayTitle(b) || b.device_id))
+        );
+        return '<div class="dev-area-group">' +
+          '<div class="dev-area-title">' + esc(area) + '</div>' +
+          devices.map((d) => {
         const selectedKeys = deviceDisplayMetrics(d).slice(0, 12);
         return '<div class="dev ' + (!isOnline(d) ? 'off' : '') + '">' +
           '<div class="dev-head">' +
@@ -1651,7 +1712,14 @@
           renderDeviceMetricPage(d, selectedKeys) +
           renderDeviceMetricEditor(d, selectedKeys) +
           '</div>';
-      }).join('') || '<div class="muted">' + esc(t('dashboard.status.noDevices')) + '</div>';
+          }).join('') +
+          '</div>';
+      }).join('');
+      $('deviceList').innerHTML = html || '<div class="muted">' + esc(t('dashboard.status.noDevices')) + '</div>';
+    }
+
+    function dashboardMetricCount(device) {
+      return deviceDisplayMetrics(device).filter((m) => isDisplayMetric(m) && !isBatteryMetric(m)).length;
     }
 
     function renderDeviceMetricPage(device, selectedKeys) {
@@ -2010,6 +2078,17 @@
       try { localStorage.setItem(key, value); } catch (err) {}
     }
 
+    function copyExecUrl() {
+      const input = $('execUrl');
+      input.select();
+      input.setSelectionRange(0, input.value.length);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).catch(() => document.execCommand('copy'));
+      } else {
+        document.execCommand('copy');
+      }
+    }
+
     function cleanupLocalStorage(namespace, allowedKeys, maxAgeMs) {
       try {
         const allowed = {};
@@ -2160,6 +2239,7 @@
       setIotGroupCollapsed($('iotMenuParent').getAttribute('aria-expanded') !== 'false');
     });
     if ($('collapsePopupsBtn')) $('collapsePopupsBtn').addEventListener('click', closeAllMapPopups);
+    $('copyExecUrlBtn').addEventListener('click', copyExecUrl);
     $('fullscreenBtn').addEventListener('click', toggleBrowserFullscreen);
     $('stageFullscreenBtn').addEventListener('click', toggleMapFullscreen);
     document.addEventListener('keydown', (ev) => {

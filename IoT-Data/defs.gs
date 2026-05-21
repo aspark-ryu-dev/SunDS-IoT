@@ -447,6 +447,42 @@ function apiSaveDevice(device) {
   }
 }
 
+function apiSaveDevices(devices, layoutSettingsByDevice) {
+  ensureIngestReady_();
+  devices = Array.isArray(devices) ? devices : [];
+  layoutSettingsByDevice = layoutSettingsByDevice || {};
+  const cleaned = devices.map(normalizeDeviceInput_).filter(function (device) {
+    return !!device.device_id;
+  });
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sh = getSheet_(SHEET_DEVICES);
+    ensureHeaders_(sh, HEADERS.Devices);
+    const idx = headerIndex_(sh);
+    const values = sh.getDataRange().getValues();
+    const rowById = {};
+    for (let r = 1; r < values.length; r++) {
+      const id = String(values[r][idx.device_id] || '').trim();
+      if (id) rowById[id] = r + 1;
+    }
+    cleaned.forEach(function (device) {
+      if (rowById[device.device_id]) {
+        writeDeviceRow_(sh, rowById[device.device_id], idx, device, false);
+      } else {
+        sh.appendRow(deviceToRow_(device, idx));
+      }
+    });
+    Object.keys(layoutSettingsByDevice).forEach(function (deviceId) {
+      saveDeviceLayoutSettingsRows_(deviceId, layoutSettingsByDevice[deviceId]);
+    });
+    return getAdminSnapshot_();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function apiDeleteDevice(deviceId) {
   ensureIngestReady_();
   const target = String(deviceId || '').trim();
@@ -690,41 +726,45 @@ function apiSaveMapLayout(items, deletedIds) {
   }
 }
 
-function apiSaveDeviceLayoutSettings(deviceId, styleConfig) {
-  ensureIngestReady_();
+function saveDeviceLayoutSettingsRows_(deviceId, styleConfig) {
   const target = String(deviceId || '').trim();
   if (!target) throw new Error('device_id is required');
   styleConfig = styleConfig || {};
   const incomingStyle = normalizeStyleConfig_(styleConfig);
   const hasDisplayMode = Object.prototype.hasOwnProperty.call(styleConfig, 'displayMode') || Object.prototype.hasOwnProperty.call(styleConfig, 'display_mode');
+  const sh = getSheet_(SHEET_LAYOUT);
+  ensureHeaders_(sh, HEADERS.Layout);
+  const values = sh.getDataRange().getValues();
+  for (let r = 1; r < values.length; r++) {
+    if (String(values[r][2] || '').trim() !== target) continue;
+    const existingStyle = parseStyleConfig_(values[r][6]);
+    const cleanStyle = {
+      metrics: incomingStyle.metrics,
+      displayMode: hasDisplayMode ? incomingStyle.displayMode : (existingStyle.displayMode || 'card'),
+      cardWidth: existingStyle.cardWidth || 0,
+      cardHeight: existingStyle.cardHeight || 0
+    };
+    const item = normalizeLayoutItem_({
+      item_id: values[r][0],
+      bind_type: values[r][1] || 'device',
+      bind_ref: values[r][2],
+      x_norm: values[r][3],
+      y_norm: values[r][4],
+      label: values[r][5],
+      style_config: cleanStyle,
+      enabled: values[r][7]
+    });
+    sh.getRange(r + 1, 1, 1, 8).setValues([layoutItemToRow_(item)]);
+  }
+}
+
+function apiSaveDeviceLayoutSettings(deviceId, styleConfig) {
+  ensureIngestReady_();
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const sh = getSheet_(SHEET_LAYOUT);
-    ensureHeaders_(sh, HEADERS.Layout);
-    const values = sh.getDataRange().getValues();
-    for (let r = 1; r < values.length; r++) {
-      if (String(values[r][2] || '').trim() !== target) continue;
-      const existingStyle = parseStyleConfig_(values[r][6]);
-      const cleanStyle = {
-        metrics: incomingStyle.metrics,
-        displayMode: hasDisplayMode ? incomingStyle.displayMode : (existingStyle.displayMode || 'card'),
-        cardWidth: existingStyle.cardWidth || 0,
-        cardHeight: existingStyle.cardHeight || 0
-      };
-      const item = normalizeLayoutItem_({
-        item_id: values[r][0],
-        bind_type: values[r][1] || 'device',
-        bind_ref: values[r][2],
-        x_norm: values[r][3],
-        y_norm: values[r][4],
-        label: values[r][5],
-        style_config: cleanStyle,
-        enabled: values[r][7]
-      });
-      sh.getRange(r + 1, 1, 1, 8).setValues([layoutItemToRow_(item)]);
-    }
+    saveDeviceLayoutSettingsRows_(deviceId, styleConfig);
     return getAdminSnapshot_();
   } finally {
     lock.releaseLock();

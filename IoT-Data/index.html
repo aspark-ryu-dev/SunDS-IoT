@@ -429,6 +429,27 @@
       margin-top: 2px;
     }
     .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .exec-copy {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 260px;
+      max-width: min(420px, 40vw);
+    }
+    .exec-copy input {
+      height: 32px;
+      padding: 6px 9px;
+      font: 700 11px var(--font-mono);
+      color: var(--ink-dim);
+      background: var(--panel-2);
+      border-color: var(--card-border-2);
+    }
+    .exec-copy button {
+      height: 32px;
+      padding: 0 10px;
+      font-size: 11px;
+      white-space: nowrap;
+    }
     .clock {
       display: flex;
       flex-direction: column;
@@ -610,13 +631,25 @@
       z-index: 7;
     }
     .map-preview-item.popup {
-      width: auto;
-      min-width: 86px;
-      max-width: 130px;
-      padding: 6px 8px;
+      width: 34px;
+      min-width: 34px;
+      height: 34px;
+      min-height: 34px;
+      padding: 0;
+      border-radius: 50%;
       border-color: rgba(45,212,191,.45);
-      background: rgba(236,253,245,.96);
+      background: rgba(45,212,191,.94);
+      box-shadow: 0 0 0 5px rgba(45,212,191,.16), 0 12px 24px -12px rgba(0,0,0,.72);
       z-index: 9;
+      overflow: visible;
+    }
+    .map-preview-item.popup::after {
+      content: "";
+      position: absolute;
+      inset: 7px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: inset 0 0 0 3px rgba(45,212,191,.8);
     }
     .map-preview-item::before {
       content: "";
@@ -629,6 +662,20 @@
       background: var(--grad);
     }
     .map-preview-item.popup .map-preview-metrics { display: none; }
+    .map-preview-item.popup .map-preview-title {
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 7px);
+      transform: translateX(-50%);
+      width: max-content;
+      max-width: 150px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(8,12,20,.78);
+      color: #fff;
+      font-size: 10px;
+      box-shadow: 0 8px 18px -12px rgba(0,0,0,.8);
+    }
     .map-resize {
       position: absolute;
       right: 2px;
@@ -1028,6 +1075,10 @@
     }
     .drawer-savebar button { flex: 1; }
     .field-group { margin-bottom: 18px; }
+    .drawer.detail-only .device-edit-fields { display: none; }
+    .drawer.detail-only #saveDeviceBtn { display: none; }
+    .drawer.detail-only .drawer-savebar { justify-content: flex-end; }
+    .drawer.detail-only .drawer-savebar button { flex: 0 0 auto; }
     .field-group > h3 {
       margin: 0 0 10px; font-size: 11px; font-weight: 800; letter-spacing: .08em;
       text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 7px;
@@ -1077,6 +1128,10 @@
       </div>
     </div>
     <div class="row header-right">
+      <div class="exec-copy">
+        <input id="execUrl" type="text" readonly aria-label="Exec URL">
+        <button id="copyExecUrlBtn" type="button">Copy</button>
+      </div>
       <span class="live-dot"><i></i>DATA 管理</span>
       <div class="clock"><span class="clock-time" id="clkTime">--:--:--</span><span class="clock-date" id="clkDate">----</span></div>
     </div>
@@ -1130,17 +1185,23 @@
     <section class="stack">
       <div class="section-head">
         <h2 data-i18n="data.devices.title"></h2>
-        <button id="addDeviceBtn" type="button" class="btn-add">＋ デバイス追加</button>
+        <div class="row">
+          <button id="saveAllDevicesBtn" type="button">全デバイス保存</button>
+          <button id="addDeviceBtn" type="button" class="btn-add">＋ デバイス追加</button>
+        </div>
       </div>
       <input id="deviceSearch" type="search">
       <div style="overflow:auto">
         <table>
           <thead>
             <tr>
-              <th data-i18n="data.devices.columns.device"></th>
-              <th data-i18n="data.devices.columns.place"></th>
-              <th data-i18n="data.devices.columns.type"></th>
-              <th data-i18n="data.devices.columns.status"></th>
+              <th>Device ID</th>
+              <th>名称</th>
+              <th>場所</th>
+              <th>種別</th>
+              <th>送信</th>
+              <th>有効</th>
+              <th>メモ</th>
               <th></th>
             </tr>
           </thead>
@@ -1336,21 +1397,21 @@
     </div>
     <div class="drawer-body">
       <form id="deviceForm">
-        <div class="field-group">
+        <div class="field-group device-edit-fields">
           <h3>基本情報</h3>
           <div class="form-grid">
             <label class="full" data-i18n-label="data.deviceEdit.deviceId"><input id="device_id" required> <span class="lock-hint" id="deviceIdHint"></span></label>
             <label class="full" data-i18n-label="data.deviceEdit.name"><input id="device_name"></label>
           </div>
         </div>
-        <div class="field-group">
+        <div class="field-group device-edit-fields">
           <h3>設置場所</h3>
           <div class="form-grid">
             <label data-i18n-label="data.deviceEdit.area"><input id="device_area_id" list="dl_area"></label>
             <label data-i18n-label="data.deviceEdit.location"><input id="device_location" list="dl_location"></label>
           </div>
         </div>
-        <div class="field-group">
+        <div class="field-group device-edit-fields">
           <h3>種別・電源</h3>
           <div class="form-grid">
             <label data-i18n-label="data.deviceEdit.type"><input id="device_type" list="dl_type"></label>
@@ -1358,7 +1419,7 @@
             <label class="full" data-i18n-label="data.deviceEdit.power"><input id="device_power_source" list="dl_power" placeholder="battery / poe"></label>
           </div>
         </div>
-        <div class="field-group">
+        <div class="field-group device-edit-fields">
           <h3>送信設定・メモ</h3>
           <div class="form-grid">
             <label data-i18n-label="data.deviceEdit.reportInterval"><input id="device_report_interval_min" type="number" min="0.1" step="0.1" placeholder="10"></label>
@@ -1366,7 +1427,7 @@
             <label class="full" data-i18n-label="data.deviceEdit.note"><textarea id="device_note"></textarea></label>
           </div>
         </div>
-        <div class="field-group">
+        <div class="field-group device-data-fields">
           <h3>マップ表示</h3>
           <div class="form-grid">
             <div id="deviceMetricToggles" class="metric-toggle-list full"></div>
@@ -1425,7 +1486,8 @@
     const DATA_ALLOWED_STORAGE_KEYS = [DATA_CACHE_KEY, DATA_PAGE_KEY, DATA_QUERY_KEY, DATA_LATEST_DEVICE_KEY, DATA_MENU_KEY, DATA_THEME_KEY, DATA_LOGO_KEY];
     const DATA_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
     const DEFAULT_LOGO_URL = 'https://www.dropbox.com/scl/fi/bwxb55mrt1qg4aqih5bxt/icon_dark.png?rlkey=g2mb3yooo636lr4qfa8zg8dlb&st=icn9wq0m&dl=1';
-    const state = { snapshot: null, deviceMap: {}, deviceQuery: '', latestDeviceId: '', editingDeviceId: '', keyCatalogQuery: '', mapDraft: null, mapAddPoint: null, mapEditorItemId: '', mapSuppressClick: false };
+    const EXEC_URL = 'https://script.google.com/macros/s/AKfycbwjGLWMa6PAI2bJn_50MvYSUC12-8lrWft9iZj8fwzD-xOvhBg95YYCOEsXoZYGdQ3rJQ/exec';
+    const state = { snapshot: null, deviceMap: {}, deviceDrafts: {}, deviceMetricDrafts: {}, deviceDraftDirty: false, deviceMetricDraftDirty: false, deviceQuery: '', latestDeviceId: '', editingDeviceId: '', keyCatalogQuery: '', mapDraft: null, mapAddPoint: null, mapEditorItemId: '', mapSuppressClick: false };
     const $ = (id) => document.getElementById(id);
 
     function t(path) {
@@ -1434,6 +1496,7 @@
 
     function initText() {
       $('title').textContent = t('data.header.title');
+      $('execUrl').value = EXEC_URL;
       $('refreshBtn').textContent = t('common.actions.refresh');
       $('deviceSearch').placeholder = t('data.devices.searchPlaceholder');
       state.deviceQuery = getStored(DATA_QUERY_KEY, '');
@@ -1470,6 +1533,7 @@
     function render(snapshot) {
       state.snapshot = snapshot || {};
       state.deviceMap = buildDeviceMap(state.snapshot.devices || []);
+      resetDeviceDrafts(state.snapshot.devices || []);
       saveCachedSnapshot(state.snapshot);
       $('build').textContent = t('data.header.build') + ' ' + (state.snapshot.build || '');
       $('bgUrl').value = (state.snapshot.dashboard && state.snapshot.dashboard.config && state.snapshot.dashboard.config.background_image_url) || '';
@@ -1542,6 +1606,18 @@
       try { localStorage.setItem(key, value); } catch (err) {}
     }
 
+    function copyExecUrl() {
+      const input = $('execUrl');
+      input.select();
+      input.setSelectionRange(0, input.value.length);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(() => showToast('Exec URL をコピーしました')).catch(() => document.execCommand('copy'));
+      } else {
+        document.execCommand('copy');
+        showToast('Exec URL をコピーしました');
+      }
+    }
+
     function cleanupLocalStorage(namespace, allowedKeys, maxAgeMs) {
       try {
         const allowed = {};
@@ -1581,20 +1657,61 @@
     function renderDevices() {
       const q = state.deviceQuery.toLowerCase();
       const rows = (state.snapshot.devices || []).filter((d) => {
-        const hay = [d.device_id, d.name, d.area_id, d.location, d.type, d.sensor_type].join(' ').toLowerCase();
+        const draft = state.deviceDrafts[d.device_id] || d;
+        const hay = [d.device_id, draft.name, draft.area_id, draft.location, draft.type, draft.sensor_type].join(' ').toLowerCase();
         return !q || hay.indexOf(q) > -1;
       }).sort((a, b) => String(a.sensor_type || '').localeCompare(String(b.sensor_type || '')) || String(a.area_id || a.device_id).localeCompare(String(b.area_id || b.device_id)));
-      $('deviceRows').innerHTML = rows.map((d) => `
-        <tr class="${d.device_id === state.editingDeviceId ? 'editing' : ''}">
-          <td><code>${esc(d.device_id)}</code><div class="muted">${esc(d.name || '')}</div></td>
-          <td>${esc([d.area_id, d.location].filter(Boolean).join(' / '))}</td>
-          <td>${esc([d.sensor_type, d.type].filter(Boolean).join(' / '))}</td>
-          <td><span class="pill ${isDeviceOnline(d) ? '' : 'off'}">${isDeviceOnline(d) ? 'Online' : 'Offline'}</span><div class="muted">${esc(statusDetail(d))}</div></td>
-          <td><div class="row"><button class="secondary" type="button" onclick='editDevice(${jsonAttr(d)})'>編集</button><button class="danger" type="button" onclick='deleteDevice(${jsonAttr(d.device_id)})'>削除</button></div></td>
-        </tr>`).join('') || `<tr><td colspan="5" class="muted">${esc(t('data.devices.none'))}</td></tr>`;
+      $('deviceRows').innerHTML = rows.map((d) => {
+        const v = state.deviceDrafts[d.device_id] || d;
+        return `
+        <tr class="${d.device_id === state.editingDeviceId ? 'editing' : ''}" data-device-id="${esc(attrEscape(d.device_id))}">
+          <td><code>${esc(d.device_id)}</code><div><span class="pill ${isDeviceOnline(d) ? '' : 'off'}">${isDeviceOnline(d) ? 'Online' : 'Offline'}</span></div></td>
+          <td><input data-device-field="name" value="${esc(attrEscape(v.name || ''))}"></td>
+          <td><input data-device-field="area_id" list="dl_area" placeholder="エリア" value="${esc(attrEscape(v.area_id || ''))}"><input data-device-field="location" list="dl_location" placeholder="場所" value="${esc(attrEscape(v.location || ''))}" style="margin-top:6px"></td>
+          <td><input data-device-field="sensor_type" list="dl_sensor_type" placeholder="センサー" value="${esc(attrEscape(v.sensor_type || ''))}"><input data-device-field="type" list="dl_type" placeholder="種別" value="${esc(attrEscape(v.type || ''))}" style="margin-top:6px"></td>
+          <td><input data-device-field="power_source" list="dl_power" placeholder="電源" value="${esc(attrEscape(v.power_source || ''))}"><input data-device-field="report_interval_min" type="number" min="0.1" step="0.1" placeholder="min" value="${esc(attrEscape(v.report_interval_min || ''))}" style="margin-top:6px"></td>
+          <td><label class="check"><input data-device-field="enabled" type="checkbox" ${v.enabled !== false ? 'checked' : ''}> <span>有効</span></label><div class="muted">${esc(statusDetail(d))}</div></td>
+          <td><textarea data-device-field="note" rows="2">${esc(v.note || '')}</textarea></td>
+          <td><div class="row"><button class="secondary" type="button" onclick='editDeviceById(${jsonAttr(d.device_id)})'>詳細</button><button class="danger" type="button" onclick='deleteDevice(${jsonAttr(d.device_id)})'>削除</button></div></td>
+        </tr>`;
+      }).join('') || `<tr><td colspan="8" class="muted">${esc(t('data.devices.none'))}</td></tr>`;
     }
 
     function renderDeviceSelects() {}
+
+    function resetDeviceDrafts(devices) {
+      state.deviceDrafts = {};
+      state.deviceMetricDrafts = {};
+      (devices || []).forEach((d) => {
+        state.deviceDrafts[d.device_id] = {
+          device_id: d.device_id || '',
+          name: d.name || '',
+          area_id: d.area_id || '',
+          location: d.location || '',
+          type: d.type || '',
+          sensor_type: d.sensor_type || '',
+          power_source: d.power_source || '',
+          report_interval_min: d.report_interval_min || '',
+          note: d.note || '',
+          enabled: d.enabled !== false
+        };
+        const layout = findLayoutForDevice(d.device_id);
+        const cfg = layout ? (layout.style_config || parseStyle(layout.style)) : { metrics: [] };
+        state.deviceMetricDrafts[d.device_id] = { metrics: (cfg.metrics || []).filter((m) => isDashboardMetric(m) && !isBatteryMetric(m)).slice(0, 12) };
+      });
+      state.deviceDraftDirty = false;
+      state.deviceMetricDraftDirty = false;
+    }
+
+    function updateDeviceDraftFromInput(input) {
+      const tr = input.closest('tr[data-device-id]');
+      if (!tr) return;
+      const id = tr.getAttribute('data-device-id');
+      const field = input.getAttribute('data-device-field');
+      if (!id || !field || !state.deviceDrafts[id]) return;
+      state.deviceDrafts[id][field] = input.type === 'checkbox' ? input.checked : input.value;
+      state.deviceDraftDirty = true;
+    }
 
     function isDeviceOnline(device) {
       if (!device) return false;
@@ -1945,13 +2062,15 @@
       $('device_enabled').checked = d.enabled !== false;
       const layout = findLayoutForDevice(d.device_id);
       const cfg = layout ? (layout.style_config || parseStyle(layout.style)) : { metrics: [], displayMode: 'card' };
-      renderDeviceMetricToggles(d, cfg.metrics || []);
+      const draftMetrics = state.deviceMetricDrafts[d.device_id] && state.deviceMetricDrafts[d.device_id].metrics;
+      renderDeviceMetricToggles(d, draftMetrics || cfg.metrics || []);
       $('device_id').readOnly = isEdit;
       $('deviceIdHint').textContent = isEdit ? '（変更不可）' : '';
-      $('deviceDrawerTitle').textContent = isEdit ? 'デバイス編集' : 'デバイス追加';
-      $('deviceDrawerSub').textContent = isEdit ? (d.device_id || '') : '新規登録';
+      $('deviceDrawerTitle').textContent = isEdit ? '表示データ選択' : 'デバイス追加';
+      $('deviceDrawerSub').textContent = isEdit ? ((d.device_id || '') + ' / 全デバイス保存で反映') : '新規登録';
       $('deleteDeviceBtn').style.display = isEdit ? '' : 'none';
       state.editingDeviceId = isEdit ? (d.device_id || '') : '';
+      $('deviceDrawer').classList.toggle('detail-only', isEdit);
       renderDevices();
       $('deviceDrawer').classList.add('open');
       $('drawerBackdrop').classList.add('open');
@@ -1964,6 +2083,7 @@
       $('drawerBackdrop').classList.remove('open');
       $('deviceDrawer').setAttribute('aria-hidden', 'true');
       state.editingDeviceId = '';
+      $('deviceDrawer').classList.remove('detail-only');
       renderDevices();
     }
 
@@ -1987,6 +2107,13 @@
 
     window.editDevice = function (d) {
       openDeviceDrawer('edit', d);
+    };
+
+    window.editDeviceById = function (deviceId) {
+      const id = String(deviceId || '').trim();
+      const base = deviceMap()[id] || { device_id: id };
+      const draft = state.deviceDrafts[id] || {};
+      openDeviceDrawer('edit', Object.assign({}, base, draft));
     };
 
     window.deleteDevice = function (deviceId) {
@@ -2066,6 +2193,18 @@
       };
     }
 
+    function collectDeviceDrafts() {
+      return (state.snapshot.devices || []).map((d) => state.deviceDrafts[d.device_id] || d).filter((d) => String(d.device_id || '').trim());
+    }
+
+    function collectDeviceLayoutDrafts() {
+      const out = {};
+      Object.keys(state.deviceMetricDrafts || {}).forEach((deviceId) => {
+        out[deviceId] = { metrics: (state.deviceMetricDrafts[deviceId].metrics || []).slice(0, 12) };
+      });
+      return out;
+    }
+
     function findLayoutForDevice(deviceId) {
       const target = String(deviceId || '').trim();
       if (!target || !state.snapshot || !state.snapshot.dashboard) return null;
@@ -2077,6 +2216,13 @@
       return {
         metrics: Array.from($('deviceMetricToggles').querySelectorAll('.metric-chip.active')).map((chip) => chip.getAttribute('data-key')).filter(Boolean)
       };
+    }
+
+    function syncEditingDeviceMetrics() {
+      const id = state.editingDeviceId || $('device_id').value;
+      if (!id) return;
+      state.deviceMetricDrafts[id] = collectDeviceLayoutSettings();
+      state.deviceMetricDraftDirty = true;
     }
 
     function collectDefinition() {
@@ -2290,6 +2436,7 @@
     }
 
     $('refreshBtn').addEventListener('click', load);
+    $('copyExecUrlBtn').addEventListener('click', copyExecUrl);
     function setActiveThemeSeg(mode) {
       document.querySelectorAll('#themeSeg button').forEach((b) => b.classList.toggle('on', b.getAttribute('data-theme') === mode));
     }
@@ -2344,10 +2491,30 @@
       setStored(DATA_QUERY_KEY, state.deviceQuery);
       renderDevices();
     });
+    $('deviceRows').addEventListener('input', (ev) => {
+      if (ev.target.matches('[data-device-field]')) updateDeviceDraftFromInput(ev.target);
+    });
+    $('deviceRows').addEventListener('change', (ev) => {
+      if (ev.target.matches('[data-device-field]')) updateDeviceDraftFromInput(ev.target);
+    });
+    $('saveAllDevicesBtn').addEventListener('click', () => {
+      if (state.editingDeviceId) syncEditingDeviceMetrics();
+      const devices = collectDeviceDrafts();
+      callServer('apiSaveDevices', [devices, collectDeviceLayoutDrafts()], (snapshot) => {
+        render(snapshot);
+        showToast('全デバイス情報を保存しました');
+      });
+    });
     $('deviceForm').addEventListener('submit', (ev) => {
       ev.preventDefault();
       const dev = collectDevice();
       if (!String(dev.device_id || '').trim()) { showToast('Device ID を入力してください', true); return; }
+      if (state.editingDeviceId) {
+        syncEditingDeviceMetrics();
+        closeDeviceDrawer();
+        showToast('表示データを一時反映しました。全デバイス保存で同期します');
+        return;
+      }
       callServer('apiSaveDevice', [dev], (snapshot) => {
         state.snapshot = snapshot;
         state.deviceMap = buildDeviceMap(snapshot.devices || []);
@@ -2363,6 +2530,7 @@
       if (!chip) return;
       chip.classList.toggle('active');
       chip.draggable = chip.classList.contains('active');
+      syncEditingDeviceMetrics();
     });
     $('deviceMetricToggles').addEventListener('dragstart', (ev) => {
       const chip = ev.target.closest('.metric-chip.active');
@@ -2374,6 +2542,7 @@
     $('deviceMetricToggles').addEventListener('dragend', (ev) => {
       const chip = ev.target.closest('.metric-chip');
       if (chip) chip.classList.remove('dragging');
+      syncEditingDeviceMetrics();
     });
     $('deviceMetricToggles').addEventListener('dragover', (ev) => {
       const dragging = $('deviceMetricToggles').querySelector('.metric-chip.dragging');

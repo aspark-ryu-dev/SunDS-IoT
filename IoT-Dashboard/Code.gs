@@ -3,7 +3,7 @@
  * Public read-only dashboard for the shared IoT spreadsheet.
  */
 
-const BUILD_VERSION = 'v2026-05-19-readonly-metrics';
+const BUILD_VERSION = 'v2026-05-21-single-logo';
 
 function doGet(e) {
   const tpl = HtmlService.createTemplateFromFile('index');

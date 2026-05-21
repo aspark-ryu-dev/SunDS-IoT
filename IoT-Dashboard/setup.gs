@@ -21,9 +21,11 @@ function ensureScriptProps_() {
 }
 
 function seedConfigDefaults_() {
+  const logoUrl = 'https://www.dropbox.com/scl/fi/bwxb55mrt1qg4aqih5bxt/icon_dark.png?rlkey=g2mb3yooo636lr4qfa8zg8dlb&st=icn9wq0m&dl=1';
   if (getConfig_('background_image_url', null) === null) {
     setConfig_('background_image_url', 'https://dl.dropboxusercontent.com/scl/fi/4ymgkh5vfwol4l5yn2na5/v2.png?rlkey=xia5kn3txaz80y2blkdjzniwz&st=psc510yw&dl=1');
   }
+  if (getConfig_('logo_url', null) === null) setConfig_('logo_url', logoUrl);
   if (getConfig_('map_width', null) === null) setConfig_('map_width', 1200);
   if (getConfig_('map_height', null) === null) setConfig_('map_height', 800);
   if (getConfig_('refresh_interval_sec', null) === null) setConfig_('refresh_interval_sec', 60);

@@ -32,3 +32,11 @@ description: SunDS IoT の Google Apps Script プロジェクト（IoT-Data、Io
 ## 参照
 
 - 詳細な境界と確認項目は `references/project-rules.md` を必要時に読む。
+
+## Version Control
+
+- UI、RPC、schema、Config、deploy ID、表示ロジックを変更したら、同じ変更セットで `IoT-Data/Code.gs` と `IoT-Dashboard/Code.gs` の `BUILD_VERSION` を見直す。
+- `BUILD_VERSION` は `vYYYY-MM-DD-short-scope` 形式にする。例: `v2026-05-21-logo-config-visible-metrics`。
+- 片方だけを変更した場合も、もう片方の古い version 名が誤解を生まないか確認する。
+- version 名には削除済み機能や古い仕様名を残さない。
+- skill や rules を更新した場合は、`.skills/sunds-iot-gas/SKILL.md` と必要な `references/*.md` を同じコミットに含める。

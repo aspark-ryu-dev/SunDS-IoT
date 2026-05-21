@@ -616,6 +616,9 @@ function apiSaveDashboardSettings(settings) {
   if (url) setConfig_('background_image_file_id', '');
   if (settings.width) setConfig_('map_width', Number(settings.width));
   if (settings.height) setConfig_('map_height', Number(settings.height));
+  const logoUrl = normalizeImageUrl_(settings.logo_url || settings.logo_dark_url || settings.logo_light_url);
+  if (logoUrl && !/^https?:\/\/.+/i.test(logoUrl)) throw new Error('Icon URL must start with http:// or https://');
+  setConfig_('logo_url', logoUrl);
   setConfig_('refresh_interval_sec', normalizeRefreshInterval_(settings.refresh_interval_sec));
   setConfig_('offline_timeout_min', normalizeOfflineTimeout_(settings.offline_timeout_min));
   return getAdminSnapshot_();
@@ -1172,7 +1175,8 @@ function getDashboardConfig_() {
     offline_timeout_min: normalizeOfflineTimeout_(config.offline_timeout_min),
     background_image_url: String(config.background_image_url || ''),
     background_image_file_id: String(config.background_image_file_id || ''),
-    background_url: getBackgroundUrlFromConfig_(config)
+    background_url: getBackgroundUrlFromConfig_(config),
+    logo_url: String(config.logo_url || config.logo_dark_url || config.logo_light_url || '')
   };
 }
 

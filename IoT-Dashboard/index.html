@@ -113,23 +113,55 @@
     .menu-toggle:hover { background: var(--panel-hi); color: var(--ink); }
     .menu-toggle svg { width: 20px; height: 20px; }
     .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .logo {
-      width: 38px; height: 38px; flex: none;
-      border-radius: 11px;
-      background: var(--grad);
-      display: grid; place-items: center;
-      box-shadow: var(--glow);
+    .brand-copy {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+      position: relative;
     }
-    .logo svg { width: 21px; height: 21px; display: block; }
+    .brand-copy::after {
+      content: "";
+      width: 100%;
+      max-width: 260px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(45,212,191,.85), rgba(129,140,248,.42), transparent);
+      box-shadow: 0 0 14px rgba(45,212,191,.35);
+    }
+    .logo {
+      position: relative;
+      width: 50px; height: 50px; flex: none;
+      border-radius: 12px;
+      background: transparent;
+      display: grid; place-items: center;
+      box-shadow: none;
+      overflow: visible;
+    }
+    .logo::before {
+      content: ""; position: absolute; inset: -7px; z-index: -1;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(91,157,246,.42), rgba(45,212,191,.18) 45%, transparent 72%);
+      filter: blur(7px);
+    }
+    .logo-img { width: 50px; height: 50px; object-fit: contain; display: block; filter: drop-shadow(0 3px 9px rgba(45,212,191,.45)); }
     h1 {
       margin: 0;
-      font: 800 18px/1.1 var(--font-display);
-      letter-spacing: 0;
-      background: linear-gradient(90deg, var(--ink), var(--ink-dim));
+      font: 900 22px/1.05 var(--font-display);
+      letter-spacing: .01em;
+      background: linear-gradient(100deg, #e8c887 0%, #2dd4bf 26%, #5b9df6 50%, #9aa6ff 72%, #e8c887 100%);
+      background-size: 220% 100%;
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
+      color: transparent;
+      filter: drop-shadow(0 1px 6px rgba(91,157,246,.24));
+      animation: titleSheen 9s ease-in-out infinite;
     }
+    @keyframes titleSheen {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @media (prefers-reduced-motion: reduce) { h1 { animation: none; } }
     .sub { color: var(--muted); font-size: 11.5px; }
     .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .header-control {
@@ -214,6 +246,8 @@
       width: var(--side-w);
       height: calc(100vh - var(--header-h));
       overflow: auto;
+      display: flex;
+      flex-direction: column;
       border-right: 1px solid var(--line);
       background: var(--glass);
       backdrop-filter: blur(18px);
@@ -221,12 +255,50 @@
       transition: width .2s ease;
     }
     body.menu-collapsed .sidebar { width: var(--side-w-collapsed); }
+    .sidebar-footer {
+      margin-top: auto;
+      display: grid;
+      gap: 10px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+    .sidebar-footer .footer-refresh { width: 100%; justify-content: space-between; }
+    .sidebar-footer .footer-refresh select { width: auto; min-width: 76px; }
+    .sidebar-footer .footer-row { display: flex; align-items: center; gap: 8px; }
+    .sidebar-footer .footer-spacer { flex: 1; }
+    #sidebarCollapse svg { transition: transform .2s ease; }
+    body.menu-collapsed #sidebarCollapse svg { transform: rotate(180deg); }
+    body.menu-collapsed .sidebar-footer .footer-refresh { display: none; }
+    body.menu-collapsed .sidebar-footer .footer-row { flex-direction: column; gap: 8px; }
+    body.menu-collapsed .sidebar-footer .footer-spacer { display: none; }
+    /* settings popover (gear) */
+    .settings-panel {
+      position: fixed; left: 16px; bottom: 74px; z-index: 50;
+      width: 244px; max-width: calc(100vw - 32px);
+      display: none; padding: 14px; border-radius: var(--r-md);
+      background: var(--glass); backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid var(--card-border-2); box-shadow: var(--shadow-2);
+    }
+    .settings-panel.open { display: grid; gap: 14px; animation: fade .2s ease; }
+    .settings-title { font: 800 13px var(--font-display); display: flex; align-items: center; gap: 8px; }
+    .settings-title::before { content: ""; width: 4px; height: 14px; border-radius: 2px; background: var(--grad); }
+    .settings-section { display: grid; gap: 7px; }
+    .settings-label { font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .theme-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 3px; border: 1px solid var(--card-border-2); border-radius: var(--r-sm); background: var(--panel-2); }
+    .theme-seg button { border: 0; border-radius: 6px; padding: 8px 4px; font: 700 11px var(--font-display); background: transparent; color: var(--muted); cursor: pointer; transition: .14s; }
+    .theme-seg button:hover { color: var(--ink); }
+    .theme-seg button.on { background: var(--grad); color: #052420; box-shadow: 0 6px 14px -8px rgba(45,212,191,.6); }
+    .settings-panel select { width: 100%; }
+    .settings-panel button.secondary { width: 100%; }
+    /* hero icon on empty map */
+    .empty-hero { display: inline-grid; place-items: center; margin-bottom: 16px; }
+    .empty-hero .logo-img { width: 112px; height: 112px; object-fit: contain; filter: drop-shadow(0 8px 22px rgba(45,212,191,.4)); animation: heroFloat 4s ease-in-out infinite; }
+    @keyframes heroFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
     .brand-sub {
       color: var(--muted);
       font-size: 11px;
       font-weight: 700;
-      letter-spacing: .04em;
-      margin-top: 2px;
+      letter-spacing: .06em;
     }
     .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
     .header-right .header-control { border-left: 1px solid var(--line); padding-left: 14px; }
@@ -421,9 +493,21 @@
       display: grid;
       grid-template-rows: minmax(0, 1fr);
     }
-    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
-    .page-title { margin: 0; font: 800 22px/1.15 var(--font-display); letter-spacing: 0; }
-    .page-desc { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-bottom: 16px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+    .page-title { margin: 0; font: 800 25px/1.1 var(--font-display); letter-spacing: -.015em; display: flex; align-items: center; gap: 14px; }
+    .page-title::before { display: none; }
+    .page-ico {
+      width: 48px; height: 48px; flex: none; display: grid; place-items: center;
+      border-radius: 14px; background: var(--grad); color: #052420;
+      box-shadow: var(--glow), inset 0 1px 0 rgba(255,255,255,.35);
+    }
+    .page-ico svg { width: 26px; height: 26px; }
+    .page-title .page-txt {
+      background: linear-gradient(90deg, var(--ink), var(--ink-dim));
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .page-desc { color: var(--muted); font-size: 12.5px; margin-top: 6px; padding-left: 62px; }
+    @media (max-width: 920px) { .page-desc { padding-left: 0; } }
     .page-head .status {
       align-self: center;
       min-height: 0;
@@ -514,6 +598,30 @@
     .dev-actions { display: flex; align-items: center; gap: 8px; justify-self: end; }
     .dev-meta { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
     .dev-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--muted-2); }
+    .metrics-shell { display: grid; gap: 7px; }
+    .metric-page-nav { display: flex; align-items: center; justify-content: flex-end; gap: 6px; min-height: 24px; }
+    .metric-page-count {
+      color: var(--muted);
+      font: 800 10.5px var(--font-mono);
+      padding: 2px 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+    }
+    .metric-page-btn {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 7px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      box-shadow: none;
+    }
+    .metric-page-btn:hover { border-color: rgba(45,212,191,.5); color: var(--accent); }
+    .metric-page-btn svg { width: 13px; height: 13px; }
     .metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 8px; }
     .metric { border: 1px solid var(--line); border-radius: 7px; padding: 8px 9px; background: var(--panel); }
     .metric-k { color: var(--muted); font-size: 10.5px; font-weight: 700; display: flex; align-items: center; gap: 5px; }
@@ -1083,12 +1191,9 @@
         </svg>
       </button>
       <span class="logo">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 14.5l5-5 4 4 7-7" fill="none" stroke="#052420" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="20" cy="6.5" r="2.4" fill="#052420"/>
-        </svg>
+        <img class="logo-img" alt="" src="https://www.dropbox.com/scl/fi/bwxb55mrt1qg4aqih5bxt/icon_dark.png?rlkey=g2mb3yooo636lr4qfa8zg8dlb&amp;st=icn9wq0m&amp;dl=1">
       </span>
-      <div>
+      <div class="brand-copy">
         <h1 id="title"></h1>
         <div class="brand-sub" data-i18n="dashboard.header.subtitle"></div>
       </div>
@@ -1096,16 +1201,8 @@
     <div class="row header-right">
       <span class="live-dot"><i></i>LIVE</span>
       <div class="clock"><span class="clock-time" id="clkTime">--:--:--</span><span class="clock-date" id="clkDate">----</span></div>
-      <label class="header-control"><span data-i18n="dashboard.refresh.label"></span><select id="refreshInterval">
-        <option value="60">1m</option>
-        <option value="300">5m</option>
-        <option value="600">10m</option>
-      </select></label>
       <button class="icon-btn" id="fullscreenBtn" type="button" aria-label="fullscreen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
-      </button>
-      <button class="icon-btn" id="themeToggle" type="button" aria-label="theme">
-        <svg id="themeIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
       </button>
     </div>
   </header>
@@ -1124,7 +1221,33 @@
         <button class="nav-item" type="button" data-page-target="lpr"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><circle cx="12" cy="14" r="3"/></svg></span><span class="nav-text" data-i18n="dashboard.menu.lpr"></span></button>
         <button class="nav-item" type="button" data-page-target="pmc"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg></span><span class="nav-text" data-i18n="dashboard.menu.pmc"></span></button>
       </div>
+      <div class="sidebar-footer">
+        <div class="footer-row">
+          <button class="icon-btn" id="sidebarCollapse" type="button" aria-label="メニュー折りたたみ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg></button>
+          <span class="footer-spacer"></span>
+          <button class="icon-btn" id="settingsBtn" type="button" aria-label="設定"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+        </div>
+      </div>
     </aside>
+    <div class="settings-panel" id="settingsPanel">
+      <div class="settings-title">設定</div>
+      <div class="settings-section">
+        <div class="settings-label">テーマ</div>
+        <div class="theme-seg" id="themeSeg">
+          <button type="button" data-theme="light">Light</button>
+          <button type="button" data-theme="dark">Dark</button>
+          <button type="button" data-theme="system">System</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label" data-i18n="dashboard.refresh.label"></div>
+        <select id="refreshInterval">
+          <option value="60">1m</option>
+          <option value="300">5m</option>
+          <option value="600">10m</option>
+        </select>
+      </div>
+    </div>
 
     <main class="content">
       <div class="page map-page hidden" data-page="map">
@@ -1133,7 +1256,7 @@
             <button class="stage-fullscreen-btn" id="stageFullscreenBtn" type="button" aria-label="fullscreen">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
             </button>
-            <div id="stage"><div id="empty" class="empty"></div></div>
+            <div id="stage"><div id="empty" class="empty"><span class="empty-hero"><img class="logo-img" alt=""></span><span id="emptyText"></span></div></div>
           </div>
         </div>
       </div>
@@ -1142,7 +1265,7 @@
         <div class="page-wrap">
           <div class="page-head">
             <div>
-              <h2 class="page-title" data-i18n="dashboard.menu.dashboard"></h2>
+              <h2 class="page-title"><span class="page-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h8V3H3zM13 21h8V11h-8zM13 3v6h8V3zM3 17v4h8v-4z"/></svg></span><span class="page-txt" data-i18n="dashboard.menu.dashboard"></span></h2>
               <div class="page-desc" data-i18n="dashboard.devices.description"></div>
             </div>
             <div id="status" class="status"></div>
@@ -1211,7 +1334,7 @@
           status: { loading: '読み込み中...', ready: '表示中', cached: 'キャッシュを表示中、同期しています...' }
         },
         dashboard: {
-          header: { title: 'Milesight IoT', subtitle: '社内展示ダッシュボード' },
+          header: { title: 'Sun Digital System シナプス', subtitle: '社内展示ダッシュボード' },
           refresh: { label: '更新間隔' },
           menu: { label: 'Milesight IoT', dashboard: 'Dashboard', map: 'Map', meeting: '会議室Now', lpr: 'LPR', pmc: 'PMC' },
           summary: { title: 'サマリー', devices: 'デバイス', active: '有効', placed: '配置' },
@@ -1240,9 +1363,11 @@
     const DASHBOARD_IOT_GROUP_KEY = 'iotDashboard.iotGroupCollapsed';
     const DASHBOARD_THEME_KEY = 'iotDashboard.theme';
     const DASHBOARD_METRIC_PREFS_KEY = 'iotDashboard.deviceMetricPrefs';
-    const DASHBOARD_ALLOWED_STORAGE_KEYS = [DASHBOARD_CACHE_KEY, DASHBOARD_PAGE_KEY, DASHBOARD_QUERY_KEY, DASHBOARD_MENU_KEY, DASHBOARD_REFRESH_KEY, DASHBOARD_IOT_GROUP_KEY, DASHBOARD_THEME_KEY, DASHBOARD_METRIC_PREFS_KEY];
+    const DASHBOARD_LOGO_KEY = 'iotDashboard.logoUrl';
+    const DASHBOARD_ALLOWED_STORAGE_KEYS = [DASHBOARD_CACHE_KEY, DASHBOARD_PAGE_KEY, DASHBOARD_QUERY_KEY, DASHBOARD_MENU_KEY, DASHBOARD_REFRESH_KEY, DASHBOARD_IOT_GROUP_KEY, DASHBOARD_THEME_KEY, DASHBOARD_METRIC_PREFS_KEY, DASHBOARD_LOGO_KEY];
     const DASHBOARD_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-    const state = { data: null, deviceMap: {}, query: '', filter: 'all', timer: 0, metricEditorDeviceId: '' };
+    const DEFAULT_LOGO_URL = 'https://www.dropbox.com/scl/fi/bwxb55mrt1qg4aqih5bxt/icon_dark.png?rlkey=g2mb3yooo636lr4qfa8zg8dlb&st=icn9wq0m&dl=1';
+    const state = { data: null, deviceMap: {}, query: '', filter: 'all', timer: 0, metricEditorDeviceId: '', metricPages: {} };
     const $ = (id) => document.getElementById(id);
 
     function t(path) {
@@ -1257,7 +1382,7 @@
       document.querySelectorAll('[data-i18n]').forEach((el) => {
         el.textContent = t(el.getAttribute('data-i18n'));
       });
-      $('empty').textContent = t('common.status.loading');
+      $('emptyText').textContent = t('common.status.loading');
       activatePage(getStored(DASHBOARD_PAGE_KEY, 'dashboard'), false);
     }
 
@@ -1291,6 +1416,7 @@
       saveCachedDashboard(state.data);
       applyRefreshIntervalControl(state.data.config || {});
       applyBackground(state.data.config || {});
+      applyLogoConfig(state.data.config || {});
       renderStats();
       renderKpis();
       renderInsights();
@@ -1398,11 +1524,11 @@
       const devices = state.deviceMap;
       const bg = (state.data.config && state.data.config.background_url) || '';
       $('empty').classList.toggle('hidden', !!layout.length || !!bg);
-      $('empty').textContent = bg ? t('dashboard.status.noPlaced') : t('dashboard.status.noBackground');
+      $('emptyText').textContent = bg ? t('dashboard.status.noPlaced') : t('dashboard.status.noBackground');
 
       layout.forEach((item) => {
         const device = devices[item.bind_ref] || {};
-        const title = item.label || displayLocation(device) || device.name || item.bind_ref;
+        const title = item.label || deviceDisplayTitle(device) || item.bind_ref;
         const config = item.style_config || parseStyle(item.style);
         const metrics = (config.metrics || []).slice(0, 12);
         const mode = config.displayMode === 'popup' ? 'popup' : 'card';
@@ -1500,31 +1626,58 @@
 
       $('deviceList').innerHTML = rows.map((d) => {
         const selectedKeys = deviceDisplayMetrics(d).slice(0, 12);
-        const metrics = selectedKeys.slice(0, 6).map((m) => {
-          const hit = d.metrics && d.metrics[m];
-          const meta = metricMeta(m);
-          const raw = hit ? Number(hit.value) : NaN;
-          const pct = isFinite(raw) ? Math.max(4, Math.min(100, Math.round(raw / metricMax(m) * 100))) : 0;
-          return '<div class="metric">' +
-            '<div class="metric-k">' + metricIcon(m) + '<span>' + esc(meta.label || m) + '</span></div>' +
-            '<div class="metric-v">' + esc(hit ? formatValue(hit.value, meta.unit) : '--') + '</div>' +
-            '<div class="mbar"><i style="width:' + pct + '%"></i></div>' +
-            '</div>';
-        }).join('');
         return '<div class="dev ' + (!isOnline(d) ? 'off' : '') + '">' +
           '<div class="dev-head">' +
-          '<div><div class="dev-name">' + esc(displayLocation(d) || d.device_id) + '</div><div class="dev-id">' + esc([d.device_id, d.name].filter(Boolean).join(' / ')) + '</div></div>' +
+          '<div><div class="dev-name">' + esc(deviceDisplayTitle(d) || d.device_id) + '</div><div class="dev-id">' + esc(d.device_id) + '</div></div>' +
           '<div class="dev-actions">' +
           renderBatteryBadge(d, 'device-battery') +
           '<button class="icon-btn metric-edit-toggle" type="button" title="表示項目" onclick="toggleDeviceMetricEditor(\'' + esc(attrEscape(d.device_id)) + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button>' +
           '<span class="pill ' + (!isOnline(d) ? 'off' : '') + '">' + esc(isOnline(d) ? t('dashboard.label.on') : t('dashboard.label.off')) + '</span>' +
           '</div>' +
           '</div>' +
-          '<div class="dev-meta">' + esc([d.type, d.sensor_type].filter(Boolean).join(' / ') || t('dashboard.label.unknown')) + '<span class="dot"></span>' + esc(t('dashboard.label.lastSeen') + ': ' + (shortDate(d.last_seen) || t('dashboard.label.unknown'))) + '</div>' +
-          '<div class="metrics">' + metrics + '</div>' +
+          '<div class="dev-meta">' + esc([d.name, d.type, d.sensor_type].filter(Boolean).join(' / ') || t('dashboard.label.unknown')) + '<span class="dot"></span>' + esc(t('dashboard.label.lastSeen') + ': ' + (shortDate(d.last_seen) || t('dashboard.label.unknown'))) + '</div>' +
+          renderDeviceMetricPage(d, selectedKeys) +
           renderDeviceMetricEditor(d, selectedKeys) +
           '</div>';
       }).join('') || '<div class="muted">' + esc(t('dashboard.status.noDevices')) + '</div>';
+    }
+
+    function renderDeviceMetricPage(device, selectedKeys) {
+      const pageSize = 6;
+      const total = selectedKeys.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const deviceId = device.device_id;
+      let page = Math.max(0, Math.min(totalPages - 1, Number(state.metricPages[deviceId] || 0)));
+      state.metricPages[deviceId] = page;
+      const start = page * pageSize;
+      const visibleKeys = selectedKeys.slice(start, start + pageSize);
+      const metrics = visibleKeys.map((m) => {
+        const hit = device.metrics && device.metrics[m];
+        const meta = metricMeta(m);
+        const raw = hit ? Number(hit.value) : NaN;
+        const pct = isFinite(raw) ? Math.max(4, Math.min(100, Math.round(raw / metricMax(m) * 100))) : 0;
+        return '<div class="metric">' +
+          '<div class="metric-k">' + metricIcon(m) + '<span>' + esc(meta.label || m) + '</span></div>' +
+          '<div class="metric-v">' + esc(hit ? formatValue(hit.value, meta.unit) : '--') + '</div>' +
+          '<div class="mbar"><i style="width:' + pct + '%"></i></div>' +
+          '</div>';
+      }).join('');
+      const nav = total > pageSize
+        ? '<div class="metric-page-nav">' +
+          '<span class="metric-page-count">' + esc((start + 1) + '-' + Math.min(start + pageSize, total) + ' / ' + total) + '</span>' +
+          '<button class="metric-page-btn" type="button" title="前へ" onclick="shiftDeviceMetricPage(\'' + esc(attrEscape(deviceId)) + '\', -1, ' + total + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>' +
+          '<button class="metric-page-btn" type="button" title="次へ" onclick="shiftDeviceMetricPage(\'' + esc(attrEscape(deviceId)) + '\', 1, ' + total + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>' +
+          '</div>'
+        : '';
+      return '<div class="metrics-shell">' + nav + '<div class="metrics">' + metrics + '</div></div>';
+    }
+
+    function shiftDeviceMetricPage(deviceId, delta, total) {
+      const pageSize = 6;
+      const totalPages = Math.max(1, Math.ceil(Number(total || 0) / pageSize));
+      const current = Math.max(0, Math.min(totalPages - 1, Number(state.metricPages[deviceId] || 0)));
+      state.metricPages[deviceId] = (current + delta + totalPages) % totalPages;
+      renderDeviceList();
     }
 
     function applyBackground(config) {
@@ -1534,6 +1687,15 @@
       $('stage').style.setProperty('--aspect', String(w && h ? w / h : 1.5));
       $('stage').style.backgroundImage = url ? 'url("' + url + '")' : '';
       fitStageToWrap();
+    }
+
+    function applyLogoConfig(config) {
+      config = config || {};
+      const hasLogo = Object.prototype.hasOwnProperty.call(config, 'logo_url');
+      const compatLogo = config.logo_dark_url || config.logo_light_url || '';
+      const url = hasLogo ? (config.logo_url || DEFAULT_LOGO_URL) : (compatLogo || getStored(DASHBOARD_LOGO_KEY, DEFAULT_LOGO_URL));
+      document.querySelectorAll('.logo-img').forEach((img) => img.src = url);
+      setStored(DASHBOARD_LOGO_KEY, url);
     }
 
     function fitStageToWrap() {
@@ -1561,6 +1723,15 @@
       setTimeout(fitStageToWrap, 40);
     }
 
+    function toggleBrowserFullscreen() {
+      const root = document.documentElement;
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+        return;
+      }
+      if (root.requestFullscreen) root.requestFullscreen().catch(() => {});
+    }
+
     function deviceMap() {
       return state.deviceMap || {};
     }
@@ -1574,6 +1745,13 @@
     function displayLocation(device) {
       if (!device) return '';
       return [device.area_id, device.location].filter(Boolean).join(' / ');
+    }
+
+    function deviceDisplayTitle(device) {
+      if (!device) return '';
+      const model = device.sensor_type || device.type || device.name || '';
+      const place = displayLocation(device);
+      return [model, place].filter(Boolean).join(' / ');
     }
 
     function deviceDisplayMetrics(device) {
@@ -1898,12 +2076,21 @@
       $('clkDate').textContent = d.toLocaleDateString('ja-JP', { weekday: 'short', month: 'short', day: 'numeric' });
     }
 
-    function applyTheme(theme) {
-      const light = theme === 'light';
-      document.body.classList.toggle('theme-light', light);
-      $('themeIco').innerHTML = light
-        ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>'
-        : '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+    const THEME_ICONS = {
+      light: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+      dark: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+      system: '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'
+    };
+    const THEME_LABELS = { light: 'Light', dark: 'Dark', system: 'System (OS追従)' };
+    function systemPrefersDark() {
+      return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    function applyTheme(mode) {
+      const m = (mode === 'light' || mode === 'system') ? mode : 'dark';
+      const dark = m === 'system' ? systemPrefersDark() : (m === 'dark');
+      document.body.classList.toggle('theme-light', !dark);
+      if ($('themeIco')) $('themeIco').innerHTML = THEME_ICONS[m];
+      if ($('themeToggle')) $('themeToggle').setAttribute('title', 'テーマ: ' + THEME_LABELS[m]);
     }
 
     function formatValue(v, unit) {
@@ -1932,16 +2119,35 @@
       setStored(DASHBOARD_REFRESH_KEY, String(selectedRefreshIntervalSec()));
       scheduleRefresh();
     });
-    $('themeToggle').addEventListener('click', () => {
-      const next = document.body.classList.contains('theme-light') ? 'dark' : 'light';
-      setStored(DASHBOARD_THEME_KEY, next);
-      applyTheme(next);
+    function setActiveThemeSeg(mode) {
+      document.querySelectorAll('#themeSeg button').forEach((b) => b.classList.toggle('on', b.getAttribute('data-theme') === mode));
+    }
+    function setTheme(mode) {
+      setStored(DASHBOARD_THEME_KEY, mode);
+      applyTheme(mode);
+      setActiveThemeSeg(mode);
+    }
+    $('themeSeg').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (b) setTheme(b.getAttribute('data-theme'));
     });
+    $('settingsBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      $('settingsPanel').classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#settingsPanel') && !e.target.closest('#settingsBtn')) $('settingsPanel').classList.remove('open');
+    });
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (getStored(DASHBOARD_THEME_KEY, 'dark') === 'system') applyTheme('system');
+      });
+    }
     $('iotMenuParent').addEventListener('click', () => {
       setIotGroupCollapsed($('iotMenuParent').getAttribute('aria-expanded') !== 'false');
     });
     if ($('collapsePopupsBtn')) $('collapsePopupsBtn').addEventListener('click', closeAllMapPopups);
-    $('fullscreenBtn').addEventListener('click', toggleMapFullscreen);
+    $('fullscreenBtn').addEventListener('click', toggleBrowserFullscreen);
     $('stageFullscreenBtn').addEventListener('click', toggleMapFullscreen);
     document.addEventListener('keydown', (ev) => {
       if (ev.key === 'Escape' && document.body.classList.contains('map-fullscreen')) toggleMapFullscreen();
@@ -1997,6 +2203,14 @@
         setStored(DASHBOARD_MENU_KEY, document.body.classList.contains('menu-collapsed') ? '1' : '0');
       }
     });
+    $('sidebarCollapse').addEventListener('click', () => {
+      if (window.matchMedia('(max-width: 920px)').matches) {
+        document.body.classList.remove('menu-open');
+      } else {
+        document.body.classList.toggle('menu-collapsed');
+        setStored(DASHBOARD_MENU_KEY, document.body.classList.contains('menu-collapsed') ? '1' : '0');
+      }
+    });
     $('sidebarBackdrop').addEventListener('click', () => {
       document.body.classList.remove('menu-open');
     });
@@ -2022,7 +2236,8 @@
     initText();
     if (getStored(DASHBOARD_MENU_KEY, '0') === '1') document.body.classList.add('menu-collapsed');
     setIotGroupCollapsed(getStored(DASHBOARD_IOT_GROUP_KEY, '0') === '1');
-    applyTheme(getStored(DASHBOARD_THEME_KEY, 'dark'));
+    (function () { const tm = getStored(DASHBOARD_THEME_KEY, 'dark'); applyTheme(tm); setActiveThemeSeg(tm); })();
+    applyLogoConfig({});
     tickClock();
     setInterval(tickClock, 1000);
     applyCachedDashboard();

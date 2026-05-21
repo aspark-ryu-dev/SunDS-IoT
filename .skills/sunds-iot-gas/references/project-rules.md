@@ -37,3 +37,4 @@
 
 - Do not run `push.bat`, `push.ps1`, `clasp push`, or deploy commands unless the user explicitly asks.
 - If push/deploy is requested, inspect the changed files first and summarize the scope in Chinese or Japanese.
+- Keep `BUILD_VERSION` current. Any UI/RPC/schema/Config/deploy-visible change must update the relevant `IoT-Data/Code.gs` or `IoT-Dashboard/Code.gs` version using `vYYYY-MM-DD-short-scope`.

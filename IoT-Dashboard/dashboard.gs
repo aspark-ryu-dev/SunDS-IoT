@@ -14,12 +14,41 @@ const METRIC_META = {
   distance: { label: '距離', unit: 'mm' },
   occupancy: { label: '在席', unit: '' },
   people_count_all: { label: '人数', unit: '人' },
+  current_total: { label: '現在人数', unit: '人' },
+  max_counted: { label: '最大人数', unit: '人' },
+  Max_counted: { label: '最大人数', unit: '人' },
+  total_mapped_regions: { label: 'マップ済みリージョン数', unit: '' },
+  current_counted: { label: '現在人数', unit: '人' },
+  in_counted: { label: '入場人数', unit: '人' },
+  out_counted: { label: '退場人数', unit: '人' },
+  capacity_counted: { label: '在室増減', unit: '人' },
+  total_data_in_cumulative_counted: { label: '累計入場人数', unit: '人' },
+  total_data_out_cumulative_counted: { label: '累計退場人数', unit: '人' },
+  total_data_capacity_cumulative_counted: { label: '累計在室増減', unit: '人' },
+  line_trigger_data_in: { label: '入場トリガー', unit: '人' },
+  line_trigger_data_out: { label: '退場トリガー', unit: '人' },
+  flow_data_A_A: { label: 'A-A 人流', unit: '人' },
+  flow_data_A_B: { label: 'A-B 人流', unit: '人' },
+  flow_data_A_C: { label: 'A-C 人流', unit: '人' },
+  flow_data_A_D: { label: 'A-D 人流', unit: '人' },
+  flow_data_B_A: { label: 'B-A 人流', unit: '人' },
+  flow_data_B_B: { label: 'B-B 人流', unit: '人' },
+  flow_data_B_C: { label: 'B-C 人流', unit: '人' },
+  flow_data_B_D: { label: 'B-D 人流', unit: '人' },
+  flow_data_C_A: { label: 'C-A 人流', unit: '人' },
+  flow_data_C_B: { label: 'C-B 人流', unit: '人' },
+  flow_data_C_C: { label: 'C-C 人流', unit: '人' },
+  flow_data_C_D: { label: 'C-D 人流', unit: '人' },
+  flow_data_D_A: { label: 'D-A 人流', unit: '人' },
+  flow_data_D_B: { label: 'D-B 人流', unit: '人' },
+  flow_data_D_C: { label: 'D-C 人流', unit: '人' },
+  flow_data_D_D: { label: 'D-D 人流', unit: '人' },
   voltage: { label: '電圧', unit: 'V' },
   current: { label: '電流', unit: 'A' },
   power_consumption: { label: '電力量', unit: 'kWh' },
   power_factor: { label: '力率', unit: '' }
 };
-const DASHBOARD_STATE_CACHE_KEY = 'iot_dashboard_state_v1';
+const DASHBOARD_STATE_CACHE_KEY = 'iot_dashboard_state_v2';
 const DASHBOARD_STATE_CACHE_SEC = 20;
 const OFFLINE_INTERVAL_MULTIPLIER = 1.1;
 

@@ -1490,7 +1490,54 @@
     }
 
     function metricMeta(metric) {
-      return (state.data.metricMeta && state.data.metricMeta[metric]) || { label: metric, unit: '' };
+      return (state.data.metricMeta && state.data.metricMeta[metric]) || inferMetricMeta(metric);
+    }
+
+    function inferMetricMeta(metric) {
+      const raw = String(metric || '');
+      const direct = {
+        current_total: { label: '現在人数', unit: '人' },
+        max_counted: { label: '最大人数', unit: '人' },
+        Max_counted: { label: '最大人数', unit: '人' },
+        total_mapped_regions: { label: 'マップ済みリージョン数', unit: '' },
+        in_counted: { label: '入場人数', unit: '人' },
+        out_counted: { label: '退場人数', unit: '人' },
+        capacity_counted: { label: '在室増減', unit: '人' },
+        total_data_in_cumulative_counted: { label: '累計入場人数', unit: '人' },
+        total_data_out_cumulative_counted: { label: '累計退場人数', unit: '人' },
+        total_data_capacity_cumulative_counted: { label: '累計在室増減', unit: '人' },
+        line_trigger_data_in: { label: '入場トリガー', unit: '人' },
+        line_trigger_data_out: { label: '退場トリガー', unit: '人' }
+      };
+      if (direct[raw]) return direct[raw];
+
+      let m = raw.match(/^flow_data_([A-D])_([A-D])$/);
+      if (m) return { label: m[1] + '-' + m[2] + ' 人流', unit: '人' };
+
+      m = raw.match(/^current_counted_(\d+)$/);
+      if (m) return { label: 'リージョン' + (Number(m[1]) + 1) + ' 現在人数', unit: '人' };
+
+      m = raw.match(/^occupancy_(\d+)$/);
+      if (m) return { label: 'リージョン' + (Number(m[1]) + 1) + ' 占有状態', unit: '' };
+
+      m = raw.match(/^numbering_regions_(\d+)$/);
+      if (m) return { label: 'リージョン番号 ' + (Number(m[1]) + 1), unit: '' };
+
+      m = raw.match(/^dwell_time_data_(\d+)_(region|max_dwell_time|avg_dwell_time|people_id|duration)$/);
+      if (m) {
+        const n = Number(m[1]) + 1;
+        const map = {
+          region: { label: '滞在リージョン', unit: '' },
+          max_dwell_time: { label: '最大滞在時間', unit: 's' },
+          avg_dwell_time: { label: '平均滞在時間', unit: 's' },
+          people_id: { label: '人物ID', unit: '' },
+          duration: { label: '滞在時間', unit: 'ms' }
+        };
+        const hit = map[m[2]] || { label: raw, unit: '' };
+        return { label: hit.label + ' ' + n, unit: hit.unit };
+      }
+
+      return { label: raw, unit: '' };
     }
 
     function renderBatteryBadge(device, extraClass) {
@@ -1544,16 +1591,20 @@
         co2: '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
         occupancy: '<circle cx="12" cy="8" r="3"/><path d="M6 20a6 6 0 0 1 12 0"/>',
         people_count_all: '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/>',
+        current_total: '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="10" r="2"/><path d="M15 20a4 4 0 0 1 6 0"/>',
+        in_counted: '<path d="M4 12h14"/><path d="m12 6 6 6-6 6"/><circle cx="6" cy="6" r="2"/>',
+        out_counted: '<path d="M20 12H6"/><path d="m12 6-6 6 6 6"/><circle cx="18" cy="6" r="2"/>',
         voltage: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
         power_consumption: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'
       };
-      const p = paths[key] || '<circle cx="12" cy="12" r="3"/>';
+      const p = paths[key] || (key.indexOf('flow_data_') === 0 ? '<path d="M4 7h11"/><path d="m11 3 4 4-4 4"/><path d="M20 17H9"/><path d="m13 13-4 4 4 4"/>' : '<circle cx="12" cy="12" r="3"/>');
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
     }
 
     function metricMax(metric) {
       const key = String(metric || '').toLowerCase();
-      const max = { temperature: 40, humidity: 100, co2: 2000, tvoc: 1000, pm2_5: 100, pressure: 1100, occupancy: 1, people_count_all: 20, voltage: 240, power_consumption: 100 };
+      const max = { temperature: 40, humidity: 100, co2: 2000, tvoc: 1000, pm2_5: 100, pressure: 1100, occupancy: 1, people_count_all: 20, current_total: 20, max_counted: 20, in_counted: 20, out_counted: 20, capacity_counted: 20, voltage: 240, power_consumption: 100 };
+      if (/^(flow_data|current_counted|dwell_time_data)_/.test(key)) return 20;
       return max[key] || 100;
     }
 

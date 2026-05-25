@@ -19,6 +19,15 @@ const RETENTION_MAX_DELETE_PER_RUN = 200000;
  * and the editor can call it). Returns a summary and logs it.
  */
 function purgeOldReadings() {
+  try {
+    return _purgeOldReadingsImpl_();
+  } catch (err) {
+    try { logError_('purgeOldReadings', err); } catch (_) {}
+    throw err;
+  }
+}
+
+function _purgeOldReadingsImpl_() {
   ensureIngestReady_();
 
   const retentionDays = Number(getConfig_('retention_days', 30));

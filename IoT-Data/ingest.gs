@@ -54,6 +54,7 @@ function doPost(e) {
     return jsonOut_(handlePost_(e));
   } catch (err) {
     // Last-resort guard — doPost must never surface an exception to the device.
+    try { logError_('doPost', err, e && e.postData && e.postData.contents); } catch (_) {}
     return jsonOut_({ ok: false, error: 'internal', detail: String((err && err.message) || err) });
   }
 }
@@ -363,24 +364,81 @@ function appendReadings_(device_id, metrics, ts) {
   sh.getRange(sh.getLastRow() + 1, 1, rows.length, 5).setValues(rows);
 }
 
-/** Upsert one Latest row per (device_id, metric): value + ts. */
+/**
+ * Upsert one Latest row per (device_id, metric).
+ * Batched: clustered row updates are coalesced into a single read-modify-write,
+ * cutting per-uplink Sheets API calls from O(N metrics) to ~O(1) in the common case.
+ */
 function upsertLatest_(device_id, metrics, ts) {
   const sh = getSheet_(SHEET_LATEST);
   const idx = headerIndex_(sh);
   const index = latestRowIndex_(sh, idx);
+  const updates = [];
   const appends = [];
-  metrics.forEach(function (m) {
+  for (let i = 0; i < metrics.length; i++) {
+    const m = metrics[i];
     const key = latestKey_(device_id, m.metric);
     const row = index[key];
-    if (row) {
-      setLatestValues_(sh, row, idx, m.value, ts, key);
-    } else {
-      appends.push(latestRow_(idx, device_id, m.metric, m.value, ts, key));
-    }
-  });
+    if (row) updates.push({ row: row, value: m.value, key: key });
+    else appends.push(latestRow_(idx, device_id, m.metric, m.value, ts, key));
+  }
+  if (updates.length) applyLatestUpdates_(sh, idx, updates, ts);
   if (appends.length) {
-    sh.getRange(sh.getLastRow() + 1, 1, appends.length, appends[0].length).setValues(appends);
+    const startRow = sh.getLastRow() + 1;
+    sh.getRange(startRow, 1, appends.length, appends[0].length).setValues(appends);
+    // Incrementally extend the cached index instead of invalidating it.
+    const newKeys = [];
+    for (let i = 0; i < appends.length; i++) {
+      const row = appends[i];
+      const k = latestKey_(row[idx.device_id], row[idx.metric]);
+      newKeys.push({ key: k, row: startRow + i });
+    }
+    extendLatestIndexCache_(index, newKeys);
+  }
+}
+
+/** Merge new (key,row) pairs into the live index map AND the script cache. */
+function extendLatestIndexCache_(index, additions) {
+  for (let i = 0; i < additions.length; i++) index[additions[i].key] = additions[i].row;
+  try {
+    const json = JSON.stringify(index);
+    if (json.length < 95000) {
+      CacheService.getScriptCache().put(LATEST_INDEX_CACHE_KEY, json, 21600);
+    } else {
+      // Index too large to cache — drop and let next call rebuild lazily.
+      CacheService.getScriptCache().remove(LATEST_INDEX_CACHE_KEY);
+    }
+  } catch (err) {
     CacheService.getScriptCache().remove(LATEST_INDEX_CACHE_KEY);
+  }
+}
+
+/** Apply N Latest updates with as few Sheets API calls as possible. */
+function applyLatestUpdates_(sh, idx, updates, ts) {
+  const contig = (idx.value !== undefined && idx.ts === idx.value + 1 && idx.latest_key === idx.value + 2);
+  if (!contig) {
+    for (let i = 0; i < updates.length; i++) {
+      setLatestValues_(sh, updates[i].row, idx, updates[i].value, ts, updates[i].key);
+    }
+    return;
+  }
+  updates.sort(function (a, b) { return a.row - b.row; });
+  const minRow = updates[0].row;
+  const maxRow = updates[updates.length - 1].row;
+  const span = maxRow - minRow + 1;
+  // Clustered enough? Read once, splice, write once (2 API calls vs N).
+  if (updates.length >= 2 && span <= updates.length * 4) {
+    const range = sh.getRange(minRow, idx.value + 1, span, 3);
+    const matrix = range.getValues();
+    for (let i = 0; i < updates.length; i++) {
+      matrix[updates[i].row - minRow] = [updates[i].value, ts, updates[i].key];
+    }
+    range.setValues(matrix);
+    return;
+  }
+  // Sparse: per-row write (still single setValues each, fast path).
+  for (let i = 0; i < updates.length; i++) {
+    sh.getRange(updates[i].row, idx.value + 1, 1, 3).setValues([[updates[i].value, ts, updates[i].key]]);
   }
 }
 

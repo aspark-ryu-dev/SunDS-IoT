@@ -1,3 +1,11 @@
+# --- whitelist: track only the two IoT projects (and a couple of repo-root files) ---
+/*
+!/.gitignore
+!/README.md
+!/IoT-Dashboard/
+!/IoT-Data/
+
+# --- caches / build artifacts inside the tracked folders ---
 .npm-cache/
 .npm-cache-push/
 **/.npm-cache/

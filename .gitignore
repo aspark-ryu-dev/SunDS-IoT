@@ -1,11 +1,17 @@
-# --- whitelist: track only the two IoT projects (and a couple of repo-root files) ---
+# --- whitelist: track only the two IoT projects + shared/ + repo-root meta ---
 /*
 !/.gitignore
 !/README.md
 !/IoT-Dashboard/
 !/IoT-Data/
+!/shared/
+
+# --- generated copies of shared/ (synced by *-push.ps1, do not commit) ---
+IoT-Dashboard/_shared_*.gs
+IoT-Data/_shared_*.gs
 
 # --- caches / build artifacts inside the tracked folders ---
+*.bak
 .npm-cache/
 .npm-cache-push/
 **/.npm-cache/

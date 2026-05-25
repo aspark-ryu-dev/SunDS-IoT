@@ -2,33 +2,6 @@
  * AUTO-MIGRATED from defs.gs — see README.
  * Edits here are fine; this file is hand-maintained from now on.
  */
-const SYSTEM_METADATA_KEYS = [
-  'applicationID', 'applicationName', 'application_id', 'application_name',
-  'adr', 'confirmed', 'dataRate', 'data_rate', 'devAddr', 'devaddr',
-  'deviceAddress', 'device_address', 'deviceName', 'device_name', 'devName',
-  'dev_name', 'name', 'model', 'device_model', 'gatewayID', 'gateway_id', 'gatewayTime', 'gateway_time',
-  'fCnt', 'fcnt', 'fPort', 'fport', 'frequency', 'rssi', 'snr', 'token',
-  'ts', 'timestamp', 'time', 'datetime', 'date', 'event', 'report_type',
-  'snapshot', 'isRetransmission', 'device_info.device', 'device_info.device_sn',
-  'device_info.device_mac', 'device_info.device_name', 'device_info.ip_address',
-  'device_info.cus_device_id', 'device_info.cus_site_id', 'device_info.firmware_version',
-  'device_info.hardware_version', 'device_info.wlan mac', 'device_info.wlan_mac',
-  'network_info.network_status', 'network_info.iccid', 'network_info.imei',
-  'network_info.cell_id', 'network_info.lac', 'time_info.time',
-  'time_info.timezone', 'time_info.dst_status', 'time_info.start_time',
-  'time_info.end_time', 'time_info.enable_dst', 'time_info.time_zone',
-  'regions_name[]', 'dwell_time_data[].dwell_start_time',
-  'dwell_time_data[].dwell_end_time', 'line_trigger_data[].line_name',
-  'line_trigger_data[].line_uuid', 'region_trigger_data.region_count_data[].region_name',
-  'region_trigger_data.region_count_data[].region_uuid',
-  'region_trigger_data.dwell_time_data[].dwell_start_time',
-  'region_trigger_data.dwell_time_data[].dwell_end_time',
-  'region_trigger_data.dwell_time_data[].region_name',
-  'region_trigger_data.dwell_time_data[].region_uuid',
-  'attention_region_trigger_data.region_attention_time_data[].region_uuid',
-  'di_trigger_data.di_trigger_event_name'
-];
-
 const DEVICE_EXAMPLE_KEYS = {
   am102: ["battery", "humidity", "temperature"],
   am102l: ["battery", "humidity", "temperature"],
@@ -139,42 +112,6 @@ function apiGenerateDevicePayload(model, deviceId) {
     payload: payload,
     json: JSON.stringify(payload, null, 2)
   };
-}
-
-function isSystemMetadataKey_(key) {
-  const normalized = normalizeSystemMetadataKey_(key);
-  if (!normalized) return false;
-  const keys = systemMetadataKeySet_();
-  if (keys[normalized]) return true;
-  if (/^(application|gateway|deviceaddress|devaddr|fcnt|fport|datarate|frequency|rssi|snr|adr|confirmed|token)$/.test(normalized)) return true;
-  if (/^(ts|timestamp|time|datetime|date)$/.test(normalized)) return true;
-  if (/^(event|reporttype|snapshot)$/.test(normalized)) return true;
-  if (/^deviceinfo(device|devicesn|devicemac|ipaddress)$/.test(normalized)) return true;
-  if (/^timeinfo(time|timezone|dststatus|starttime|endtime)$/.test(normalized)) return true;
-  if (/^regionsname\d*$/.test(normalized)) return true;
-  if (/^dwelltimedata\d*(dwellstarttime|dwellendtime)$/.test(normalized)) return true;
-  if (/^deviceinfo(cusdeviceid|cussiteid|devicemac|devicename|devicesn|firmwareversion|hardwareversion|ipaddress|wlanmac)$/.test(normalized)) return true;
-  if (/^networkinfo(networkstatus|iccid|imei|cellid|lac)$/.test(normalized)) return true;
-  if (/^timeinfo(dststatus|enabledst|time|timezone|starttime|endtime)$/.test(normalized)) return true;
-  if (/^linetriggerdata\d*line(name|uuid)$/.test(normalized)) return true;
-  if (/^regiontriggerdata(regioncountdata|dwelltimedata)\d*region(name|uuid)$/.test(normalized)) return true;
-  if (/^regiontriggerdatadwelltimedata\d*dwell(start|end)time$/.test(normalized)) return true;
-  if (/^attentionregiontriggerdataregionattentiontimedata\d*regionuuid$/.test(normalized)) return true;
-  if (/^ditriggerdataditriggereventname$/.test(normalized)) return true;
-  if (/^isretransmission$/.test(normalized)) return true;
-  return false;
-}
-
-function systemMetadataKeySet_() {
-  const out = {};
-  SYSTEM_METADATA_KEYS.forEach(function (key) {
-    out[normalizeSystemMetadataKey_(key)] = true;
-  });
-  return out;
-}
-
-function normalizeSystemMetadataKey_(key) {
-  return String(key || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 function getDeviceExampleModels_() {

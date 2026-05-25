@@ -1,0 +1,182 @@
+/**
+ * AUTO-MIGRATED from defs.gs — see README.
+ * Edits here are fine; this file is hand-maintained from now on.
+ */
+const DEF_TYPES = { metric: true, expr: true, expression: true, formula: true };
+
+const DEF_TYPES_EXPR = { expr: true, expression: true, formula: true };
+
+function apiSaveDefinition(definition) {
+  ensureIngestReady_();
+  const clean = normalizeDefinitionInput_(definition);
+  if (!clean.id) throw new Error('id is required');
+  if (isSystemMetadataKey_(clean.id)) throw new Error('system metadata key cannot be added as a definition');
+  if (!DEF_TYPES[clean.type]) throw new Error('type must be metric or expr');
+  if (DEF_TYPES_EXPR[clean.type] && !clean.expression) throw new Error('expression is required');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sh = getSheet_(SHEET_DEFINITIONS);
+    const values = sh.getDataRange().getValues();
+    for (let r = 1; r < values.length; r++) {
+      if (String(values[r][0]) === clean.id) {
+        sh.getRange(r + 1, 1, 1, 8).setValues([definitionToRow_(clean)]);
+        return getAdminSnapshot_();
+      }
+    }
+    sh.appendRow(definitionToRow_(clean));
+    return getAdminSnapshot_();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function apiDeleteDefinition(id) {
+  ensureIngestReady_();
+  const target = String(id || '').trim();
+  if (!target) throw new Error('id is required');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sh = getSheet_(SHEET_DEFINITIONS);
+    const values = sh.getDataRange().getValues();
+    for (let r = values.length - 1; r >= 1; r--) {
+      if (String(values[r][0]) === target) sh.deleteRow(r + 1);
+    }
+    return getAdminSnapshot_();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function apiSeedKnownMetricDefinitions() {
+  ensureIngestReady_();
+  seedKeyCatalog_();
+  seedKnownMetricDefinitions_();
+  return getAdminSnapshot_();
+}
+
+function apiTestExpression(expression, scopeJson) {
+  let scope = {};
+  if (String(scopeJson || '').trim()) {
+    scope = JSON.parse(scopeJson);
+  }
+  return evalExpression_(expression, scope);
+}
+
+function seedKnownMetricDefinitions_() {
+  const sh = getSheet_(SHEET_DEFINITIONS);
+  const values = sh.getDataRange().getValues();
+  const exists = {};
+  for (let r = 1; r < values.length; r++) {
+    const id = String(values[r][0] || '').trim();
+    if (id) exists[id] = true;
+    if (String(values[r][1] || '').trim().toLowerCase() === 'raw') {
+      sh.getRange(r + 1, 2).setValue('metric');
+    }
+    if (isTemperatureMetricKey_(id) && String(values[r][3] || '').trim() === 'C') {
+      sh.getRange(r + 1, 4).setValue('°C');
+    }
+  }
+
+  const rows = knownMetricKeys_().filter(function (key) {
+    return !exists[key];
+  }).map(function (key) {
+    const meta = metricMetaForKey_(key);
+    return [key, 'metric', meta.label, meta.unit, 'device-examples', '', '{"origin":"device-examples"}', true];
+  });
+
+  if (rows.length) {
+    sh.getRange(sh.getLastRow() + 1, 1, rows.length, 8).setValues(rows);
+  }
+  return { added: rows.length };
+}
+
+function normalizeDefinitionInput_(definition) {
+  definition = definition || {};
+  let type = String(definition.type || 'metric').trim().toLowerCase();
+  if (type === 'raw') type = 'metric';
+  return {
+    id: String(definition.id || '').trim(),
+    type: type,
+    name: String(definition.name || '').trim(),
+    unit: String(definition.unit || '').trim(),
+    source: String(definition.source || '*').trim() || '*',
+    expression: String(definition.expression || '').trim(),
+    params: String(definition.params || '').trim(),
+    enabled: parseBool_(definition.enabled)
+  };
+}
+
+function definitionToRow_(d) {
+  return [d.id, d.type, d.name, d.unit, d.source, d.expression, d.params, d.enabled];
+}
+
+function readDefinitions_() {
+  const sh = getSheet_(SHEET_DEFINITIONS);
+  const values = sh.getDataRange().getValues();
+  const out = [];
+  for (let r = 1; r < values.length; r++) {
+    if (String(values[r][0]).trim() === '') continue;
+    if (isSystemMetadataKey_(values[r][0])) continue;
+    out.push({
+      id: String(values[r][0]),
+      type: String(values[r][1] || 'expr').toLowerCase(),
+      name: String(values[r][2] || ''),
+      unit: String(values[r][3] || ''),
+      source: String(values[r][4] || '*'),
+      expression: String(values[r][5] || ''),
+      params: String(values[r][6] || ''),
+      enabled: parseBool_(values[r][7])
+    });
+  }
+  return out;
+}
+
+function latestScopeForDevice_(device_id) {
+  const sh = getSheet_(SHEET_LATEST);
+  const values = sh.getDataRange().getValues();
+  const scope = {};
+  for (let r = 1; r < values.length; r++) {
+    if (String(values[r][0]) !== device_id) continue;
+    const metric = String(values[r][1] || '').trim();
+    const value = Number(values[r][2]);
+    if (metric && isFinite(value)) scope[metric] = value;
+  }
+  return scope;
+}
+
+function applyDefinitionsForDevice_(device_id, ts) {
+  const defs = readDefinitions_();
+  if (!defs.length) return [];
+
+  const scope = latestScopeForDevice_(device_id);
+  const derived = [];
+  defs.forEach(function (d) {
+    if (!d.enabled || !DEF_TYPES_EXPR[d.type]) return;
+    if (!(d.source === '*' || d.source === '' || d.source === device_id)) return;
+    const result = evalExpression_(d.expression, scope);
+    if (!result.ok) {
+      Logger.log('definition "' + d.id + '" failed for ' + device_id + ': ' + result.error);
+      return;
+    }
+    scope[d.id] = result.value;
+    derived.push({ metric: d.id, value: result.value });
+  });
+
+  if (derived.length) {
+    appendDerivedReadings_(device_id, derived, ts);
+    upsertLatest_(device_id, derived, ts);
+  }
+  return derived;
+}
+
+function appendDerivedReadings_(device_id, metrics, ts) {
+  const sh = getSheet_(SHEET_READINGS);
+  const rows = metrics.map(function (m) {
+    return [ts, device_id, m.metric, m.value, 'derived'];
+  });
+  sh.getRange(sh.getLastRow() + 1, 1, rows.length, 5).setValues(rows);
+}

@@ -13,3 +13,4 @@ node_modules/**
 *コピー*
 *競合*
 *DESKTOP-*
+*.bak

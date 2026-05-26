@@ -109,12 +109,19 @@ const METRIC_LABEL_OVERRIDES = {
   temperature: '温度',
   humidity: '湿度',
   co2: 'CO2',
+  co2_enable: 'CO2検出有効',
   tvoc: 'TVOC',
+  tvoc_enable: 'TVOC検出有効',
   pm2_5: 'PM2.5',
+  pm2_5_enable: 'PM2.5検出有効',
   pm10: 'PM10',
+  pm10_enable: 'PM10検出有効',
   hcho: 'ホルムアルデヒド',
+  hcho_enable: 'HCHO検出有効',
   h2s: '硫化水素',
+  h2s_enable: 'H2S検出有効',
   nh3: 'アンモニア',
+  nh3_enable: 'NH3検出有効',
   pressure: '気圧',
   pressure_2: '気圧 2',
   distance: '距離',
@@ -297,6 +304,29 @@ const METRIC_LABEL_OVERRIDES = {
   'region_trigger_data.region_count_data[].total.current_total': '現在総人数',
   'region_trigger_data.dwell_time_data[].duration': '滞在時間',
   'attention_region_trigger_data.region_attention_time_data[].attention_time_ms': '注視時間'
+};
+
+const SENSOR_ENABLE_LABELS_JA = {
+  co2: 'CO2',
+  tvoc: 'TVOC',
+  pm2_5: 'PM2.5',
+  pm10: 'PM10',
+  pm1_0: 'PM1.0',
+  hcho: 'HCHO',
+  h2s: 'H2S',
+  nh3: 'NH3',
+  o3: 'O3',
+  temperature: '温度',
+  humidity: '湿度',
+  pressure: '気圧',
+  pir: 'PIR',
+  occupancy: '在席',
+  illumination: '照度',
+  light_level: '照度',
+  distance: '距離',
+  motion: 'モーション',
+  leakage: '漏水',
+  water: '水量'
 };
 
 const METRIC_WORDS_JA = {
@@ -703,11 +733,24 @@ function vs125UnitForLeaf_(key) {
 function metricLabelJa_(key) {
   key = String(key || '').trim();
   if (METRIC_LABEL_OVERRIDES[key]) return METRIC_LABEL_OVERRIDES[key];
+  const enableLabel = sensorEnableLabelJa_(key);
+  if (enableLabel) return enableLabel;
   const last = key.split('.').pop().replace('[]', '');
   if (METRIC_LABEL_OVERRIDES[last]) return METRIC_LABEL_OVERRIDES[last];
+  const lastEnableLabel = sensorEnableLabelJa_(last);
+  if (lastEnableLabel) return lastEnableLabel;
   return key.split('.').map(function (part) {
     return translateMetricPart_(part.replace('[]', '')) + (part.indexOf('[]') > -1 ? ' 配列' : '');
   }).join(' / ');
+}
+
+function sensorEnableLabelJa_(key) {
+  const normalized = String(key || '').trim().replace(/\[\]/g, '');
+  if (normalized.indexOf('.') !== -1) return '';
+  const m = normalized.match(/^(.+)_enable$/);
+  if (!m) return '';
+  const sensorLabel = SENSOR_ENABLE_LABELS_JA[m[1]];
+  return sensorLabel ? sensorLabel + '検出有効' : '';
 }
 
 function translateMetricPart_(part) {

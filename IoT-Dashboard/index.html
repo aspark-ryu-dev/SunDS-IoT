@@ -1967,6 +1967,8 @@
         line_trigger_data_out: { label: '退場トリガー', unit: '人' }
       };
       if (direct[raw]) return direct[raw];
+      const sensorEnable = inferSensorEnableMetricMeta(raw);
+      if (sensorEnable) return sensorEnable;
       const vs125 = inferVs125MetricMeta(raw);
       if (vs125) return vs125;
 
@@ -1997,6 +1999,36 @@
       }
 
       return { label: raw, unit: '' };
+    }
+
+    function inferSensorEnableMetricMeta(metric) {
+      const raw = String(metric || '').trim().replace(/\[\]/g, '');
+      if (raw.indexOf('.') !== -1) return null;
+      const m = raw.match(/^(.+)_enable$/);
+      if (!m) return null;
+      const labels = {
+        co2: 'CO2',
+        tvoc: 'TVOC',
+        pm2_5: 'PM2.5',
+        pm10: 'PM10',
+        pm1_0: 'PM1.0',
+        hcho: 'HCHO',
+        h2s: 'H2S',
+        nh3: 'NH3',
+        o3: 'O3',
+        temperature: '温度',
+        humidity: '湿度',
+        pressure: '気圧',
+        pir: 'PIR',
+        occupancy: '在席',
+        illumination: '照度',
+        light_level: '照度',
+        distance: '距離',
+        motion: 'モーション',
+        leakage: '漏水',
+        water: '水量'
+      };
+      return labels[m[1]] ? { label: labels[m[1]] + '検出有効', unit: '' } : null;
     }
 
     function inferVs125MetricMeta(metric) {

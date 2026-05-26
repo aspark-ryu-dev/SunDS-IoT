@@ -95,6 +95,13 @@ function deviceOnlineStatus_(enabled, lastSeen, now, reportIntervalMin) {
 
  */
 
+function parseBool_(v) {
+  if (v === true) return true;
+  if (v === false) return false;
+  const s = String(v).trim().toLowerCase();
+  return !(s === 'false' || s === 'no' || s === '0' || s === 'off');
+}
+
 function toDate_(v) {
   if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v.getTime())) return v;
   const d = new Date(v);

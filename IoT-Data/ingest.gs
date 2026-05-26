@@ -567,13 +567,7 @@ function setLatestValues_(sheet, row, idx, value, ts, key) {
   if (idx.latest_key !== undefined) sheet.getRange(row, idx.latest_key + 1).setValue(key);
 }
 
-/** enabled-column convention: false / no / 0 / off => disabled; anything else => enabled. */
-function parseBool_(v) {
-  if (v === true) return true;
-  if (v === false) return false;
-  const s = String(v).trim().toLowerCase();
-  return !(s === 'false' || s === 'no' || s === '0' || s === 'off');
-}
+// parseBool_ is in shared/util.gs.
 
 function jsonOut_(obj) {
   return ContentService

@@ -1969,6 +1969,8 @@
       if (direct[raw]) return direct[raw];
       const sensorEnable = inferSensorEnableMetricMeta(raw);
       if (sensorEnable) return sensorEnable;
+      const vs121 = inferVs121MetricMeta(raw);
+      if (vs121) return vs121;
       const vs125 = inferVs125MetricMeta(raw);
       if (vs125) return vs125;
 
@@ -1986,19 +1988,39 @@
 
       m = raw.match(/^dwell_time_data_(\d+)_(region|max_dwell_time|avg_dwell_time|people_id|duration)$/);
       if (m) {
-        const n = Number(m[1]) + 1;
+        const regionNo = m[1];
         const map = {
-          region: { label: '滞在リージョン', unit: '' },
-          max_dwell_time: { label: '最大滞在時間', unit: 's' },
-          avg_dwell_time: { label: '平均滞在時間', unit: 's' },
-          people_id: { label: '人物ID', unit: '' },
-          duration: { label: '滞在時間', unit: 'ms' }
+          region: { label: 'リージョン' + regionNo, unit: '' },
+          max_dwell_time: { label: 'リージョン' + regionNo + ' 最大滞在時間', unit: 's' },
+          avg_dwell_time: { label: 'リージョン' + regionNo + ' 平均滞在時間', unit: 's' },
+          people_id: { label: 'リージョン' + regionNo + ' 人物ID', unit: '' },
+          duration: { label: 'リージョン' + regionNo + ' 滞在時間', unit: 'ms' }
         };
-        const hit = map[m[2]] || { label: raw, unit: '' };
-        return { label: hit.label + ' ' + n, unit: hit.unit };
+        return map[m[2]] || { label: raw, unit: '' };
       }
 
       return { label: raw, unit: '' };
+    }
+
+    function inferVs121MetricMeta(metric) {
+      const raw = normalizeMetricPath(metric);
+      const direct = {
+        current_total: { label: '現在人数', unit: '人' },
+        max_counted: { label: '最大人数', unit: '人' },
+        total_mapped_regions: { label: 'マップ済みリージョン数', unit: '' }
+      };
+      if (direct[raw]) return direct[raw];
+      const m = raw.match(/^dwell_time_data_(\d+)_(region|max_dwell_time|avg_dwell_time|people_id|duration)$/);
+      if (!m) return null;
+      const regionNo = m[1];
+      const map = {
+        region: { label: 'リージョン' + regionNo, unit: '' },
+        max_dwell_time: { label: 'リージョン' + regionNo + ' 最大滞在時間', unit: 's' },
+        avg_dwell_time: { label: 'リージョン' + regionNo + ' 平均滞在時間', unit: 's' },
+        people_id: { label: 'リージョン' + regionNo + ' 人物ID', unit: '' },
+        duration: { label: 'リージョン' + regionNo + ' 滞在時間', unit: 'ms' }
+      };
+      return map[m[2]] || null;
     }
 
     function inferSensorEnableMetricMeta(metric) {

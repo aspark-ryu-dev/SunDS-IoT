@@ -638,12 +638,35 @@ function knownMetricKeys_() {
 }
 
 function metricMetaForKey_(key) {
+  const vs121 = vs121MetricMetaForKey_(key);
+  if (vs121) return vs121;
   const vs125 = vs125MetricMetaForKey_(key);
   if (vs125) return vs125;
   return {
     label: metricLabelJa_(key),
     unit: metricUnitForKey_(key)
   };
+}
+
+function vs121MetricMetaForKey_(key) {
+  const raw = normalizeMetricPathForPattern_(key);
+  const direct = {
+    current_total: { label: '現在人数', unit: '人' },
+    max_counted: { label: '最大人数', unit: '人' },
+    total_mapped_regions: { label: 'マップ済みリージョン数', unit: '' }
+  };
+  if (direct[raw]) return direct[raw];
+  const m = raw.match(/^dwell_time_data_(\d+)_(region|max_dwell_time|avg_dwell_time|people_id|duration)$/);
+  if (!m) return null;
+  const regionNo = m[1];
+  const map = {
+    region: { label: 'リージョン' + regionNo, unit: '' },
+    max_dwell_time: { label: 'リージョン' + regionNo + ' 最大滞在時間', unit: 's' },
+    avg_dwell_time: { label: 'リージョン' + regionNo + ' 平均滞在時間', unit: 's' },
+    people_id: { label: 'リージョン' + regionNo + ' 人物ID', unit: '' },
+    duration: { label: 'リージョン' + regionNo + ' 滞在時間', unit: 'ms' }
+  };
+  return map[m[2]] || null;
 }
 
 function vs125MetricMetaForKey_(key) {

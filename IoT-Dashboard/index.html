@@ -1541,7 +1541,7 @@
       const lowBatt = devices.filter((d) => {
         const key = batteryMetricKey(d);
         const hit = key && d.metrics && d.metrics[key];
-        const n = hit ? Number(hit.value) : NaN;
+        const n = hasMetricValue(hit) ? Number(hit.value) : NaN;
         return isFinite(n) && n < 20;
       }).length;
       const ratio = devices.length ? Math.round(online / devices.length * 100) : 0;
@@ -1715,7 +1715,7 @@
         const hit = device.metrics && device.metrics[metric];
         return '<div class="metric-line">' +
           '<span class="metric-name">' + esc(meta.label || metric) + '</span>' +
-          '<span class="metric-value">' + esc(hit ? formatValue(hit.value, meta.unit) : t('dashboard.status.noValue')) + '</span>' +
+          '<span class="metric-value">' + esc(hasMetricValue(hit) ? formatValue(hit.value, meta.unit) : t('dashboard.status.noValue')) + '</span>' +
           '</div>';
       }).join('');
     }
@@ -1789,11 +1789,11 @@
       const metrics = visibleKeys.map((m) => {
         const hit = device.metrics && device.metrics[m];
         const meta = metricMeta(m);
-        const raw = hit ? Number(hit.value) : NaN;
+        const raw = hasMetricValue(hit) ? Number(hit.value) : NaN;
         const pct = isFinite(raw) ? Math.max(4, Math.min(100, Math.round(raw / metricMax(m) * 100))) : 0;
         return '<div class="metric">' +
           '<div class="metric-k">' + metricIcon(m) + '<span>' + esc(meta.label || m) + '</span></div>' +
-          '<div class="metric-v">' + esc(hit ? formatValue(hit.value, meta.unit) : '--') + '</div>' +
+          '<div class="metric-v">' + esc(hasMetricValue(hit) ? formatValue(hit.value, meta.unit) : '--') + '</div>' +
           '<div class="mbar"><i style="width:' + pct + '%"></i></div>' +
           '</div>';
       }).join('');
@@ -2085,7 +2085,7 @@
       const key = batteryMetricKey(device);
       if (!key) return '';
       const hit = device.metrics && device.metrics[key];
-      const value = hit ? Number(hit.value) : NaN;
+      const value = hasMetricValue(hit) ? Number(hit.value) : NaN;
       const pct = isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0;
       const label = isFinite(value) ? pct + '%' : '--';
       const small = extraClass === 'widget-battery' ? ' sm' : '';
@@ -2329,9 +2329,14 @@
     }
 
     function formatValue(v, unit) {
+      if (v === null || v === undefined || String(v).trim() === '') return '--';
       const n = Number(v);
       const body = isFinite(n) ? String(Math.round(n * 100) / 100) : String(v == null ? '' : v);
       return unit ? body + unit : body;
+    }
+
+    function hasMetricValue(hit) {
+      return !!hit && hit.value !== null && hit.value !== undefined && String(hit.value).trim() !== '';
     }
 
     function shortDate(v) {

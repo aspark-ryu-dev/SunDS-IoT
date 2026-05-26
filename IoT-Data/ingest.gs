@@ -184,6 +184,9 @@ function pushMetric_(out, path, value) {
     num = value;
   } else if (typeof value === 'boolean') {
     num = value ? 1 : 0;
+  } else if (value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) {
+    out.push({ metric: sanitizeMetricName_(path), value: '' });
+    return;
   } else if (typeof value === 'string' && value.trim() !== '' && isFinite(Number(value))) {
     num = Number(value);
   } else {

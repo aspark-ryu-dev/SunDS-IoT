@@ -1952,14 +1952,19 @@
       const hit = device.metrics && device.metrics[metric];
       const meta = state.snapshot.metricMeta && state.snapshot.metricMeta[metric];
       const label = meta && meta.label ? meta.label : metric;
-      const value = hit ? formatPreviewValue(hit.value, meta && meta.unit) : '--';
+      const value = hasPreviewMetricValue(hit) ? formatPreviewValue(hit.value, meta && meta.unit) : '--';
       return '<div class="map-preview-metric"><span>' + esc(label) + '</span><span class="map-preview-value">' + esc(value) + '</span></div>';
     }
 
     function formatPreviewValue(value, unit) {
+      if (value === null || value === undefined || String(value).trim() === '') return '--';
       const n = Number(value);
       const body = isFinite(n) ? (Math.round(n * 10) / 10) : String(value);
       return unit ? body + unit : body;
+    }
+
+    function hasPreviewMetricValue(hit) {
+      return !!hit && hit.value !== null && hit.value !== undefined && String(hit.value).trim() !== '';
     }
 
     function renderDefinitions() {

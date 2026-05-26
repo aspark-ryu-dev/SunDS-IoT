@@ -43,8 +43,10 @@ curl -X POST "https://script.google.com/.../exec" \
 ## Device example library
 
 `device-examples/milesight-lorawan/` contains per-model decoded key lists
-extracted from vendor README examples. The admin UI uses a curated runtime map
-based on these files to generate sample POST JSON.
+extracted from vendor README examples. `device-examples/milesight-poe/`
+contains HTTP/MQTT JSON key lists for PoE people-counting sensors such as
+VS121-P and VS125-P. The admin UI uses a curated runtime map based on these
+files to generate sample POST JSON.
 
 ## Files
 

@@ -5,16 +5,6 @@
 !/IoT-Dashboard/
 !/IoT-Data/
 !/shared/
-!/tools/
-!/tools/gas-clasp.js
-!/data-push.bat
-!/dashboard-push.bat
-!/data-deploy.bat
-!/dashboard-deploy.bat
-!/data-push.ps1
-!/dashboard-push.ps1
-!/data-deploy.ps1
-!/dashboard-deploy.ps1
 
 # local assistant/editor state
 **/.claude/

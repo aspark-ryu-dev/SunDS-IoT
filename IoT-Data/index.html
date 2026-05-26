@@ -1424,8 +1424,13 @@
         <div id="latestDeviceRows" class="latest-device-list"></div>
       </section>
       <section class="stack">
-        <h2 id="latestDetailTitle" data-i18n="data.latest.detailTitle"></h2>
-        <div id="latestDetailMeta" class="muted"></div>
+        <div class="section-head">
+          <div>
+            <h2 id="latestDetailTitle" data-i18n="data.latest.detailTitle"></h2>
+            <div id="latestDetailMeta" class="muted"></div>
+          </div>
+          <button id="copyLatestKeysBtn" type="button" class="secondary">全key Copy</button>
+        </div>
         <div style="overflow:auto">
           <table>
             <thead><tr><th data-i18n="data.latest.metric"></th><th data-i18n="data.latest.value"></th><th data-i18n="data.latest.ts"></th></tr></thead>
@@ -2082,6 +2087,10 @@
       const rows = (byDevice[selected] || []).slice().sort((a, b) => String(a.metric).localeCompare(String(b.metric)));
       $('latestDetailTitle').textContent = selected ? (selectedDevice.area_id || selectedDevice.name || selected) : t('data.latest.detailTitle');
       $('latestDetailMeta').textContent = selected ? [selectedDevice.location, selectedDevice.sensor_type || selectedDevice.type, selected].filter(Boolean).join(' / ') : t('data.latest.selectDevice');
+      if ($('copyLatestKeysBtn')) {
+        $('copyLatestKeysBtn').disabled = !rows.length;
+        $('copyLatestKeysBtn').textContent = rows.length ? '全key Copy (' + rows.length + ')' : '全key Copy';
+      }
       $('latestRows').innerHTML = rows.map((r) => {
         const meta = state.snapshot.metricMeta && state.snapshot.metricMeta[r.metric];
         const label = meta && meta.label ? meta.label : r.metric;
@@ -2089,7 +2098,7 @@
         return `<tr>
           <td><div class="latest-key-cell">
             <span class="latest-key-label">${esc(label)}</span>
-            <span class="latest-key-row"><code title="${esc(attrEscape(r.metric))}">${esc(r.metric)}</code><button class="secondary key-copy-btn" type="button" onclick='copyText(${jsonAttr(r.metric)}, "key")'>Copy</button></span>
+            <span class="latest-key-row"><code title="${esc(attrEscape(r.metric))}">${esc(r.metric)}</code></span>
           </div></td>
           <td>${esc(value)}</td>
           <td>${esc(shortDate(r.ts))}</td>
@@ -2281,6 +2290,16 @@
       state.latestDeviceId = deviceId || '';
       setStored(DATA_LATEST_DEVICE_KEY, state.latestDeviceId);
       renderLatest();
+    };
+
+    window.copyLatestKeys = function () {
+      const selected = state.latestDeviceId;
+      const keys = (state.snapshot.latest || [])
+        .filter((row) => String(row.device_id || '').trim() === selected)
+        .map((row) => String(row.metric || '').trim())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b));
+      copyText(keys.join('\n'), '全key');
     };
 
     function collectDevice() {
@@ -2569,6 +2588,7 @@
 
     $('refreshBtn').addEventListener('click', load);
     $('copyExecUrlBtn').addEventListener('click', copyExecUrl);
+    $('copyLatestKeysBtn').addEventListener('click', copyLatestKeys);
     function setActiveThemeSeg(mode) {
       document.querySelectorAll('#themeSeg button').forEach((b) => b.classList.toggle('on', b.getAttribute('data-theme') === mode));
     }

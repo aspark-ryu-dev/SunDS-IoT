@@ -671,6 +671,8 @@ function vs121MetricMetaForKey_(key) {
 
 function vs125MetricMetaForKey_(key) {
   const raw = normalizeMetricPathForPattern_(key);
+  const extended = vs125ExtendedMetricMetaForKey_(raw);
+  if (extended) return extended;
   let m = raw.match(/^line_trigger_data(?:_(\d+))?_(children|group|staff|total)_(female_in|female_out|male_in|male_out|in|out)$/);
   if (m) {
     return { label: prefixNumberedLabel_('ライン', m[1], vs125GroupLabel_(m[2]) + ' ' + vs125LineCountLabel_(m[3])), unit: '人' };
@@ -704,6 +706,74 @@ function vs125MetricMetaForKey_(key) {
   return direct[raw] || null;
 }
 
+function vs125ExtendedMetricMetaForKey_(raw) {
+  let m = raw.match(/^line_(periodic|trigger|total)_data_(\d+)_line$/);
+  if (m) return { label: 'ライン' + m[2], unit: '' };
+  m = raw.match(/^line_(periodic|trigger)_data_(\d+)_(group|total)_(female_in|female_out|male_in|male_out|in|out)$/);
+  if (m) {
+    return { label: vs125LineLabel_(m[2], m[3], m[4], false), unit: m[4] === 'line' ? '' : '人' };
+  }
+  m = raw.match(/^line_(total)_data_(\d+)_(group|total)_(female_in_counted|female_out_counted|male_in_counted|male_out_counted|in_counted|out_counted|capacity_counted)$/);
+  if (m) {
+    return { label: vs125LineLabel_(m[2], m[3], m[4], true), unit: m[4] === 'line' ? '' : '人' };
+  }
+  m = raw.match(/^region_data_dwell_time_data_(\d+)_(region|max_dwell_time|avg_dwell_time|male_max_dwell_time|male_avg_dwell_time|female_max_dwell_time|female_avg_dwell_time)$/);
+  if (m) {
+    return { label: vs125AreaDwellLabel_(m[1], m[2]), unit: m[2] === 'region' ? '' : 's' };
+  }
+  m = raw.match(/^region_data_region_count_data_(\d+)_(region|total_current_female|total_current_male|total_current_total)$/);
+  if (m) {
+    return { label: vs125AreaCountLabel_(m[1], m[2]), unit: m[2] === 'region' ? '' : '人' };
+  }
+  m = raw.match(/^region_trigger_data_dwell_time_data_(\d+)_(duration|people_id|region)$/);
+  if (m) {
+    return { label: vs125AreaTriggerDwellLabel_(m[1], m[2]), unit: m[2] === 'duration' ? 'ms' : '' };
+  }
+  m = raw.match(/^region_trigger_data_region_count_data_(\d+)_(region|total_current_female|total_current_male|total_current_total)$/);
+  if (m) {
+    return { label: vs125AreaCountLabel_(m[1], m[2]), unit: m[2] === 'region' ? '' : '人' };
+  }
+  return null;
+}
+
+function vs125LineLabel_(lineNo, group, metric, counted) {
+  if (metric === 'line') return 'ライン' + lineNo;
+  const normalized = metric.replace(/_counted$/, '');
+  return 'ライン' + lineNo + ' ' + vs125GroupLabel_(group) + ' ' + vs125LineCountLabel_(normalized) + (counted ? ' 累計' : '');
+}
+
+function vs125AreaDwellLabel_(areaNo, metric) {
+  const labels = {
+    region: 'エリア',
+    max_dwell_time: '最大滞在時間',
+    avg_dwell_time: '平均滞在時間',
+    male_max_dwell_time: '男性最大滞在時間',
+    male_avg_dwell_time: '男性平均滞在時間',
+    female_max_dwell_time: '女性最大滞在時間',
+    female_avg_dwell_time: '女性平均滞在時間'
+  };
+  return 'エリア' + areaNo + (metric === 'region' ? '' : ' ' + (labels[metric] || metric));
+}
+
+function vs125AreaCountLabel_(areaNo, metric) {
+  const labels = {
+    region: 'エリア',
+    total_current_female: '合計 現在女性人数',
+    total_current_male: '合計 現在男性人数',
+    total_current_total: '合計 現在人数'
+  };
+  return 'エリア' + areaNo + (metric === 'region' ? '' : ' ' + (labels[metric] || metric));
+}
+
+function vs125AreaTriggerDwellLabel_(areaNo, metric) {
+  const labels = {
+    duration: '滞在時間',
+    people_id: '人物ID',
+    region: 'エリア'
+  };
+  return 'エリア' + areaNo + (metric === 'region' ? '' : ' ' + (labels[metric] || metric));
+}
+
 function normalizeMetricPathForPattern_(key) {
   return String(key || '').trim().replace(/\[\]/g, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase();
 }
@@ -724,7 +794,8 @@ function vs125LineCountLabel_(key) {
     male_in: '男性入場人数',
     male_out: '男性退場人数',
     in: '入場人数',
-    out: '退場人数'
+    out: '退場人数',
+    capacity: '人数差分'
   }[key] || key;
 }
 

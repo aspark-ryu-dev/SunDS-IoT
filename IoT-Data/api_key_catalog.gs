@@ -349,11 +349,31 @@ const METRIC_UNITS = {
 
 const METRIC_META = buildKnownMetricMeta_();
 
+/**
+
+ * Seed the KeyCatalog sheet with known metric metadata (idempotent).
+
+ * @returns {object} updated admin snapshot
+
+ */
+
 function apiSeedKeyCatalog() {
   ensureIngestReady_();
   seedKeyCatalog_();
   return getAdminSnapshot_();
 }
+
+/**
+
+ * Toggle whether a metric key is visible on the dashboard.
+
+ * @param {string} key
+
+ * @param {boolean} enabled
+
+ * @returns {object} updated admin snapshot
+
+ */
 
 function apiSaveKeyCatalogVisibility(key, enabled) {
   ensureIngestReady_();

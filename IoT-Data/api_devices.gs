@@ -2,6 +2,11 @@
  * AUTO-MIGRATED from defs.gs — see README.
  * Edits here are fine; this file is hand-maintained from now on.
  */
+/**
+ * Upsert a device row keyed by device_id. Returns the updated admin snapshot.
+ * @param {{device_id:string, name?:string, area_id?:string, location?:string, type?:string, sensor_type?:string, power_source?:string, report_interval_min?:number, enabled?:boolean, note?:string}} device
+ * @returns {object}
+ */
 function apiSaveDevice(device) {
   ensureIngestReady_();
   const clean = normalizeDeviceInput_(device);
@@ -26,6 +31,18 @@ function apiSaveDevice(device) {
     lock.releaseLock();
   }
 }
+
+/**
+
+ * Bulk upsert. Optional per-device dashboard layout settings keyed by device_id.
+
+ * @param {Array<object>} devices
+
+ * @param {Object<string,{order?:number, card_type?:string, metrics?:string}>} [dashboardSettingsByDevice]
+
+ * @returns {object} updated admin snapshot
+
+ */
 
 function apiSaveDevices(devices, dashboardSettingsByDevice) {
   ensureIngestReady_();
@@ -63,6 +80,16 @@ function apiSaveDevices(devices, dashboardSettingsByDevice) {
     lock.releaseLock();
   }
 }
+
+/**
+
+ * Delete a device by id AND the layout entries that reference it.
+
+ * @param {string} deviceId
+
+ * @returns {object} updated admin snapshot
+
+ */
 
 function apiDeleteDevice(deviceId) {
   ensureIngestReady_();

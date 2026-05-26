@@ -1457,7 +1457,7 @@
     const DASHBOARD_ALLOWED_STORAGE_KEYS = [DASHBOARD_CACHE_KEY, DASHBOARD_PAGE_KEY, DASHBOARD_QUERY_KEY, DASHBOARD_MENU_KEY, DASHBOARD_REFRESH_KEY, DASHBOARD_IOT_GROUP_KEY, DASHBOARD_THEME_KEY, DASHBOARD_METRIC_PREFS_KEY, DASHBOARD_LOGO_KEY];
     const DASHBOARD_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
     const DEFAULT_LOGO_URL = 'https://www.dropbox.com/scl/fi/bwxb55mrt1qg4aqih5bxt/icon_dark.png?rlkey=g2mb3yooo636lr4qfa8zg8dlb&st=icn9wq0m&dl=1';
-    const state = { data: null, deviceMap: {}, query: '', filter: 'all', timer: 0, metricEditorDeviceId: '', metricPages: {} };
+    const state = { data: null, deviceMap: {}, query: '', filter: 'all', timer: 0, metricEditorDeviceId: '', metricPages: {}, version: '', lastVersionAt: 0 };
     const $ = (id) => document.getElementById(id);
 
     function t(path) {
@@ -1497,11 +1497,18 @@
     }
 
     function load(silent) {
-      callServer('apiGetDashboardState', [], render, { silent: !!silent });
+      callServer('apiGetDashboardState', [state.version || ''], render, { silent: !!silent });
     }
 
     function render(data) {
+      // Server returned "no change since last fetch" — skip rerender entirely.
+      if (data && data.unchanged) {
+        state.lastVersionAt = Date.now();
+        scheduleRefresh();
+        return;
+      }
       state.data = data || {};
+      state.version = (data && data.version) || '';
       state.deviceMap = buildDeviceMap(state.data.devices || []);
       saveCachedDashboard(state.data);
       applyRefreshIntervalControl(state.data.config || {});

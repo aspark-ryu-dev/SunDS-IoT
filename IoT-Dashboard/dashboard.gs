@@ -50,14 +50,36 @@ const METRIC_META = {
 };
 const DASHBOARD_STATE_CACHE_KEY = 'iot_dashboard_state_v3';
 const DASHBOARD_STATE_CACHE_SEC = 20;
-function apiGetDashboardState() {
+/**
+ * Returns the full dashboard snapshot, or a tiny "unchanged" response when
+ * the client already holds the latest version.
+ *
+ * @param {string} [clientVersion] - the `version` value the client last received.
+ * @returns {{unchanged:true,version:string} | object} state envelope with `.version`
+ */
+function apiGetDashboardState(clientVersion) {
   const cache = CacheService.getScriptCache();
+  let state = null;
   const cached = cache.get(DASHBOARD_STATE_CACHE_KEY);
   if (cached) {
-    try {
-      return JSON.parse(cached);
-    } catch (err) {}
+    try { state = JSON.parse(cached); } catch (err) {}
   }
+  if (!state) {
+    state = buildDashboardState_();
+    const json = JSON.stringify(state);
+    state.version = shortHash_(json);
+    if (json.length < 95000) {
+      cache.put(DASHBOARD_STATE_CACHE_KEY, JSON.stringify(state), DASHBOARD_STATE_CACHE_SEC);
+    }
+  }
+  if (clientVersion && state.version && clientVersion === state.version) {
+    return { ok: true, unchanged: true, version: state.version };
+  }
+  return state;
+}
+
+/** Build the dashboard state (excluding `version`); cache-miss path only. */
+function buildDashboardState_() {
   const config = getConfigMap_();
   const visibleMetricKeys = readVisibleMetricKeys_();
   const devices = readDevicesWithMetrics_(normalizeOfflineTimeout_(config.offline_timeout_min), visibleMetricKeys);
@@ -66,8 +88,7 @@ function apiGetDashboardState() {
   const layout = readLayout_().filter(function (item) {
     return item.enabled !== false && (!item.bind_ref || visibleDeviceIds[item.bind_ref]);
   });
-
-  const state = {
+  return {
     build: BUILD_VERSION,
     config: {
       map_width: Number(config.map_width || 1200),
@@ -84,9 +105,17 @@ function apiGetDashboardState() {
     devices: devices,
     metricMeta: readMetricMeta_(visibleMetricKeys)
   };
-  const json = JSON.stringify(state);
-  if (json.length < 95000) cache.put(DASHBOARD_STATE_CACHE_KEY, json, DASHBOARD_STATE_CACHE_SEC);
-  return state;
+}
+
+/** 24-char hex of MD5(s). Stable, content-addressable. */
+function shortHash_(s) {
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, String(s || ''), Utilities.Charset.UTF_8);
+  let hex = '';
+  for (let i = 0; i < 12; i++) {
+    const b = digest[i] & 0xff;
+    hex += (b < 16 ? '0' : '') + b.toString(16);
+  }
+  return hex;
 }
 
 function readMetricMeta_(visibleMetricKeys) {
@@ -273,11 +302,5 @@ function normalizeMetricUnit_(metric, unit) {
 
 function isTemperatureMetric_(metric) {
   return /(^|_)temperature($|_)/.test(String(metric || '').toLowerCase().replace(/[^a-z0-9]+/g, '_'));
-}
-
-function normalizeReportIntervalMin_(value, fallbackMin) {
-  const n = Number(value);
-  if (isFinite(n) && n > 0) return Math.round(n * 100) / 100;
-  return normalizeOfflineTimeout_(fallbackMin);
 }
 

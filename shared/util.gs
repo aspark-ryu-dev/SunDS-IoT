@@ -43,11 +43,35 @@ function normalizeOfflineTimeout_(value) {
   return n === 5 || n === 30 || n === 60 ? n : 15;
 }
 
-function normalizeReportIntervalMin_(value) {
+/**
+ * Normalize a "report interval (min)" cell value.
+ * @param {*} value
+ * @param {*} [fallbackMin]  If given, an invalid `value` falls back to normalizeOfflineTimeout_(fallbackMin).
+ *                           Otherwise returns '' for invalid input.
+ * @returns {number|''}
+ */
+function normalizeReportIntervalMin_(value, fallbackMin) {
   const n = Number(value);
-  if (!isFinite(n) || n <= 0) return '';
-  return Math.round(n * 100) / 100;
+  if (isFinite(n) && n > 0) return Math.round(n * 100) / 100;
+  if (fallbackMin === undefined) return '';
+  return normalizeOfflineTimeout_(fallbackMin);
 }
+
+/**
+
+ * Decide whether a device counts as Online.
+
+ * @param {boolean} enabled
+
+ * @param {*} lastSeen   Date or ISO string of last uplink.
+
+ * @param {Date} now
+
+ * @param {number} reportIntervalMin
+
+ * @returns {{online:boolean, reason:string}}
+
+ */
 
 function deviceOnlineStatus_(enabled, lastSeen, now, reportIntervalMin) {
   if (!enabled) return { online: false, reason: 'disabled' };
@@ -60,6 +84,16 @@ function deviceOnlineStatus_(enabled, lastSeen, now, reportIntervalMin) {
   }
   return { online: true, reason: '' };
 }
+
+/**
+
+ * Coerce a value into a Date, or null if invalid.
+
+ * @param {*} v
+
+ * @returns {Date|null}
+
+ */
 
 function toDate_(v) {
   if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v.getTime())) return v;

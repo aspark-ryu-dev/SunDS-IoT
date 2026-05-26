@@ -2,6 +2,11 @@
  * AUTO-MIGRATED from defs.gs — see README.
  * Edits here are fine; this file is hand-maintained from now on.
  */
+/**
+ * Upsert a layout item. Empty item_id triggers auto-generation ('item_'+timestamp).
+ * @param {{item_id?:string, bind_type?:'device', bind_ref:string, x_norm:number, y_norm:number, label?:string, style_config?:{metrics?:string[], displayMode?:('card'|'popup')}, enabled?:boolean}} item
+ * @returns {object} updated admin snapshot
+ */
 function apiSaveLayoutItem(item) {
   ensureIngestReady_();
   const clean = normalizeLayoutItem_(item);
@@ -25,6 +30,18 @@ function apiSaveLayoutItem(item) {
     lock.releaseLock();
   }
 }
+
+/**
+
+ * Replace the entire layout in one shot: upsert `items`, then delete `deletedIds`.
+
+ * @param {Array<object>} items
+
+ * @param {string[]} [deletedIds]
+
+ * @returns {object} updated admin snapshot
+
+ */
 
 function apiSaveMapLayout(items, deletedIds) {
   ensureIngestReady_();
@@ -67,6 +84,16 @@ function apiSaveMapLayout(items, deletedIds) {
     lock.releaseLock();
   }
 }
+
+/**
+
+ * Delete a layout item by item_id.
+
+ * @param {string} itemId
+
+ * @returns {object} updated admin snapshot
+
+ */
 
 function apiDeleteLayoutItem(itemId) {
   ensureIngestReady_();

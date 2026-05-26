@@ -6,6 +6,16 @@ const DEF_TYPES = { metric: true, expr: true, expression: true, formula: true };
 
 const DEF_TYPES_EXPR = { expr: true, expression: true, formula: true };
 
+/**
+
+ * Save a metric definition (type='metric' to override label/unit; type='expr' for derived).
+
+ * @param {{id:string, type?:('metric'|'expr'), name?:string, unit?:string, source?:string, expression?:string, params?:string, enabled?:boolean}} definition
+
+ * @returns {object} updated admin snapshot
+
+ */
+
 function apiSaveDefinition(definition) {
   ensureIngestReady_();
   const clean = normalizeDefinitionInput_(definition);
@@ -32,6 +42,16 @@ function apiSaveDefinition(definition) {
   }
 }
 
+/**
+
+ * Delete a definition by id.
+
+ * @param {string} id
+
+ * @returns {object} updated admin snapshot
+
+ */
+
 function apiDeleteDefinition(id) {
   ensureIngestReady_();
   const target = String(id || '').trim();
@@ -57,6 +77,18 @@ function apiSeedKnownMetricDefinitions() {
   seedKnownMetricDefinitions_();
   return getAdminSnapshot_();
 }
+
+/**
+
+ * Evaluate an expression against a JSON scope. Safe-fails: returns {ok:false,error}.
+
+ * @param {string} expression
+
+ * @param {string} scopeJson  JSON-encoded object passed as the expression's scope.
+
+ * @returns {{ok:true,value:any} | {ok:false,error:string}}
+
+ */
 
 function apiTestExpression(expression, scopeJson) {
   let scope = {};

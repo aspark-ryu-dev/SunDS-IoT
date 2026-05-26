@@ -2,6 +2,10 @@
  * AUTO-MIGRATED from defs.gs — see README.
  * Edits here are fine; this file is hand-maintained from now on.
  */
+/**
+ * Returns the admin snapshot: devices, layout, definitions, latest, keyCatalog, deviceExamples, config.
+ * @returns {object}
+ */
 function apiGetAdminSnapshot() {
   ensureIngestReady_();
   return getAdminSnapshot_();
@@ -22,6 +26,20 @@ function apiTestIngest() {
   return testIngest();
 }
 
+/**
+
+ * Convenience: set the dashboard background image URL + dimensions.
+
+ * @param {string} imageUrl
+
+ * @param {number} [width]
+
+ * @param {number} [height]
+
+ * @returns {object} updated admin snapshot
+
+ */
+
 function apiSetBackgroundUrl(imageUrl, width, height) {
   ensureIngestReady_();
   const url = normalizeImageUrl_(imageUrl);
@@ -32,6 +50,16 @@ function apiSetBackgroundUrl(imageUrl, width, height) {
   if (height) setConfig_('map_height', Number(height));
   return getAdminSnapshot_();
 }
+
+/**
+
+ * Save dashboard-level settings (background image, refresh interval, map size).
+
+ * @param {{imageUrl?:string, width?:number, height?:number, refresh_interval_sec?:number}} settings
+
+ * @returns {object} updated admin snapshot
+
+ */
 
 function apiSaveDashboardSettings(settings) {
   ensureIngestReady_();

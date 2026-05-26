@@ -992,6 +992,32 @@
       font-size: 11.5px;
       font-weight: 600;
     }
+    .latest-key-cell {
+      display: grid;
+      gap: 4px;
+      min-width: 220px;
+    }
+    .latest-key-label { color: var(--ink); font-weight: 700; }
+    .latest-key-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+    .latest-key-row code {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .key-copy-btn {
+      flex: none;
+      padding: 4px 8px;
+      min-height: 24px;
+      border-radius: 7px;
+      font-size: 10.5px;
+      box-shadow: none;
+    }
     @media (max-width: 960px) {
       header { align-items: flex-start; flex-direction: column; }
       .grid, .three, .form-grid, .map-admin-grid { grid-template-columns: 1fr; }
@@ -1648,6 +1674,29 @@
       }
     }
 
+    window.copyText = function (text, label) {
+      text = String(text || '');
+      const done = () => showToast((label || 'text') + ' をコピーしました');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopyText(text, done));
+      } else {
+        fallbackCopyText(text, done);
+      }
+    };
+
+    function fallbackCopyText(text, done) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      if (done) done();
+    }
+
     function cleanupLocalStorage(namespace, allowedKeys, maxAgeMs) {
       try {
         const allowed = {};
@@ -2035,9 +2084,16 @@
       $('latestDetailMeta').textContent = selected ? [selectedDevice.location, selectedDevice.sensor_type || selectedDevice.type, selected].filter(Boolean).join(' / ') : t('data.latest.selectDevice');
       $('latestRows').innerHTML = rows.map((r) => {
         const meta = state.snapshot.metricMeta && state.snapshot.metricMeta[r.metric];
-        const label = meta && meta.label ? meta.label + ' (' + r.metric + ')' : r.metric;
+        const label = meta && meta.label ? meta.label : r.metric;
         const value = meta && meta.unit ? String(r.value) + meta.unit : r.value;
-        return `<tr><td><code>${esc(label)}</code></td><td>${esc(value)}</td><td>${esc(shortDate(r.ts))}</td></tr>`;
+        return `<tr>
+          <td><div class="latest-key-cell">
+            <span class="latest-key-label">${esc(label)}</span>
+            <span class="latest-key-row"><code title="${esc(attrEscape(r.metric))}">${esc(r.metric)}</code><button class="secondary key-copy-btn" type="button" onclick='copyText(${jsonAttr(r.metric)}, "key")'>Copy</button></span>
+          </div></td>
+          <td>${esc(value)}</td>
+          <td>${esc(shortDate(r.ts))}</td>
+        </tr>`;
       }).join('') || `<tr><td colspan="3" class="muted">${esc(selected ? t('data.latest.noDeviceData') : t('data.latest.selectDevice'))}</td></tr>`;
     }
 

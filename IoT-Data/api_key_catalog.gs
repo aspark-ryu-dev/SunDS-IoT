@@ -209,14 +209,14 @@ const METRIC_LABEL_OVERRIDES = {
   current_total: '現在人数',
   max_counted: '最大人数',
   Max_counted: '最大人数',
-  total_mapped_regions: 'マップ済みリージョン数',
-  regions_name: 'リージョン名',
-  numbering_regions: 'リージョン番号',
+  total_mapped_regions: '設定済みエリア数',
+  regions_name: 'エリア名',
+  numbering_regions: 'エリア番号',
   current_counted: '現在人数',
   max_dwell_time: '最大滞在時間',
   avg_dwell_time: '平均滞在時間',
-  dwell_time_data_region: '滞在リージョン',
-  'dwell_time_data[].region': '滞在リージョン',
+  dwell_time_data_region: '滞在エリア',
+  'dwell_time_data[].region': '滞在エリア',
   dwell_time_data_max_dwell_time: '最大滞在時間',
   'dwell_time_data[].max_dwell_time': '最大滞在時間',
   dwell_time_data_avg_dwell_time: '平均滞在時間',
@@ -294,7 +294,7 @@ const METRIC_LABEL_OVERRIDES = {
   attention_time_ms: '注視時間',
   di_trigger_count: 'DI トリガー回数',
   line: 'ライン番号',
-  region: 'リージョン番号',
+  region: 'エリア番号',
   'line_trigger_data[].children.in': '子供 入場人数',
   'line_trigger_data[].children.out': '子供 退場人数',
   'line_trigger_data[].staff.in': 'スタッフ 入場人数',
@@ -653,18 +653,18 @@ function vs121MetricMetaForKey_(key) {
   const direct = {
     current_total: { label: '現在人数', unit: '人' },
     max_counted: { label: '最大人数', unit: '人' },
-    total_mapped_regions: { label: 'マップ済みリージョン数', unit: '' }
+    total_mapped_regions: { label: '設定済みエリア数', unit: '' }
   };
   if (direct[raw]) return direct[raw];
   const m = raw.match(/^dwell_time_data_(\d+)_(region|max_dwell_time|avg_dwell_time|people_id|duration)$/);
   if (!m) return null;
   const regionNo = m[1];
   const map = {
-    region: { label: 'リージョン' + regionNo, unit: '' },
-    max_dwell_time: { label: 'リージョン' + regionNo + ' 最大滞在時間', unit: 's' },
-    avg_dwell_time: { label: 'リージョン' + regionNo + ' 平均滞在時間', unit: 's' },
-    people_id: { label: 'リージョン' + regionNo + ' 人物ID', unit: '' },
-    duration: { label: 'リージョン' + regionNo + ' 滞在時間', unit: 'ms' }
+    region: { label: 'エリア' + regionNo, unit: '' },
+    max_dwell_time: { label: 'エリア' + regionNo + ' 最大滞在時間', unit: 's' },
+    avg_dwell_time: { label: 'エリア' + regionNo + ' 平均滞在時間', unit: 's' },
+    people_id: { label: 'エリア' + regionNo + ' 人物ID', unit: '' },
+    duration: { label: 'エリア' + regionNo + ' 滞在時間', unit: 'ms' }
   };
   return map[m[2]] || null;
 }
@@ -677,7 +677,7 @@ function vs125MetricMetaForKey_(key) {
   }
   m = raw.match(/^region_trigger_data_region_count_data(?:_(\d+))?_(total|children|staff)_(current_female|current_male|current_total)$/);
   if (m) {
-    return { label: prefixNumberedLabel_('リージョン', m[1], vs125GroupLabel_(m[2]) + ' ' + vs125RegionCountLabel_(m[3])), unit: '人' };
+    return { label: prefixNumberedLabel_('エリア', m[1], vs125GroupLabel_(m[2]) + ' ' + vs125RegionCountLabel_(m[3])), unit: '人' };
   }
   m = raw.match(/^region_trigger_data_dwell_time_data(?:_(\d+))?_(children|duration|people_id|region|gender|staff)$/);
   if (m) {
@@ -742,7 +742,7 @@ function vs125DwellLabel_(key) {
     duration: '滞在時間',
     attention_time_ms: '注視時間',
     people_id: '人物ID',
-    region: 'リージョン番号',
+    region: 'エリア番号',
     gender: '性別',
     staff: 'スタッフ判定'
   }[key] || key;

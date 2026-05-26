@@ -17,7 +17,7 @@ const METRIC_META = {
   current_total: { label: '現在人数', unit: '人' },
   max_counted: { label: '最大人数', unit: '人' },
   Max_counted: { label: '最大人数', unit: '人' },
-  total_mapped_regions: { label: 'マップ済みリージョン数', unit: '' },
+  total_mapped_regions: { label: '設定済みエリア数', unit: '' },
   current_counted: { label: '現在人数', unit: '人' },
   in_counted: { label: '入場人数', unit: '人' },
   out_counted: { label: '退場人数', unit: '人' },

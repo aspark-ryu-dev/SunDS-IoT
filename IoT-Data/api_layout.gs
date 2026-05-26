@@ -154,28 +154,3 @@ function normalizeLayoutItem_(item) {
 function layoutItemToRow_(item) {
   return [item.item_id, item.bind_type, item.bind_ref, item.x_norm, item.y_norm, item.label, item.style, item.enabled];
 }
-
-function normalizeStyleConfig_(value) {
-  let obj = value;
-  if (typeof value === 'string') obj = parseStyleConfig_(value);
-  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) obj = {};
-  const metrics = Array.isArray(obj.metrics) ? obj.metrics : [];
-  const displayMode = String(obj.displayMode || obj.display_mode || 'card').trim().toLowerCase();
-  const cardWidth = clampNumber_(Number(obj.cardWidth || obj.card_width), 100, 360, 0);
-  const cardHeight = clampNumber_(Number(obj.cardHeight || obj.card_height), 54, 260, 0);
-  return {
-    metrics: metrics.map(function (m) { return String(m || '').trim(); }).filter(Boolean).slice(0, 12),
-    displayMode: displayMode === 'popup' ? 'popup' : 'card',
-    cardWidth: cardWidth,
-    cardHeight: cardHeight
-  };
-}
-
-function parseStyleConfig_(style) {
-  try {
-    const obj = JSON.parse(String(style || '{}'));
-    return normalizeStyleConfig_(obj);
-  } catch (err) {
-    return { metrics: [], displayMode: 'card', cardWidth: 0, cardHeight: 0 };
-  }
-}

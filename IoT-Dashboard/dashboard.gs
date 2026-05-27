@@ -49,7 +49,7 @@ const METRIC_META = {
   power_factor: { label: '力率', unit: '' }
 };
 const DASHBOARD_STATE_CACHE_KEY = 'iot_dashboard_state_v3';
-const DASHBOARD_STATE_CACHE_SEC = 20;
+const DASHBOARD_STATE_CACHE_SEC = 5;
 /**
  * Returns the full dashboard snapshot, or a tiny "unchanged" response when
  * the client already holds the latest version.

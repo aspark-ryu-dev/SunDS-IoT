@@ -69,6 +69,7 @@ function apiSaveDevices(devices, dashboardSettingsByDevice) {
         writeDeviceRow_(sh, rowById[device.device_id], idx, device, false);
       } else {
         sh.appendRow(deviceToRow_(device, idx));
+        rowById[device.device_id] = sh.getLastRow();
       }
     });
     Object.keys(dashboardSettingsByDevice).forEach(function (deviceId) {
@@ -326,9 +327,11 @@ function parseDashboardMetrics_(value) {
 }
 
 function attachMetricsToDevices_(devices, latest) {
+  const visibleMetricKeys = readVisibleMetricKeysForAdmin_();
   const byDevice = {};
   latest.forEach(function (row) {
     if (isSystemMetadataKey_(row.metric)) return;
+    if (!isVisibleMetricKeyForAdmin_(row.metric, visibleMetricKeys)) return;
     if (!byDevice[row.device_id]) byDevice[row.device_id] = {};
     byDevice[row.device_id][row.metric] = { value: row.value, ts: row.ts };
   });
@@ -338,4 +341,33 @@ function attachMetricsToDevices_(devices, latest) {
       return !isSystemMetadataKey_(key);
     }).sort();
   });
+}
+
+function readVisibleMetricKeysForAdmin_() {
+  try {
+    const sh = getSheet_(SHEET_KEY_CATALOG);
+    ensureHeaders_(sh, HEADERS.KeyCatalog);
+    const values = sh.getDataRange().getValues();
+    if (values.length <= 1) return null;
+    const idx = headerIndex_(sh);
+    const out = {};
+    let foundEnabledRows = false;
+    for (let r = 1; r < values.length; r++) {
+      const key = String(valueByHeader_(values[r], idx, 'key') || '').trim();
+      if (!key || isSystemMetadataKey_(key)) continue;
+      if (parseBool_(valueByHeader_(values[r], idx, 'enabled'))) {
+        out[normalizeSystemMetadataKey_(key)] = true;
+        foundEnabledRows = true;
+      }
+    }
+    return foundEnabledRows ? out : null;
+  } catch (err) {
+    Logger.log('readVisibleMetricKeysForAdmin_ skipped: ' + err.message);
+    return null;
+  }
+}
+
+function isVisibleMetricKeyForAdmin_(key, visibleMetricKeys) {
+  if (!visibleMetricKeys) return true;
+  return !!visibleMetricKeys[normalizeSystemMetadataKey_(key)];
 }

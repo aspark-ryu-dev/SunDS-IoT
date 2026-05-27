@@ -1510,6 +1510,7 @@
       state.data = data || {};
       state.version = (data && data.version) || '';
       state.deviceMap = buildDeviceMap(state.data.devices || []);
+      syncMetricPrefsWithServer(state.data.devices || []);
       saveCachedDashboard(state.data);
       applyRefreshIntervalControl(state.data.config || {});
       applyBackground(state.data.config || {});
@@ -1808,7 +1809,8 @@
     }
 
     function shiftDeviceMetricPage(deviceId, delta, total) {
-      const pageSize = 6;
+      const device = deviceMap()[deviceId] || {};
+      const pageSize = dashboardCardType(device) === 'compact' ? 4 : 6;
       const totalPages = Math.max(1, Math.ceil(Number(total || 0) / pageSize));
       const current = Math.max(0, Math.min(totalPages - 1, Number(state.metricPages[deviceId] || 0)));
       state.metricPages[deviceId] = (current + delta + totalPages) % totalPages;
@@ -1928,6 +1930,18 @@
       try { localStorage.setItem(DASHBOARD_METRIC_PREFS_KEY, JSON.stringify(prefs || {})); } catch (err) {}
     }
 
+    function syncMetricPrefsWithServer(devices) {
+      const prefs = getMetricPrefs();
+      let changed = false;
+      (devices || []).forEach((device) => {
+        if (Array.isArray(device.dashboard_metrics) && device.dashboard_metrics.length && prefs[device.device_id]) {
+          delete prefs[device.device_id];
+          changed = true;
+        }
+      });
+      if (changed) setMetricPrefs(prefs);
+    }
+
     function saveDeviceMetricPrefs(deviceId, keys) {
       const prefs = getMetricPrefs();
       prefs[deviceId] = (keys || []).filter(Boolean).slice(0, 12);
@@ -1990,7 +2004,7 @@
       if (m) {
         const regionNo = m[1];
         const map = {
-          region: { label: 'エリア' + regionNo, unit: '' },
+          region: { label: 'エリア' + regionNo + '滞在時間', unit: '' },
           max_dwell_time: { label: 'エリア' + regionNo + ' 最大滞在時間', unit: 's' },
           avg_dwell_time: { label: 'エリア' + regionNo + ' 平均滞在時間', unit: 's' },
           people_id: { label: 'エリア' + regionNo + ' 人物ID', unit: '' },
@@ -2014,7 +2028,7 @@
       if (!m) return null;
       const regionNo = m[1];
       const map = {
-        region: { label: 'エリア' + regionNo, unit: '' },
+        region: { label: 'エリア' + regionNo + '滞在時間', unit: '' },
         max_dwell_time: { label: 'エリア' + regionNo + ' 最大滞在時間', unit: 's' },
         avg_dwell_time: { label: 'エリア' + regionNo + ' 平均滞在時間', unit: 's' },
         people_id: { label: 'エリア' + regionNo + ' 人物ID', unit: '' },

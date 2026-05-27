@@ -660,7 +660,7 @@ function vs121MetricMetaForKey_(key) {
   if (!m) return null;
   const regionNo = m[1];
   const map = {
-    region: { label: 'エリア' + regionNo, unit: '' },
+    region: { label: 'エリア' + regionNo + '滞在時間', unit: '' },
     max_dwell_time: { label: 'エリア' + regionNo + ' 最大滞在時間', unit: 's' },
     avg_dwell_time: { label: 'エリア' + regionNo + ' 平均滞在時間', unit: 's' },
     people_id: { label: 'エリア' + regionNo + ' 人物ID', unit: '' },

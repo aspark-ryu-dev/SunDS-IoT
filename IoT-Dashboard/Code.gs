@@ -3,13 +3,13 @@
  * Public read-only dashboard for the shared IoT spreadsheet.
  */
 
-const BUILD_VERSION = 'v2026-05-22-dashboard-device-controls';
+const BUILD_VERSION = 'v2026-05-27-sunds-title-sync-debug';
 
 function doGet(e) {
   const tpl = HtmlService.createTemplateFromFile('index');
   tpl.BUILD_VERSION = BUILD_VERSION;
   return tpl.evaluate()
-    .setTitle('IoT ダッシュボード')
+    .setTitle('SunDS')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

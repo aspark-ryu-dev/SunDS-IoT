@@ -1966,6 +1966,8 @@
 
     function inferMetricMeta(metric) {
       const raw = String(metric || '');
+      const readable = inferReadableMetricMeta(raw);
+      if (readable) return readable;
       const direct = {
         current_total: { label: '現在人数', unit: '人' },
         max_counted: { label: '最大人数', unit: '人' },
@@ -2004,7 +2006,7 @@
       if (m) {
         const regionNo = m[1];
         const map = {
-          region: { label: 'エリア' + regionNo + '滞在時間', unit: '' },
+          region: { label: 'エリア' + regionNo + ' 滞在時間', unit: '' },
           max_dwell_time: { label: 'エリア' + regionNo + ' 最大滞在時間', unit: 's' },
           avg_dwell_time: { label: 'エリア' + regionNo + ' 平均滞在時間', unit: 's' },
           people_id: { label: 'エリア' + regionNo + ' 人物ID', unit: '' },
@@ -2014,6 +2016,58 @@
       }
 
       return { label: raw, unit: '' };
+    }
+
+    function inferReadableMetricMeta(metric) {
+      const raw = normalizeMetricPath(metric);
+      const direct = {
+        current_total: { label: '現在人数', unit: '人' },
+        max_counted: { label: '最大人数', unit: '人' },
+        total_mapped_regions: { label: '設定済みエリア数', unit: '' },
+        in_counted: { label: '入場人数', unit: '人' },
+        out_counted: { label: '退場人数', unit: '人' },
+        capacity_counted: { label: '在室人数', unit: '人' },
+        total_data_in_cumulative_counted: { label: '累計入場人数', unit: '人' },
+        total_data_out_cumulative_counted: { label: '累計退場人数', unit: '人' },
+        total_data_capacity_cumulative_counted: { label: '累計在室人数', unit: '人' },
+        device_info_running_time: { label: '稼働時間', unit: 's' },
+        device_info_cpu_cpu_temperature: { label: 'CPU温度', unit: '°C' },
+        device_info_cpu_cpu_usage: { label: 'CPU使用率', unit: '%' },
+        device_info_device_tilt_pitch_roll_pitch: { label: '傾き Pitch', unit: '°' },
+        device_info_device_tilt_pitch_roll_roll: { label: '傾き Roll', unit: '°' },
+        device_info_ram_memory_usage: { label: 'メモリ使用率', unit: '%' },
+        device_info_ram_total_memory_mb: { label: 'メモリ総容量', unit: 'MB' },
+        device_info_ram_used_memory_mb: { label: 'メモリ使用量', unit: 'MB' },
+        device_info_storage_storage_usage: { label: 'ストレージ使用率', unit: '%' },
+        device_info_storage_total_space_gb: { label: 'ストレージ総容量', unit: 'GB' },
+        device_info_storage_used_space_gb: { label: 'ストレージ使用量', unit: 'GB' },
+        di_trigger_data_di_trigger_count: { label: 'DIトリガー回数', unit: '回' }
+      };
+      if (direct[raw]) return direct[raw];
+      let m = raw.match(/^flow_data_([a-d])_([a-d])$/);
+      if (m) return { label: m[1].toUpperCase() + '-' + m[2].toUpperCase() + ' 人流', unit: '人' };
+      m = raw.match(/^current_counted_(\d+)$/);
+      if (m) return { label: 'エリア' + m[1] + ' 現在人数', unit: '人' };
+      m = raw.match(/^occupancy_(\d+)$/);
+      if (m) return { label: 'エリア' + m[1] + ' 占有状態', unit: '' };
+      m = raw.match(/^numbering_regions_(\d+)$/);
+      if (m) return { label: 'エリア' + m[1] + ' 番号', unit: '' };
+      m = raw.match(/^dwell_time_data_(\d+)_(region|max_dwell_time|avg_dwell_time|people_id|duration)$/);
+      if (m) return { label: vs121DwellLabel(m[1], m[2]), unit: m[2] === 'duration' ? 'ms' : (m[2] === 'max_dwell_time' || m[2] === 'avg_dwell_time' ? 's' : '') };
+      m = raw.match(/^line_trigger_data_(in|out)$/);
+      if (m) return { label: m[1] === 'in' ? '入場トリガー' : '退場トリガー', unit: '人' };
+      return null;
+    }
+
+    function vs121DwellLabel(areaNo, metric) {
+      const labels = {
+        region: '滞在時間',
+        max_dwell_time: '最大滞在時間',
+        avg_dwell_time: '平均滞在時間',
+        people_id: '人物ID',
+        duration: '滞在時間'
+      };
+      return 'エリア' + areaNo + (labels[metric] ? ' ' + labels[metric] : '');
     }
 
     function inferVs121MetricMeta(metric) {
@@ -2028,7 +2082,7 @@
       if (!m) return null;
       const regionNo = m[1];
       const map = {
-        region: { label: 'エリア' + regionNo + '滞在時間', unit: '' },
+        region: { label: 'エリア' + regionNo + ' 滞在時間', unit: '' },
         max_dwell_time: { label: 'エリア' + regionNo + ' 最大滞在時間', unit: 's' },
         avg_dwell_time: { label: 'エリア' + regionNo + ' 平均滞在時間', unit: 's' },
         people_id: { label: 'エリア' + regionNo + ' 人物ID', unit: '' },
@@ -2137,7 +2191,7 @@
     function vs125LineLabel(lineNo, group, metric, counted) {
       if (metric === 'line') return 'ライン' + lineNo;
       const normalized = metric.replace(/_counted$/, '');
-      return 'ライン' + lineNo + ' ' + vs125GroupLabel(group) + ' ' + vs125LineCountLabel(normalized) + (counted ? ' 累計' : '');
+      return 'ライン' + lineNo + ' ' + (counted ? '累計 ' : '') + vs125GroupLabel(group) + ' ' + vs125LineCountLabel(normalized);
     }
 
     function vs125AreaDwellLabel(areaNo, metric) {
@@ -2156,9 +2210,9 @@
     function vs125AreaCountLabel(areaNo, metric) {
       const labels = {
         region: 'エリア',
-        total_current_female: '合計 現在女性人数',
-        total_current_male: '合計 現在男性人数',
-        total_current_total: '合計 現在人数'
+        total_current_female: '現在女性人数',
+        total_current_male: '現在男性人数',
+        total_current_total: '現在人数'
       };
       return 'エリア' + areaNo + (metric === 'region' ? '' : ' ' + (labels[metric] || metric));
     }
@@ -2181,18 +2235,18 @@
     }
 
     function vs125GroupLabel(key) {
-      return { children: '子供', group: 'グループ', staff: 'スタッフ', total: '総計' }[key] || key;
+      return { children: '子供', group: 'グループ', staff: 'スタッフ', total: '全体' }[key] || key;
     }
 
     function vs125LineCountLabel(key) {
       return {
-        female_in: '女性入場人数',
-        female_out: '女性退場人数',
-        male_in: '男性入場人数',
-        male_out: '男性退場人数',
-        in: '入場人数',
-        out: '退場人数',
-        capacity: '人数差分'
+        female_in: '女性入場',
+        female_out: '女性退場',
+        male_in: '男性入場',
+        male_out: '男性退場',
+        in: '入場',
+        out: '退場',
+        capacity: '在室人数'
       }[key] || key;
     }
 
@@ -2200,7 +2254,7 @@
       return {
         current_female: '現在女性人数',
         current_male: '現在男性人数',
-        current_total: '現在総人数'
+        current_total: '現在人数'
       }[key] || key;
     }
 

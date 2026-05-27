@@ -571,7 +571,12 @@ function fillKeyCatalogBlanks_(sheet, rowNumber, idx, meta) {
   const row = sheet.getRange(rowNumber, 1, 1, sheet.getLastColumn()).getValues()[0];
   ['label_ja', 'data_type', 'unit', 'source', 'models', 'enabled'].forEach(function (key) {
     if (idx[key] === undefined) return;
-    if (String(row[idx[key]] || '').trim() !== '') return;
+    const current = String(row[idx[key]] || '').trim();
+    const source = idx.source === undefined ? '' : String(row[idx.source] || '').trim();
+    if (current !== '') {
+      if (key !== 'label_ja') return;
+      if (source && source !== 'device-examples' && source !== 'latest') return;
+    }
     sheet.getRange(rowNumber, idx[key] + 1).setValue(meta[key]);
   });
 }
@@ -627,11 +632,13 @@ function syncLatestKeysToKeyCatalog_() {
     const existing = {};
     for (let r = 1; r < values.length; r++) {
       const key = String(valueByHeader_(values[r], idx, 'key') || '').trim();
-      if (key) existing[key] = true;
+      if (key) existing[key] = r + 1;
     }
     const rows = [];
     keys.forEach(function (key) {
-      if (!existing[key]) rows.push(keyCatalogToRow_(keyCatalogMetaForKey_(key, 'latest'), idx));
+      const meta = keyCatalogMetaForKey_(key, 'latest');
+      if (existing[key]) fillKeyCatalogBlanks_(sh, existing[key], idx, meta);
+      else rows.push(keyCatalogToRow_(meta, idx));
     });
     if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, sh.getLastColumn()).setValues(rows);
     return { added: rows.length };
@@ -725,7 +732,7 @@ function vs121MetricMetaForKey_(key) {
   if (!m) return null;
   const regionNo = m[1];
   const map = {
-    region: { label: 'エリア' + regionNo + '滞在時間', unit: '' },
+    region: { label: 'エリア' + regionNo + ' 滞在時間', unit: '' },
     max_dwell_time: { label: 'エリア' + regionNo + ' 最大滞在時間', unit: 's' },
     avg_dwell_time: { label: 'エリア' + regionNo + ' 平均滞在時間', unit: 's' },
     people_id: { label: 'エリア' + regionNo + ' 人物ID', unit: '' },
@@ -804,7 +811,7 @@ function vs125ExtendedMetricMetaForKey_(raw) {
 function vs125LineLabel_(lineNo, group, metric, counted) {
   if (metric === 'line') return 'ライン' + lineNo;
   const normalized = metric.replace(/_counted$/, '');
-  return 'ライン' + lineNo + ' ' + vs125GroupLabel_(group) + ' ' + vs125LineCountLabel_(normalized) + (counted ? ' 累計' : '');
+  return 'ライン' + lineNo + ' ' + (counted ? '累計 ' : '') + vs125GroupLabel_(group) + ' ' + vs125LineCountLabel_(normalized);
 }
 
 function vs125AreaDwellLabel_(areaNo, metric) {
@@ -823,9 +830,9 @@ function vs125AreaDwellLabel_(areaNo, metric) {
 function vs125AreaCountLabel_(areaNo, metric) {
   const labels = {
     region: 'エリア',
-    total_current_female: '合計 現在女性人数',
-    total_current_male: '合計 現在男性人数',
-    total_current_total: '合計 現在人数'
+    total_current_female: '現在女性人数',
+    total_current_male: '現在男性人数',
+    total_current_total: '現在人数'
   };
   return 'エリア' + areaNo + (metric === 'region' ? '' : ' ' + (labels[metric] || metric));
 }
@@ -849,18 +856,18 @@ function prefixNumberedLabel_(prefix, index, label) {
 }
 
 function vs125GroupLabel_(key) {
-  return { children: '子供', group: 'グループ', staff: 'スタッフ', total: '総計' }[key] || key;
+  return { children: '子供', group: 'グループ', staff: 'スタッフ', total: '全体' }[key] || key;
 }
 
 function vs125LineCountLabel_(key) {
   return {
-    female_in: '女性入場人数',
-    female_out: '女性退場人数',
-    male_in: '男性入場人数',
-    male_out: '男性退場人数',
-    in: '入場人数',
-    out: '退場人数',
-    capacity: '人数差分'
+    female_in: '女性入場',
+    female_out: '女性退場',
+    male_in: '男性入場',
+    male_out: '男性退場',
+    in: '入場',
+    out: '退場',
+    capacity: '在室人数'
   }[key] || key;
 }
 
@@ -868,7 +875,7 @@ function vs125RegionCountLabel_(key) {
   return {
     current_female: '現在女性人数',
     current_male: '現在男性人数',
-    current_total: '現在総人数'
+    current_total: '現在人数'
   }[key] || key;
 }
 
@@ -891,6 +898,8 @@ function vs125UnitForLeaf_(key) {
 
 function metricLabelJa_(key) {
   key = String(key || '').trim();
+  const readable = readableMetricLabelJa_(key);
+  if (readable) return readable;
   if (METRIC_LABEL_OVERRIDES[key]) return METRIC_LABEL_OVERRIDES[key];
   const enableLabel = sensorEnableLabelJa_(key);
   if (enableLabel) return enableLabel;
@@ -901,6 +910,75 @@ function metricLabelJa_(key) {
   return key.split('.').map(function (part) {
     return translateMetricPart_(part.replace('[]', '')) + (part.indexOf('[]') > -1 ? ' 配列' : '');
   }).join(' / ');
+}
+
+function readableMetricLabelJa_(key) {
+  const raw = normalizeMetricPathForPattern_(key);
+  const direct = {
+    battery: 'バッテリー',
+    temperature: '温度',
+    humidity: '湿度',
+    co2: 'CO2',
+    tvoc: 'TVOC',
+    pm2_5: 'PM2.5',
+    pm10: 'PM10',
+    hcho: 'HCHO',
+    h2s: 'H2S',
+    nh3: 'NH3',
+    pressure: '気圧',
+    voltage: '電圧',
+    current: '電流',
+    active_power: '有効電力',
+    power_consumption: '消費電力量',
+    power_factor: '力率',
+    current_total: '現在人数',
+    max_counted: '最大人数',
+    total_mapped_regions: '設定済みエリア数',
+    in_counted: '入場人数',
+    out_counted: '退場人数',
+    capacity_counted: '在室人数',
+    total_data_in_cumulative_counted: '累計入場人数',
+    total_data_out_cumulative_counted: '累計退場人数',
+    total_data_capacity_cumulative_counted: '累計在室人数',
+    device_info_running_time: '稼働時間',
+    device_info_cpu_cpu_temperature: 'CPU温度',
+    device_info_cpu_cpu_usage: 'CPU使用率',
+    device_info_device_tilt_pitch_roll_pitch: '傾き Pitch',
+    device_info_device_tilt_pitch_roll_roll: '傾き Roll',
+    device_info_ram_memory_usage: 'メモリ使用率',
+    device_info_ram_total_memory_mb: 'メモリ総容量',
+    device_info_ram_used_memory_mb: 'メモリ使用量',
+    device_info_storage_storage_usage: 'ストレージ使用率',
+    device_info_storage_total_space_gb: 'ストレージ総容量',
+    device_info_storage_used_space_gb: 'ストレージ使用量',
+    di_trigger_data_di_trigger_count: 'DIトリガー回数'
+  };
+  if (direct[raw]) return direct[raw];
+
+  let m = raw.match(/^flow_data_([a-d])_([a-d])$/);
+  if (m) return m[1].toUpperCase() + '-' + m[2].toUpperCase() + ' 人流';
+  m = raw.match(/^current_counted_(\d+)$/);
+  if (m) return 'エリア' + m[1] + ' 現在人数';
+  m = raw.match(/^occupancy_(\d+)$/);
+  if (m) return 'エリア' + m[1] + ' 占有状態';
+  m = raw.match(/^numbering_regions_(\d+)$/);
+  if (m) return 'エリア' + m[1] + ' 番号';
+  m = raw.match(/^dwell_time_data_(\d+)_(region|max_dwell_time|avg_dwell_time|people_id|duration)$/);
+  if (m) return vs121DwellLabelJa_(m[1], m[2]);
+  m = raw.match(/^line_trigger_data_(in|out)$/);
+  if (m) return m[1] === 'in' ? '入場トリガー' : '退場トリガー';
+  return '';
+}
+
+function vs121DwellLabelJa_(areaNo, metric) {
+  const labels = {
+    region: '滞在時間',
+    max_dwell_time: '最大滞在時間',
+    avg_dwell_time: '平均滞在時間',
+    people_id: '人物ID',
+    duration: '滞在時間'
+  };
+  return 'エリア' + areaNo + (labels[metric] ? ' ' + labels[metric] : '');
 }
 
 function sensorEnableLabelJa_(key) {
@@ -925,6 +1003,10 @@ function metricUnitForKey_(key) {
   key = String(key || '').trim();
   if (METRIC_UNITS[key]) return METRIC_UNITS[key];
   const last = key.split('.').pop().replace('[]', '');
+  const raw = normalizeMetricPathForPattern_(key);
+  if (/^(flow_data|current_counted)_/.test(raw)) return '人';
+  if (/^occupancy_\d+$/.test(raw) || /^numbering_regions_\d+$/.test(raw)) return '';
+  if (/^line_trigger_data_(in|out)$/.test(raw)) return '人';
   if (isTemperatureMetricKey_(last)) return '°C';
   return METRIC_UNITS[last] || '';
 }

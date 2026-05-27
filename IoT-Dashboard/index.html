@@ -1898,7 +1898,7 @@
     function deviceDisplayMetrics(device) {
       const keys = ((device && device.metricKeys) || []).filter((m) => isDisplayMetric(m) && !isBatteryMetric(m));
       if (Array.isArray(device && device.dashboard_metrics) && device.dashboard_metrics.length) {
-        return device.dashboard_metrics.filter((key) => keys.indexOf(key) > -1);
+        return device.dashboard_metrics.filter((key) => keys.indexOf(key) > -1 && isDisplayMetric(key) && !isBatteryMetric(key));
       }
       return keys;
     }

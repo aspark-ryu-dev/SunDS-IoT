@@ -231,7 +231,7 @@ function normalizeDashboardMetrics_(value, visibleMetricKeys) {
   return arr.map(function (key) {
     return String(key || '').trim();
   }).filter(function (key) {
-    return key && !isSystemMetadataKey_(key) && isVisibleMetricKey_(key, visibleMetricKeys);
+    return key && !isSystemMetadataKey_(key) && isVisibleMetricKey_(key, visibleMetricKeys) && isDashboardDisplayMetric_(key);
   }).slice(0, 12);
 }
 
@@ -258,9 +258,17 @@ function latestByDevice_() {
 function filterDisplayMetrics_(metrics, visibleMetricKeys) {
   const out = {};
   Object.keys(metrics || {}).forEach(function (key) {
-    if (!isSystemMetadataKey_(key) && isVisibleMetricKey_(key, visibleMetricKeys)) out[key] = metrics[key];
+    if (!isSystemMetadataKey_(key) && isVisibleMetricKey_(key, visibleMetricKeys) && isDashboardDisplayMetric_(key)) out[key] = metrics[key];
   });
   return out;
+}
+
+function isDashboardDisplayMetric_(metric) {
+  const key = normalizeSystemMetadataKey_(metric);
+  if (!key) return false;
+  if (/^(devicestatus|lorawanclass|firmwareversion|hardwareversion|ipsoversion|tslversion|sn|devicesn|devicedeveui|deveui|deviceeui)$/.test(key)) return false;
+  if (/sensorstatus$/.test(key)) return false;
+  return true;
 }
 
 function readVisibleMetricKeys_() {

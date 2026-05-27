@@ -273,7 +273,9 @@ function normalizeDashboardMetricsString_(value) {
       }
     }
   }
-  arr = arr.map(function (key) { return String(key || '').trim(); }).filter(Boolean).slice(0, 12);
+  arr = arr.map(function (key) { return String(key || '').trim(); }).filter(function (key) {
+    return key && isDashboardDisplayMetricForAdmin_(key);
+  }).slice(0, 12);
   return JSON.stringify(arr);
 }
 
@@ -332,6 +334,7 @@ function attachMetricsToDevices_(devices, latest) {
   latest.forEach(function (row) {
     if (isSystemMetadataKey_(row.metric)) return;
     if (!isVisibleMetricKeyForAdmin_(row.metric, visibleMetricKeys)) return;
+    if (!isDashboardDisplayMetricForAdmin_(row.metric)) return;
     if (!byDevice[row.device_id]) byDevice[row.device_id] = {};
     byDevice[row.device_id][row.metric] = { value: row.value, ts: row.ts };
   });
@@ -341,6 +344,14 @@ function attachMetricsToDevices_(devices, latest) {
       return !isSystemMetadataKey_(key);
     }).sort();
   });
+}
+
+function isDashboardDisplayMetricForAdmin_(metric) {
+  const key = normalizeSystemMetadataKey_(metric);
+  if (!key) return false;
+  if (/^(devicestatus|lorawanclass|firmwareversion|hardwareversion|ipsoversion|tslversion|sn|devicesn|devicedeveui|deveui|deviceeui)$/.test(key)) return false;
+  if (/sensorstatus$/.test(key)) return false;
+  return true;
 }
 
 function readVisibleMetricKeysForAdmin_() {

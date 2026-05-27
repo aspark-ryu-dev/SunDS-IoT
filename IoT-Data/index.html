@@ -659,6 +659,16 @@
       z-index: 2;
     }
     .map-preview-item.dragging { cursor: grabbing; opacity: .86; z-index: 5; }
+    .map-preview-item.off {
+      border-color: rgba(239,68,68,.34);
+      background: rgba(255,255,255,.84);
+      box-shadow: 0 14px 32px -10px rgba(127,29,29,.42), 0 0 0 1px rgba(239,68,68,.16);
+    }
+    body[data-theme="dark"] .map-preview-item.off {
+      background: rgba(18,24,38,.82);
+      color: #eef1f8;
+    }
+    .map-preview-item.off::before { background: linear-gradient(90deg, #ef4444, #f59e0b); }
     .map-preview-item.selected {
       outline: 2px solid rgba(45,212,191,.78);
       outline-offset: 3px;
@@ -997,6 +1007,14 @@
       color: var(--muted);
       font-size: 11.5px;
       font-weight: 600;
+    }
+    .map-preview-item.popup.off {
+      border-color: rgba(239,68,68,.55);
+      background: rgba(239,68,68,.92);
+      box-shadow: 0 0 0 5px rgba(239,68,68,.18), 0 12px 24px -12px rgba(0,0,0,.72);
+    }
+    .map-preview-item.popup.off::after {
+      box-shadow: inset 0 0 0 3px rgba(239,68,68,.85);
     }
     .latest-key-cell {
       display: grid;
@@ -1850,10 +1868,11 @@
         const title = item.label || device.area_id || device.name || item.bind_ref;
         const mode = cfg.displayMode === 'popup' ? 'popup' : 'card';
         const selected = item.item_id === state.mapEditorItemId ? ' selected' : '';
+        const offline = !isDeviceOnline(device) ? ' off' : '';
         const sizeStyle = mode === 'card'
           ? ';--card-w:' + (Number(cfg.cardWidth) || 150) + 'px;height:' + (Number(cfg.cardHeight) || 0 || 'auto') + (Number(cfg.cardHeight) ? 'px' : '')
           : '';
-        return '<div class="map-preview-item ' + mode + selected + '" data-item-id="' + esc(attrEscape(item.item_id)) + '" style="left:' + (Number(item.x_norm) * 100) + '%;top:' + (Number(item.y_norm) * 100) + '%' + sizeStyle + '">' +
+        return '<div class="map-preview-item ' + mode + selected + offline + '" data-item-id="' + esc(attrEscape(item.item_id)) + '" style="left:' + (Number(item.x_norm) * 100) + '%;top:' + (Number(item.y_norm) * 100) + '%' + sizeStyle + '">' +
           '<button class="map-del" type="button" title="削除" data-del-id="' + esc(attrEscape(item.item_id)) + '">×</button>' +
           '<div class="map-preview-title">' + esc(title) + '</div>' +
           '<div class="map-preview-metrics">' + metrics.map((m) => previewMetricLine(device, m)).join('') + '</div>' +
@@ -1912,7 +1931,7 @@
       });
       const devices = (state.snapshot.devices || []).filter((d) => d.enabled !== false && !placed[d.device_id]);
       select.innerHTML = devices.map((d) => {
-        const label = (d.area_id || d.name) ? (d.area_id || d.name) + ' (' + d.device_id + ')' : d.device_id;
+        const label = mapConfigDeviceLabel(d);
         return '<option value="' + esc(d.device_id) + '">' + esc(label) + '</option>';
       }).join('') || '<option value="">配置できる有効デバイスがありません</option>';
       if (current && devices.some((d) => d.device_id === current)) select.value = current;
@@ -1927,9 +1946,14 @@
         if (item.bind_ref && item.bind_ref !== currentDeviceId) placed[item.bind_ref] = true;
       });
       return (state.snapshot.devices || []).filter((d) => d.enabled !== false && (!placed[d.device_id] || d.device_id === currentDeviceId)).map((d) => {
-        const label = (d.area_id || d.name) ? (d.area_id || d.name) + ' (' + d.device_id + ')' : d.device_id;
+        const label = mapConfigDeviceLabel(d);
         return '<option value="' + esc(attrEscape(d.device_id)) + '" ' + (d.device_id === currentDeviceId ? 'selected' : '') + '>' + esc(label) + '</option>';
       }).join('');
+    }
+
+    function mapConfigDeviceLabel(device) {
+      const base = (device.area_id || device.name) ? (device.area_id || device.name) + ' (' + device.device_id + ')' : device.device_id;
+      return base + ' / ' + (isDeviceOnline(device) ? 'Online' : 'Offline');
     }
 
     function renderMapEditorMetricChips(item) {

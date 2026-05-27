@@ -9,7 +9,7 @@ function doGet(e) {
   const tpl = HtmlService.createTemplateFromFile('index');
   tpl.BUILD_VERSION = BUILD_VERSION;
   return tpl.evaluate()
-    .setTitle('SunDS')
+    .setTitle('SunDS シナプス')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

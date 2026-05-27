@@ -81,7 +81,6 @@ function apiSaveDashboardSettings(settings) {
 function getAdminSnapshot_() {
   ensureHeaders_(getSheet_(SHEET_DEVICES), HEADERS.Devices);
   ensureHeaders_(getSheet_(SHEET_KEY_CATALOG), HEADERS.KeyCatalog);
-  syncLatestKeysToKeyCatalog_();
   const devices = readDevices_();
   const latest = readLatestRows_();
   attachMetricsToDevices_(devices, latest);
@@ -111,9 +110,11 @@ function buildSnapshotMetricMeta_(latestRows) {
 
 function readLatestRows_() {
   const sh = getSheet_(SHEET_LATEST);
-  const values = sh.getDataRange().getValues();
+  const lastRow = sh.getLastRow();
+  if (lastRow <= 1) return [];
+  const values = sh.getRange(2, 1, lastRow - 1, 4).getValues();
   const out = [];
-  for (let r = 1; r < values.length; r++) {
+  for (let r = 0; r < values.length; r++) {
     if (String(values[r][0]).trim() === '' || String(values[r][1]).trim() === '') continue;
     if (isSystemMetadataKey_(values[r][1])) continue;
     out.push({

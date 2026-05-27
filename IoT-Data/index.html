@@ -2962,7 +2962,7 @@
       callServer('apiSeedKeyCatalog', [], toastRender('キーDBを更新しました'));
     });
     $('syncLatestKeysBtn').addEventListener('click', () => {
-      callServer('apiSeedKeyCatalog', [], toastRender('最新値のkeyをキーDBへ追加しました'));
+      callServer('apiSyncLatestKeysToKeyCatalog', [], toastRender('最新値のkeyをキーDBへ追加しました'));
     });
     $('keyCatalogSearch').addEventListener('input', (ev) => {
       state.keyCatalogQuery = ev.target.value || '';

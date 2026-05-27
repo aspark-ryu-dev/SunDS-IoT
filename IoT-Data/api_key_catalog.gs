@@ -495,6 +495,12 @@ function apiSeedKeyCatalog() {
   return getAdminSnapshot_();
 }
 
+function apiSyncLatestKeysToKeyCatalog() {
+  ensureIngestReady_();
+  syncLatestKeysToKeyCatalog_();
+  return getAdminSnapshot_();
+}
+
 /**
 
  * Toggle whether a metric key is visible on the dashboard.

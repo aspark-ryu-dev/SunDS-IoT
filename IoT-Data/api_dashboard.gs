@@ -81,6 +81,7 @@ function apiSaveDashboardSettings(settings) {
 function getAdminSnapshot_() {
   ensureHeaders_(getSheet_(SHEET_DEVICES), HEADERS.Devices);
   ensureHeaders_(getSheet_(SHEET_KEY_CATALOG), HEADERS.KeyCatalog);
+  syncLatestKeysToKeyCatalog_();
   const devices = readDevices_();
   const latest = readLatestRows_();
   attachMetricsToDevices_(devices, latest);

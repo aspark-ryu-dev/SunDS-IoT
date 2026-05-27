@@ -550,9 +550,10 @@ function seedKeyCatalog_() {
     }
   }
 
+  const keySources = seedMetricKeySources_();
   const rows = [];
-  knownMetricKeys_().forEach(function (key) {
-    const meta = keyCatalogMetaForKey_(key);
+  Object.keys(keySources).sort().forEach(function (key) {
+    const meta = keyCatalogMetaForKey_(key, keySources[key]);
     if (existing[key]) {
       fillKeyCatalogBlanks_(sh, existing[key], idx, meta);
     } else {
@@ -589,18 +590,82 @@ function keyCatalogToRow_(meta, idx) {
   return row;
 }
 
-function keyCatalogMetaForKey_(key) {
+function keyCatalogMetaForKey_(key, source) {
   const meta = metricMetaForKey_(key);
+  const models = modelsForMetricKey_(key);
   return {
     key: key,
     label_ja: meta.label,
     data_type: inferKeyDataType_(key),
     unit: meta.unit,
-    source: 'device-examples',
-    models: modelsForMetricKey_(key).join(','),
+    source: source || (models.length ? 'device-examples' : 'latest'),
+    models: models.join(','),
     note: '',
     enabled: true
   };
+}
+
+function seedMetricKeySources_() {
+  const out = {};
+  knownMetricKeys_().forEach(function (key) {
+    out[key] = 'device-examples';
+  });
+  latestMetricKeys_().forEach(function (key) {
+    if (!out[key]) out[key] = 'latest';
+  });
+  return out;
+}
+
+function syncLatestKeysToKeyCatalog_() {
+  try {
+    const keys = latestMetricKeys_();
+    if (!keys.length) return { added: 0 };
+    const sh = getSheet_(SHEET_KEY_CATALOG);
+    ensureHeaders_(sh, HEADERS.KeyCatalog);
+    const idx = headerIndex_(sh);
+    const values = sh.getDataRange().getValues();
+    const existing = {};
+    for (let r = 1; r < values.length; r++) {
+      const key = String(valueByHeader_(values[r], idx, 'key') || '').trim();
+      if (key) existing[key] = true;
+    }
+    const rows = [];
+    keys.forEach(function (key) {
+      if (!existing[key]) rows.push(keyCatalogToRow_(keyCatalogMetaForKey_(key, 'latest'), idx));
+    });
+    if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, sh.getLastColumn()).setValues(rows);
+    return { added: rows.length };
+  } catch (err) {
+    Logger.log('syncLatestKeysToKeyCatalog_ skipped: ' + err.message);
+    return { added: 0 };
+  }
+}
+
+function latestMetricKeys_() {
+  try {
+    const sh = getSheet_(SHEET_LATEST);
+    ensureHeaders_(sh, HEADERS.Latest);
+    const idx = headerIndex_(sh);
+    const values = sh.getDataRange().getValues();
+    const found = {};
+    for (let r = 1; r < values.length; r++) {
+      const key = String(valueByHeader_(values[r], idx, 'metric') || '').trim();
+      if (!key || isSystemMetadataKey_(key) || !isKeyCatalogDisplayCandidate_(key)) continue;
+      found[key] = true;
+    }
+    return Object.keys(found).sort();
+  } catch (err) {
+    Logger.log('latestMetricKeys_ skipped: ' + err.message);
+    return [];
+  }
+}
+
+function isKeyCatalogDisplayCandidate_(metric) {
+  const key = normalizeSystemMetadataKey_(metric);
+  if (!key) return false;
+  if (/^(devicestatus|lorawanclass|firmwareversion|hardwareversion|ipsoversion|tslversion|sn|devicesn|devicedeveui|deveui|deviceeui)$/.test(key)) return false;
+  if (/sensorstatus$/.test(key)) return false;
+  return true;
 }
 
 function modelsForMetricKey_(key) {

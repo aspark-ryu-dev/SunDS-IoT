@@ -1429,7 +1429,10 @@
             <h2 id="latestDetailTitle" data-i18n="data.latest.detailTitle"></h2>
             <div id="latestDetailMeta" class="muted"></div>
           </div>
-          <button id="copyLatestKeysBtn" type="button" class="secondary">全key Copy</button>
+          <div class="row">
+            <button id="syncLatestKeysBtn" type="button" class="secondary">最新値からキーDB追加</button>
+            <button id="copyLatestKeysBtn" type="button" class="secondary">全key Copy</button>
+          </div>
         </div>
         <div style="overflow:auto">
           <table>
@@ -2936,6 +2939,9 @@
     });
     $('seedKeyCatalogBtn').addEventListener('click', () => {
       callServer('apiSeedKeyCatalog', [], toastRender('キーDBを更新しました'));
+    });
+    $('syncLatestKeysBtn').addEventListener('click', () => {
+      callServer('apiSeedKeyCatalog', [], toastRender('最新値のkeyをキーDBへ追加しました'));
     });
     $('keyCatalogSearch').addEventListener('input', (ev) => {
       state.keyCatalogQuery = ev.target.value || '';

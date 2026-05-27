@@ -55,7 +55,7 @@ function apiSetBackgroundUrl(imageUrl, width, height) {
 
  * Save dashboard-level settings (background image, refresh interval, map size).
 
- * @param {{imageUrl?:string, width?:number, height?:number, refresh_interval_sec?:number}} settings
+ * @param {{imageUrl?:string, width?:number, height?:number, refresh_interval_sec?:number, offline_timeout_min?:number, logo_url?:string}} settings
 
  * @returns {object} updated admin snapshot
 

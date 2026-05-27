@@ -1302,6 +1302,7 @@
           <option value="300">5m</option>
           <option value="600">10m</option>
         </select></label>
+        <label data-i18n-label="data.dashboard.offlineTimeout"><input id="offlineTimeout" type="number" min="1" step="1"></label>
         <div class="row full">
           <button type="submit" data-i18n="data.dashboard.saveSettings"></button>
         </div>
@@ -1627,6 +1628,7 @@
       $('bgUrl').value = (state.snapshot.dashboard && state.snapshot.dashboard.config && state.snapshot.dashboard.config.background_image_url) || '';
       $('logoUrl').value = (state.snapshot.dashboard && state.snapshot.dashboard.config && state.snapshot.dashboard.config.logo_url) || DEFAULT_LOGO_URL;
       $('refreshInterval').value = String((state.snapshot.dashboard && state.snapshot.dashboard.config && state.snapshot.dashboard.config.refresh_interval_sec) || 60);
+      $('offlineTimeout').value = String((state.snapshot.dashboard && state.snapshot.dashboard.config && state.snapshot.dashboard.config.offline_timeout_min) || 15);
       applyLogoConfig((state.snapshot.dashboard && state.snapshot.dashboard.config) || {});
       resetMapDraft();
       renderDevices();
@@ -2766,7 +2768,8 @@
         width: width || 0,
         height: height || 0,
         logo_url: $('logoUrl').value.trim(),
-        refresh_interval_sec: Number($('refreshInterval').value || 60)
+        refresh_interval_sec: Number($('refreshInterval').value || 60),
+        offline_timeout_min: Number($('offlineTimeout').value || 15)
       }], toastRender('設定を保存しました'));
       if (!url) return save(0, 0);
       const img = new Image();

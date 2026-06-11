@@ -1,15 +1,23 @@
-# --- whitelist: track only the two IoT projects + shared/ + repo-root meta ---
+# --- whitelist: track active projects, release tooling, and project rules ---
 /*
 !/.gitignore
 !/README.md
+!/package.json
 !/IoT-Dashboard/
 !/IoT-Data/
 !/shared/
+!/tools/
+!/tools/**
+!/.skills/
+!/.skills/sunds-iot-gas/
+!/.skills/sunds-iot-gas/**
 
 # local assistant/editor state
 **/.claude/
+.local/
+.tmp-icons/
 
-# --- generated copies of shared/ (synced by *-push.ps1, do not commit) ---
+# generated copies of shared/ (synced by the release tool, do not commit)
 IoT-Dashboard/_shared_*.gs
 IoT-Data/_shared_*.gs
 
@@ -33,3 +41,7 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
+.clasprc.json
+/.clasp.json
+*.key
+*.pem

@@ -1,0 +1,12 @@
+{
+  "name": "sunds-iot-gas",
+  "private": true,
+  "scripts": {
+    "gas:status": "node tools/gas-release.js status all",
+    "gas:push": "node tools/gas-release.js push all",
+    "gas:push:data": "node tools/gas-release.js push data",
+    "gas:push:dashboard": "node tools/gas-release.js push dashboard",
+    "gas:deploy:data": "node tools/gas-release.js deploy data",
+    "gas:deploy:dashboard": "node tools/gas-release.js deploy dashboard"
+  }
+}

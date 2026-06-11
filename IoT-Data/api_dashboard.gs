@@ -11,6 +11,34 @@ function apiGetAdminSnapshot() {
   return getAdminSnapshot_();
 }
 
+function apiGetDefinitionData() {
+  ensureIngestReady_();
+  return {
+    definitions: readDefinitions_(),
+    keyCatalog: readKeyCatalog_()
+  };
+}
+
+function apiGetMetricMappingData() {
+  ensureIngestReady_();
+  return {
+    metricMappings: readMetricMappings_(),
+    mappingConfig: {
+      gemini_configured: !!String(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || '').trim(),
+      gemini_model: String(PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL') || DEFAULT_GEMINI_MODEL)
+    }
+  };
+}
+
+function apiGetLatestData() {
+  ensureIngestReady_();
+  const latest = readLatestRows_();
+  return {
+    latest: latest,
+    metricMeta: buildSnapshotMetricMeta_(latest)
+  };
+}
+
 function apiGetIngestInfo() {
   ensureIngestReady_();
   const props = PropertiesService.getScriptProperties();
@@ -80,26 +108,14 @@ function apiSaveDashboardSettings(settings) {
 
 function getAdminSnapshot_() {
   ensureHeaders_(getSheet_(SHEET_DEVICES), HEADERS.Devices);
-  ensureHeaders_(getSheet_(SHEET_KEY_CATALOG), HEADERS.KeyCatalog);
   const devices = readDevices_();
-  const latest = readLatestRows_();
-  attachMetricsToDevices_(devices, latest);
   return {
     devices: devices,
-    definitions: readDefinitions_(),
-    keyCatalog: readKeyCatalog_(),
-    metricMappings: readMetricMappings_(),
-    mappingConfig: {
-      gemini_configured: !!String(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || '').trim(),
-      gemini_model: String(PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL') || DEFAULT_GEMINI_MODEL)
-    },
-    latest: latest,
     dashboard: {
       config: getDashboardConfig_(),
       layout: readLayout_()
     },
     deviceExamples: getDeviceExampleModels_(),
-    metricMeta: buildSnapshotMetricMeta_(latest),
     build: BUILD_VERSION
   };
 }

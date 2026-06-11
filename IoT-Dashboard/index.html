@@ -1704,6 +1704,7 @@
         const active = state.requests[name];
         if (!active || active.id !== requestId) return;
         delete state.requests[name];
+        if (!silent) document.querySelectorAll('button').forEach((b) => b.disabled = false);
         setStatus('通信がタイムアウトしました。再試行します。', true);
         scheduleRefresh(60);
       }, DASHBOARD_REQUEST_TIMEOUT_MS);
@@ -3008,6 +3009,8 @@
       if (target === 'meeting') {
         if (!state.meetingLoaded) applyCachedMeeting();
         loadMeeting(!!state.meetingLoaded);
+      } else if (target === 'dashboard' || target === 'map') {
+        load(!!state.data);
       }
     }
 
@@ -3022,8 +3025,9 @@
       clearTimeout(state.timer);
       const seconds = Number(delaySeconds) || selectedRefreshIntervalSec();
       state.timer = setTimeout(() => {
-        load(true);
+        const dashboardPage = document.querySelector('[data-page="dashboard"]:not(.hidden),[data-page="map"]:not(.hidden)');
         const meetingPage = document.querySelector('[data-page="meeting"]');
+        if (dashboardPage) load(true);
         if (meetingPage && !meetingPage.classList.contains('hidden')) loadMeeting(true);
       }, Math.max(60, seconds) * 1000);
     }
@@ -3031,8 +3035,9 @@
     function refreshAfterResume() {
       if (document.visibilityState === 'hidden') return;
       clearTimeout(state.timer);
-      load(true, true);
+      const dashboardPage = document.querySelector('[data-page="dashboard"]:not(.hidden),[data-page="map"]:not(.hidden)');
       const meetingPage = document.querySelector('[data-page="meeting"]');
+      if (dashboardPage) load(true, true);
       if (meetingPage && !meetingPage.classList.contains('hidden')) loadMeeting(true, true);
     }
 
@@ -3273,7 +3278,6 @@
     setInterval(tickClock, 1000);
     setInterval(refreshIfStale, DASHBOARD_STALE_CHECK_MS);
     applyCachedDashboard();
-    load();
   </script>
 </body>
 </html>

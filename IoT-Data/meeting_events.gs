@@ -10,6 +10,7 @@ function recordMeetingEventForIngest_(deviceState, compiled, ts) {
   if (!deviceState || !deviceState.enabled || !deviceState.location) return;
   const people = currentPeopleFromCompiled_(compiled);
   if (people === null) return;
+  appendMeetingSample_(ts, deviceState.device_id, deviceState.location, people);
   const status = people > 0 ? 'OCCUPIED' : 'PENDING_EMPTY';
   const last = lastMeetingEventForLocation_(deviceState.location);
   if (last && last.status === status) return;
@@ -30,6 +31,73 @@ function recordMeetingEventForIngest_(deviceState, compiled, ts) {
     count: people,
     device_id: deviceState.device_id
   }), 21600);
+}
+
+function appendMeetingSample_(ts, deviceId, location, count, sampleKey) {
+  const sh = getSheet_(SHEET_MEETING_SAMPLES);
+  const idx = headerIndex_(sh);
+  const explicitKey = String(sampleKey || '');
+  const key = explicitKey || storageHash_([deviceId, toDate_(ts).getTime(), location].join('|'), 28);
+  if (explicitKey && meetingSampleExists_(sh, idx, key)) return false;
+  const width = Math.max.apply(null, Object.keys(idx).map(function (name) { return idx[name]; })) + 1;
+  const row = new Array(width).fill('');
+  setByHeader_(row, idx, 'ts', ts);
+  setByHeader_(row, idx, 'device_id', deviceId);
+  setByHeader_(row, idx, 'location', location);
+  setByHeader_(row, idx, 'count', count);
+  setByHeader_(row, idx, 'sample_key', key);
+  sh.getRange(sh.getLastRow() + 1, 1, 1, width).setValues([row]);
+  return true;
+}
+
+function meetingSampleExists_(sheet, idx, sampleKey) {
+  if (!sampleKey || sheet.getLastRow() <= 1 || idx.sample_key === undefined) return false;
+  return !!sheet.getRange(2, idx.sample_key + 1, sheet.getLastRow() - 1, 1)
+    .createTextFinder(sampleKey)
+    .matchEntireCell(true)
+    .findNext();
+}
+
+function appendMeetingSampleFromLegacyGroup_(group) {
+  let direct = null;
+  let areaTotal = 0;
+  let hasArea = false;
+  (group.canonical || []).forEach(function (item) {
+    if (item.canonical_key === 'state.people.current.total') {
+      const value = numberOrNull_(item.value);
+      if (value !== null) direct = value;
+    } else if (/^state\.area\.\d+\.people\.total$/.test(item.canonical_key)) {
+      const value = numberOrNull_(item.value);
+      if (value !== null) {
+        areaTotal += value;
+        hasArea = true;
+      }
+    }
+  });
+  const people = direct !== null ? direct : hasArea ? areaTotal : null;
+  if (people === null) return false;
+  const device = readDeviceMeetingInfo_(group.device_id);
+  if (!device || !device.location) return false;
+  return appendMeetingSample_(
+    group.ts,
+    group.device_id,
+    device.location,
+    people,
+    'legacy_sample_' + storageHash_(group.reading_id, 24)
+  );
+}
+
+function readDeviceMeetingInfo_(deviceId) {
+  const sh = getSheet_(SHEET_DEVICES);
+  const idx = headerIndex_(sh);
+  const values = sh.getDataRange().getValues();
+  for (let r = 1; r < values.length; r++) {
+    if (String(valueByHeader_(values[r], idx, 'device_id') || '') !== deviceId) continue;
+    return {
+      location: String(valueByHeader_(values[r], idx, 'location') || '').trim()
+    };
+  }
+  return null;
 }
 
 function currentPeopleFromCompiled_(compiled) {

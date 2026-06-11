@@ -5,10 +5,12 @@
  * spreadsheet should not be used.
  */
 function setup() {
+  PropertiesService.getScriptProperties().deleteProperty('RUNTIME_SCHEMA_VERSION');
   CacheService.getScriptCache().remove('iot_ingest_ready_v3');
   CacheService.getScriptCache().remove('iot_ingest_ready_v4');
   CacheService.getScriptCache().remove('iot_ingest_ready_v5');
   CacheService.getScriptCache().remove('iot_ingest_ready_v6');
+  CacheService.getScriptCache().remove('iot_ingest_ready_v7');
   CacheService.getScriptCache().remove('iot_latest_index_v2');
   CacheService.getScriptCache().remove('iot_metric_mappings_v1');
   CacheService.getScriptCache().remove('iot_canonical_latest_index_v1');
@@ -25,6 +27,7 @@ function setup() {
   Logger.log('setup: canonical latest ready');
   ensureRetentionTrigger_();
   ensureMetricMappingTrigger_();
+  PropertiesService.getScriptProperties().setProperty('RUNTIME_SCHEMA_VERSION', 'storage-v2');
   Logger.log('IoT-Data setup complete.');
 }
 
@@ -38,16 +41,27 @@ function ensureScriptProps_() {
 
 function seedConfigDefaults_() {
   const logoUrl = 'https://www.dropbox.com/scl/fi/bwxb55mrt1qg4aqih5bxt/icon_dark.png?rlkey=g2mb3yooo636lr4qfa8zg8dlb&st=icn9wq0m&dl=1';
-  if (getConfig_('refresh_interval_sec', null) === null) setConfig_('refresh_interval_sec', 60);
-  if (getConfig_('offline_timeout_min', null) === null) setConfig_('offline_timeout_min', 15);
-  if (getConfig_('retention_days', null) === null) setConfig_('retention_days', 7);
-  if (getConfig_('schema_version', null) === null) setConfig_('schema_version', 1);
-  if (getConfig_('background_image_url', null) === null) {
-    setConfig_('background_image_url', 'https://dl.dropboxusercontent.com/scl/fi/4ymgkh5vfwol4l5yn2na5/v2.png?rlkey=xia5kn3txaz80y2blkdjzniwz&st=psc510yw&dl=1');
-  }
-  if (getConfig_('logo_url', null) === null) setConfig_('logo_url', logoUrl);
-  if (getConfig_('map_width', null) === null) setConfig_('map_width', 1200);
-  if (getConfig_('map_height', null) === null) setConfig_('map_height', 800);
+  const defaults = {
+    refresh_interval_sec: 60,
+    offline_timeout_min: 15,
+    retention_days: 7,
+    schema_version: 1,
+    storage_schema_version: 2,
+    storage_mode: 'legacy',
+    storage_migration_id: '',
+    background_image_url: 'https://dl.dropboxusercontent.com/scl/fi/4ymgkh5vfwol4l5yn2na5/v2.png?rlkey=xia5kn3txaz80y2blkdjzniwz&st=psc510yw&dl=1',
+    logo_url: logoUrl,
+    map_width: 1200,
+    map_height: 800
+  };
+  const sh = getSheet_(SHEET_CONFIG);
+  const existing = getConfigMap_();
+  const rows = Object.keys(defaults).filter(function (key) {
+    return !Object.prototype.hasOwnProperty.call(existing, key);
+  }).map(function (key) {
+    return [key, defaults[key]];
+  });
+  if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, 2).setValues(rows);
 }
 
 function showSecrets() {

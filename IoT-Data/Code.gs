@@ -3,7 +3,7 @@
  * Backend project: HTTP POST ingestion and internal management UI.
  */
 
-const BUILD_VERSION = 'v2026-06-12-ai-key-mapping';
+const BUILD_VERSION = 'v2026-06-12-storage-v2';
 
 function doGet(e) {
   if (isLightweightCallback_(e)) {

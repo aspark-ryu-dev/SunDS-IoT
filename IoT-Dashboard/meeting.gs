@@ -8,6 +8,7 @@ const MEETING_STATE_CACHE_SEC = 10;
 const MEETING_PENDING_MINUTES = 5;
 const MEETING_AREA_ID = '会議室';
 const MEETING_READING_SCAN_CHUNK = 2000;
+const MEETING_EVENT_HISTORY_DAYS = 8;
 
 function apiGetMeetingRoomState(clientVersion) {
   const cache = CacheService.getScriptCache();
@@ -251,10 +252,17 @@ function meetingStatus_(online, count, lastEvent) {
 
 function readMeetingEvents_() {
   const sh = getSheet_(SHEET_MEETING_EVENTS);
-  const values = sh.getDataRange().getValues();
+  const lastRow = sh.getLastRow();
+  if (lastRow <= 1) return {};
   const idx = headerIndex_(sh);
+  if (idx.ts === undefined) return {};
+  const now = new Date();
+  const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - MEETING_EVENT_HISTORY_DAYS, 0, 0, 0, 0).getTime();
+  const firstRow = findFirstReadingRowAtOrAfter_(sh, idx.ts + 1, lastRow, cutoff);
+  if (!firstRow) return {};
+  const values = sh.getRange(firstRow, 1, lastRow - firstRow + 1, sh.getLastColumn()).getValues();
   const out = {};
-  for (let r = 1; r < values.length; r++) {
+  for (let r = 0; r < values.length; r++) {
     const location = String(valueByHeader_(values[r], idx, 'location') || '').trim();
     const ts = dateOut_(valueByHeader_(values[r], idx, 'ts'));
     if (!location || !ts) continue;
@@ -315,17 +323,15 @@ function buildMeetingTimeline_(events) {
 }
 
 /**
- * Today's people-count history per device, read from the shared Readings sheet.
- * Readings is append-only in ts-ascending order, so binary-search the first row
- * of today on the ts column and only fetch that trailing block.
- * Returns { device_id: [[epochMs, count], ...] } sorted by time, downsampled.
+ * Today's people-count history per device from the lightweight MeetingSamples
+ * index. This avoids scanning historical metric rows.
  */
 function readTodayPeopleSeries_() {
-  const sh = getSheet_(SHEET_READINGS);
+  const sh = getSheet_(SHEET_MEETING_SAMPLES);
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return {};
   const idx = headerIndex_(sh);
-  if (idx.ts === undefined || idx.device_id === undefined || idx.canonical_key === undefined || idx.value === undefined) return {};
+  if (idx.ts === undefined || idx.device_id === undefined || idx.count === undefined) return {};
   const now = new Date();
   const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
   const firstTodayRow = findFirstReadingRowAtOrAfter_(sh, idx.ts + 1, lastRow, dayStart);
@@ -333,30 +339,17 @@ function readTodayPeopleSeries_() {
   const values = sh.getRange(firstTodayRow, 1, lastRow - firstTodayRow + 1, sh.getLastColumn()).getValues();
   const buckets = {};
   values.forEach(function (row) {
-    const key = String(valueByHeader_(row, idx, 'canonical_key') || '').trim();
-    const isDirect = key === 'state.people.current.total';
-    if (!isDirect && !/^state\.area\.\d+\.people\.total$/.test(key)) return;
     const deviceId = String(valueByHeader_(row, idx, 'device_id') || '').trim();
     const ts = toDate_(valueByHeader_(row, idx, 'ts'));
-    const value = Number(valueByHeader_(row, idx, 'value'));
+    const value = Number(valueByHeader_(row, idx, 'count'));
     if (!deviceId || !ts || !isFinite(value)) return;
     if (!buckets[deviceId]) buckets[deviceId] = {};
-    const tsKey = String(ts.getTime());
-    if (!buckets[deviceId][tsKey]) buckets[deviceId][tsKey] = { direct: null, area: 0, hasArea: false };
-    const slot = buckets[deviceId][tsKey];
-    if (isDirect) slot.direct = value;
-    else {
-      slot.area += value;
-      slot.hasArea = true;
-    }
+    buckets[deviceId][String(ts.getTime())] = value;
   });
   const series = {};
   Object.keys(buckets).forEach(function (deviceId) {
-    const points = [];
-    Object.keys(buckets[deviceId]).forEach(function (tsKey) {
-      const slot = buckets[deviceId][tsKey];
-      const count = slot.direct !== null ? slot.direct : slot.hasArea ? slot.area : null;
-      if (count !== null) points.push([Number(tsKey), count]);
+    const points = Object.keys(buckets[deviceId]).map(function (tsKey) {
+      return [Number(tsKey), buckets[deviceId][tsKey]];
     });
     points.sort(function (a, b) { return a[0] - b[0]; });
     series[deviceId] = downsampleMeetingSeries_(points, 160);

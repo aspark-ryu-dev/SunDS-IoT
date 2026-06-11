@@ -88,15 +88,31 @@ function handlePost_(e) {
   if (!lock.tryLock(10000)) return { ok: false, error: 'busy' };
   try {
     const ts = new Date();
+    const storageMode = storageMode_();
 
     // 6. writes
-    const deviceState = touchDevice_(parsed.device_id, parsed.device_name, ts);
+    const deviceState = touchDevice_(parsed.device_id, parsed.device_name, parsed.context.device_model, ts);
     const compiled = compileIngestMetrics_(parsed, ts);
-    appendReadings_(parsed.device_id, compiled, ts, parsed.context);
     upsertLatest_(parsed.device_id, parsed.metrics, ts);
     upsertCanonicalLatest_(parsed.device_id, compiled, parsed.context, ts);
     recordMeetingEventForIngest_(deviceState, compiled, ts);
     const derived = applyDefinitionsForDevice_(parsed.device_id, ts);
+    if (storageMode !== STORAGE_MODE_WIDE) {
+      appendReadings_(parsed.device_id, compiled, ts, parsed.context);
+      appendDerivedReadings_(parsed.device_id, derived, ts, parsed.context);
+    }
+    let wideResult = null;
+    if (storageMode === STORAGE_MODE_DUAL || storageMode === STORAGE_MODE_WIDE) {
+      wideResult = appendWideReading_(
+        Utilities.getUuid(),
+        parsed.device_id,
+        resolveStorageDeviceModel_(deviceState, parsed.context, parsed.device_id),
+        parsed.context,
+        compiled,
+        derived,
+        ts
+      );
+    }
 
     // 7. done
     return {
@@ -109,6 +125,10 @@ function handlePost_(e) {
       metrics: parsed.metrics.length,
       canonical_metrics: compiled.filter(function (item) { return !!item.mapping; }).length,
       derived: derived.length,
+      storage_mode: storageMode,
+      storage_warning: wideResult && wideResult.rejected_keys.length
+        ? 'metric_limit:' + wideResult.rejected_keys.join(',')
+        : '',
       ts: ts.toISOString()
     };
   } finally {
@@ -130,7 +150,7 @@ function parseIngestPayload_(payload) {
     context: {
       event: findScalarValueDeep_(payload, ['event']),
       report_type: normalizeReportType_(findScalarValueDeep_(payload, ['report_type', 'reportType'])),
-      device_model: findScalarValueDeep_(payload, ['device_model', 'model', 'device_type', 'device'])
+      device_model: findScalarValueDeep_(payload, ['device_model', 'model', 'device_type', 'device']) || findDeviceName_(payload)
     }
   };
 
@@ -198,20 +218,30 @@ function collectMetrics_(obj, prefix, out, depth) {
 }
 
 function pushMetric_(out, path, value) {
-  let num = null;
+  const metric = sanitizeMetricName_(path);
+  if (!metric) return;
   if (typeof value === 'number' && isFinite(value)) {
-    num = value;
+    out.push({ metric: metric, value: value });
+    return;
   } else if (typeof value === 'boolean') {
-    num = value ? 1 : 0;
+    out.push({ metric: metric, value: value });
+    return;
   } else if (value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) {
-    out.push({ metric: sanitizeMetricName_(path), value: '' });
+    out.push({ metric: metric, value: '' });
     return;
   } else if (typeof value === 'string' && value.trim() !== '' && isFinite(Number(value))) {
-    num = Number(value);
-  } else {
+    out.push({ metric: metric, value: Number(value) });
     return;
   }
-  out.push({ metric: sanitizeMetricName_(path), value: num });
+  if (typeof value !== 'string') return;
+  const text = value.trim();
+  if (!text || text.length > 256 || isLikelyEncodedPayload_(text)) return;
+  out.push({ metric: metric, value: text });
+}
+
+function isLikelyEncodedPayload_(value) {
+  if (value.length < 128) return false;
+  return /^[A-Za-z0-9+/=_-]+$/.test(value) && value.indexOf(' ') < 0;
 }
 
 function findDecodedPayloadRoot_(payload) {
@@ -357,7 +387,18 @@ function makeReservedIngestKeys_() {
     starttime: true,
     endtime: true,
     ipaddress: true,
-    devicemac: true
+    devicemac: true,
+    wlanmac: true,
+    firmwareversion: true,
+    hardwareversion: true,
+    protocolversion: true,
+    cusdeviceid: true,
+    cussiteid: true,
+    iccid: true,
+    imei: true,
+    imsi: true,
+    cellid: true,
+    lac: true
   };
   DEVICE_ID_KEYS.forEach(function (key) {
     out[normalizeKey_(key)] = true;
@@ -479,7 +520,7 @@ function applyLatestUpdates_(sh, idx, updates, ts) {
  * Update Devices.last_seen, or auto-register an unknown device as disabled.
  * Disabled devices still store readings; Dashboard only displays enabled devices.
  */
-function touchDevice_(device_id, deviceName, ts) {
+function touchDevice_(device_id, deviceName, deviceModel, ts) {
   const sh = getSheet_(SHEET_DEVICES);
   const idx = headerIndex_(sh);
   const cache = CacheService.getScriptCache();
@@ -490,7 +531,11 @@ function touchDevice_(device_id, deviceName, ts) {
     if (String(valueByHeader_(cachedValues, idx, 'device_id')) === device_id) {
       const enabled = parseBool_(valueByHeader_(cachedValues, idx, 'enabled'));
       updateDeviceNameIfBlank_(sh, cachedRow, idx, cachedValues, deviceName);
+      updateDeviceModelIfBlank_(sh, cachedRow, idx, cachedValues, deviceModel);
       sh.getRange(cachedRow, idx.last_seen + 1).setValue(ts);
+      if (idx.device_model !== undefined && !String(valueByHeader_(cachedValues, idx, 'device_model') || '').trim()) {
+        cachedValues[idx.device_model] = deviceModel || '';
+      }
       return deviceIngestState_(cachedValues, idx, enabled, true);
     }
   }
@@ -506,16 +551,21 @@ function touchDevice_(device_id, deviceName, ts) {
         const current = sh.getRange(row, 1, 1, sh.getLastColumn()).getValues()[0];
         const isEnabled = parseBool_(enabled[i][0]);
         updateDeviceNameIfBlank_(sh, row, idx, current, deviceName);
+        updateDeviceModelIfBlank_(sh, row, idx, current, deviceModel);
         sh.getRange(row, idx.last_seen + 1).setValue(ts);
+        if (idx.device_model !== undefined && !String(valueByHeader_(current, idx, 'device_model') || '').trim()) {
+          current[idx.device_model] = deviceModel || '';
+        }
         return deviceIngestState_(current, idx, isEnabled, true);
       }
     }
   }
-  sh.appendRow(deviceRow_(idx, device_id, deviceName, ts));
+  sh.appendRow(deviceRow_(idx, device_id, deviceName, deviceModel, ts));
   cache.put(cacheKey, String(sh.getLastRow()), 21600);
   return {
     device_id: device_id,
     name: deviceName || '',
+    device_model: deviceModel || '',
     location: '',
     dashboard_order: 999999,
     enabled: false,
@@ -527,6 +577,7 @@ function deviceIngestState_(row, idx, enabled, registered) {
   return {
     device_id: String(valueByHeader_(row, idx, 'device_id') || ''),
     name: String(valueByHeader_(row, idx, 'name') || ''),
+    device_model: String(valueByHeader_(row, idx, 'device_model') || ''),
     location: String(valueByHeader_(row, idx, 'location') || '').trim(),
     dashboard_order: normalizeDashboardOrder_(valueByHeader_(row, idx, 'dashboard_order')),
     enabled: enabled,
@@ -538,6 +589,12 @@ function updateDeviceNameIfBlank_(sheet, row, idx, current, deviceName) {
   if (!deviceName || idx.name === undefined) return;
   if (String(valueByHeader_(current, idx, 'name') || '').trim()) return;
   sheet.getRange(row, idx.name + 1).setValue(deviceName);
+}
+
+function updateDeviceModelIfBlank_(sheet, row, idx, current, deviceModel) {
+  if (!deviceModel || idx.device_model === undefined) return;
+  if (String(valueByHeader_(current, idx, 'device_model') || '').trim()) return;
+  sheet.getRange(row, idx.device_model + 1).setValue(deviceModel);
 }
 
 function deviceRowCacheKey_(deviceId) {
@@ -597,11 +654,12 @@ function latestRow_(idx, deviceId, metric, value, ts, key) {
   return row;
 }
 
-function deviceRow_(idx, deviceId, deviceName, ts) {
+function deviceRow_(idx, deviceId, deviceName, deviceModel, ts) {
   const width = Math.max.apply(null, Object.keys(idx).map(function (name) { return idx[name]; })) + 1;
   const row = new Array(width).fill('');
   row[idx.device_id] = deviceId;
   if (idx.name !== undefined) row[idx.name] = deviceName || '';
+  if (idx.device_model !== undefined) row[idx.device_model] = deviceModel || '';
   if (idx.enabled !== undefined) row[idx.enabled] = false;
   if (idx.last_seen !== undefined) row[idx.last_seen] = ts;
   if (idx.first_seen !== undefined) row[idx.first_seen] = ts;
@@ -628,11 +686,32 @@ function jsonOut_(obj) {
 
 function ensureIngestReady_() {
   const cache = CacheService.getScriptCache();
-  if (cache.get('iot_ingest_ready_v6') === '1') return;
+  if (cache.get('iot_ingest_ready_v7') === '1') return;
   ensureScriptProps_();
-  ensureSheets_();
-  seedConfigDefaults_();
-  cache.put('iot_ingest_ready_v6', '1', 21600);
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('RUNTIME_SCHEMA_VERSION') !== 'storage-v2') {
+    ensureRuntimeSchemaV2_();
+    seedConfigDefaults_();
+    props.setProperty('RUNTIME_SCHEMA_VERSION', 'storage-v2');
+  }
+  cache.put('iot_ingest_ready_v7', '1', 21600);
+}
+
+function ensureRuntimeSchemaV2_() {
+  const ss = getSpreadsheet_();
+  const required = [
+    SHEET_CONFIG,
+    SHEET_DEVICES,
+    SHEET_MEETING_SAMPLES,
+    SHEET_READING_PARTITIONS,
+    SHEET_STORAGE_MIGRATIONS
+  ];
+  required.forEach(function (name) {
+    let sh = ss.getSheetByName(name);
+    if (!sh) sh = ss.insertSheet(name);
+    ensureHeaders_(sh, HEADERS[name]);
+    if (sh.getFrozenRows() !== 1) sh.setFrozenRows(1);
+  });
 }
 
 function testIngest() {

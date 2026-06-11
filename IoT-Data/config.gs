@@ -31,12 +31,14 @@ function setConfig_(key, value) {
         sh.getRange(r + 1, 2).setValue(value);
         CacheService.getScriptCache().remove('iot_ingest_ready_v3');
         CacheService.getScriptCache().remove('iot_ingest_ready_v4');
+        CacheService.getScriptCache().remove('iot_ingest_ready_v7');
         return;
       }
     }
     sh.appendRow([key, value]);
     CacheService.getScriptCache().remove('iot_ingest_ready_v3');
     CacheService.getScriptCache().remove('iot_ingest_ready_v4');
+    CacheService.getScriptCache().remove('iot_ingest_ready_v7');
   } finally {
     lock.releaseLock();
   }

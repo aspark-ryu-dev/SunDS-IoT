@@ -205,16 +205,26 @@ function applyDefinitionsForDevice_(device_id, ts) {
   });
 
   if (derived.length) {
-    appendDerivedReadings_(device_id, derived, ts);
     upsertLatest_(device_id, derived, ts);
   }
   return derived;
 }
 
-function appendDerivedReadings_(device_id, metrics, ts) {
+function appendDerivedReadings_(device_id, metrics, ts, context) {
+  if (!metrics || !metrics.length) return;
   const sh = getSheet_(SHEET_READINGS);
+  const idx = headerIndex_(sh);
+  const width = Math.max.apply(null, Object.keys(idx).map(function (name) { return idx[name]; })) + 1;
   const rows = metrics.map(function (m) {
-    return [ts, device_id, m.metric, m.value, 'derived'];
+    const row = new Array(width).fill('');
+    setByHeader_(row, idx, 'ts', ts);
+    setByHeader_(row, idx, 'device_id', device_id);
+    setByHeader_(row, idx, 'metric', m.metric);
+    setByHeader_(row, idx, 'value', m.value);
+    setByHeader_(row, idx, 'raw_json', 'derived');
+    setByHeader_(row, idx, 'event', context && context.event || '');
+    setByHeader_(row, idx, 'report_type', context && context.report_type || '');
+    return row;
   });
-  sh.getRange(sh.getLastRow() + 1, 1, rows.length, 5).setValues(rows);
+  sh.getRange(sh.getLastRow() + 1, 1, rows.length, width).setValues(rows);
 }

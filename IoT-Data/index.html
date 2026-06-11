@@ -1239,6 +1239,7 @@
         <button class="nav-item" type="button" data-page-target="definitions"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/><circle cx="18" cy="17" r="2"/></svg></span><span class="nav-text" data-i18n="data.menu.definitions"></span></button>
         <button class="nav-item" type="button" data-page-target="mappings"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10M7 17h10M5 5l-2 2 2 2M19 15l2 2-2 2"/><path d="M9 7l6 10"/></svg></span><span class="nav-text" data-i18n="data.menu.mappings"></span></button>
         <button class="nav-item" type="button" data-page-target="latest"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/><path d="M4 21h16"/></svg></span><span class="nav-text" data-i18n="data.menu.latest"></span></button>
+        <button class="nav-item" type="button" data-page-target="database"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"/></svg></span><span class="nav-text" data-i18n="data.menu.database"></span></button>
       </div>
       <div class="sidebar-footer">
         <div class="footer-row">
@@ -1510,6 +1511,35 @@
       </section>
     </div>
       </div>
+
+      <div class="page hidden" data-page="database">
+        <div class="page-head"><div>
+          <div class="page-title"><span class="page-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"/></svg></span><span class="page-txt" data-i18n="data.database.title"></span></div>
+          <div class="page-desc" data-i18n="data.database.description"></div>
+        </div></div>
+        <div class="kpi-grid" id="storageKpis"></div>
+        <section class="stack">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="data.database.migration"></h2>
+              <div id="storageMigrationStatus" class="muted"></div>
+            </div>
+            <div class="row">
+              <button id="storageStartBtn" type="button" data-i18n="data.database.start"></button>
+              <button id="storageRetryBtn" type="button" class="secondary" data-i18n="data.database.retry"></button>
+              <button id="storageValidateBtn" type="button" class="secondary" data-i18n="data.database.validate"></button>
+              <button id="storageFinalizeBtn" type="button" class="danger" data-i18n="data.database.finalize"></button>
+              <button id="storageMaintenanceBtn" type="button" class="secondary" data-i18n="data.database.maintenance"></button>
+            </div>
+          </div>
+          <div style="overflow:auto">
+            <table>
+              <thead><tr><th>Sheet</th><th>Device Model</th><th>Event</th><th>Report</th><th>Metrics</th><th>Rows</th><th>Status</th></tr></thead>
+              <tbody id="storagePartitionRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </main>
   </div>
 
@@ -1531,6 +1561,7 @@
           <div class="form-grid">
             <label class="full" data-i18n-label="data.deviceEdit.deviceId"><input id="device_id" required> <span class="lock-hint" id="deviceIdHint"></span></label>
             <label class="full" data-i18n-label="data.deviceEdit.name"><input id="device_name"></label>
+            <label class="full" data-i18n-label="data.deviceEdit.deviceModel"><input id="device_model" placeholder="EM300-TH / VS125-P"></label>
           </div>
         </div>
         <div class="field-group device-edit-fields">
@@ -1591,9 +1622,9 @@
         },
         data: {
           header: { title: 'IoT-Data 管理', build: 'ビルド' },
-          menu: { label: 'Menu', devices: 'デバイス', dashboard: 'マップ設定', examples: 'JSON サンプル', definitions: '定義', mappings: 'Key マッピング', latest: '最新値' },
+          menu: { label: 'Menu', devices: 'デバイス', dashboard: 'マップ設定', examples: 'JSON サンプル', definitions: '定義', mappings: 'Key マッピング', latest: '最新値', database: 'データベース' },
           devices: { title: 'デバイス一覧', searchPlaceholder: 'デバイス ID、エリア、場所、種別で検索', none: 'デバイスがありません', columns: { device: 'デバイス', place: '場所', type: '種別', status: '状態' } },
-          deviceEdit: { title: 'デバイス編集', deviceId: 'Device ID', name: '名称', area: 'エリア ID', location: '場所', type: '種別', sensorType: 'センサー種別', power: '電源', reportInterval: '送信間隔 (min)', note: 'メモ' },
+          deviceEdit: { title: 'デバイス編集', deviceId: 'Device ID', name: '名称', deviceModel: 'デバイスモデル', area: 'エリア ID', location: '場所', type: '種別', sensorType: 'センサー種別', power: '電源', reportInterval: '送信間隔 (min)', note: 'メモ' },
           dashboard: { title: 'ダッシュボード設定', background: '背景画像 URL', logoUrl: 'アイコン URL', refreshInterval: '更新間隔', offlineTimeout: 'Offline 判定', saveBackground: '背景を保存', saveSettings: '設定を保存' },
           layout: { title: '配置', itemId: '配置 ID', device: 'デバイス', label: '表示名', x: 'X 座標 0-1', y: 'Y 座標 0-1', displayMode: '表示方式', metrics: '表示指標', preview: 'Map プレビュー' },
           examples: { title: '送信 JSON サンプル', model: 'モデル', deviceId: 'Device ID', generate: 'サンプル生成', payload: 'Payload' },
@@ -1601,12 +1632,13 @@
           definitions: { title: '定義', name: '名称', type: '種別', source: '対象', expression: '式', none: '定義がありません', seedKnown: '既知キーを追加' },
           mappings: { title: 'Key マッピング', description: '受信した元キーを、用途別の多層標準キーへ変換します。', analyze: '未解析キーを分析', search: '元キー / 標準キー / モデル / イベント', rawKey: '元キー', context: '受信条件', canonicalKey: '標準キー', label: '日本語名', meta: '型 / 単位 / 分類', status: '状態', none: 'マッピングがありません' },
           definitionEdit: { title: '定義編集', test: 'テスト' },
-          latest: { title: '最新値', devicesTitle: 'デバイス別最新値', detailTitle: '受信データ詳細', metric: '指標', value: '値', ts: '時刻', count: '件', none: '最新値がありません', selectDevice: 'デバイスを選択してください', noDeviceData: 'このデバイスの受信データがありません' }
+          latest: { title: '最新値', devicesTitle: 'デバイス別最新値', detailTitle: '受信データ詳細', metric: '指標', value: '値', ts: '時刻', count: '件', none: '最新値がありません', selectDevice: 'デバイスを選択してください', noDeviceData: 'このデバイスの受信データがありません' },
+          database: { title: 'データベース', description: '履歴保存の分割テーブル、移行、検証、保守を管理します。', migration: 'Storage V2 移行', start: '移行開始', retry: '再試行', validate: '検証', finalize: '正式切替', maintenance: '履歴整理' }
         }
       }
     };
     const LANG = 'ja';
-    Object.assign(I18N.ja.data.menu, { devices: 'デバイス', dashboardSettings: 'ダッシュボード設定', dashboard: 'マップ設定', examples: 'JSON サンプル', definitions: '定義', mappings: 'Key マッピング', latest: '最新値' });
+    Object.assign(I18N.ja.data.menu, { devices: 'デバイス', dashboardSettings: 'ダッシュボード設定', dashboard: 'マップ設定', examples: 'JSON サンプル', definitions: '定義', mappings: 'Key マッピング', latest: '最新値', database: 'データベース' });
     Object.assign(I18N.ja.data.dashboard, { title: 'ダッシュボード設定', background: '背景画像 URL', logoUrl: 'アイコン URL', refreshInterval: '更新間隔', offlineTimeout: 'Offline 判定', saveSettings: '設定を保存' });
     const DATA_CACHE_KEY = 'iotData.adminSnapshot';
     const DATA_PAGE_KEY = 'iotData.activePage';
@@ -1619,7 +1651,7 @@
     const DATA_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
     const DEFAULT_LOGO_URL = 'https://www.dropbox.com/scl/fi/bwxb55mrt1qg4aqih5bxt/icon_dark.png?rlkey=g2mb3yooo636lr4qfa8zg8dlb&st=icn9wq0m&dl=1';
     const EXEC_URL = 'https://script.google.com/macros/s/AKfycbwjGLWMa6PAI2bJn_50MvYSUC12-8lrWft9iZj8fwzD-xOvhBg95YYCOEsXoZYGdQ3rJQ/exec';
-    const state = { snapshot: null, deviceMap: {}, deviceDrafts: {}, deviceMetricDrafts: {}, deviceDraftDirty: false, deviceMetricDraftDirty: false, deviceQuery: '', latestDeviceId: '', editingDeviceId: '', keyCatalogQuery: '', mappingQuery: '', mapDraft: null, mapAddPoint: null, mapEditorItemId: '', mapSuppressClick: false };
+    const state = { snapshot: null, latestDataLoading: false, storage: null, storageLoading: false, definitionDataLoaded: false, definitionDataLoading: false, mappingDataLoaded: false, mappingDataLoading: false, deviceMap: {}, deviceDrafts: {}, deviceMetricDrafts: {}, deviceDraftDirty: false, deviceMetricDraftDirty: false, deviceQuery: '', latestDeviceId: '', editingDeviceId: '', keyCatalogQuery: '', mappingQuery: '', mapDraft: null, mapAddPoint: null, mapEditorItemId: '', mapSuppressClick: false };
     const $ = (id) => document.getElementById(id);
 
     function t(path) {
@@ -1662,11 +1694,45 @@
     }
 
     function load() {
-      callServer('apiGetAdminSnapshot', [], render);
+      callServer('apiGetAdminSnapshot', [], (snapshot) => {
+        render(snapshot);
+        loadLatestData();
+      });
+    }
+
+    function loadLatestData() {
+      if (state.latestDataLoading) return;
+      state.latestDataLoading = true;
+      callServer('apiGetLatestData', [], (data) => {
+        state.latestDataLoading = false;
+        state.snapshot = Object.assign({}, state.snapshot || {}, data || {});
+        mergeLatestIntoDevices();
+        state.deviceMap = buildDeviceMap(state.snapshot.devices || []);
+        resetDeviceDrafts(state.snapshot.devices || []);
+        saveCachedSnapshot(state.snapshot);
+        renderDevices();
+        renderDeviceKpis();
+        renderLayout();
+        renderMapPreview();
+        renderLatest();
+      });
+    }
+
+    function mergeLatestIntoDevices() {
+      const byDevice = {};
+      (state.snapshot.latest || []).forEach((row) => {
+        if (!row || !row.device_id || !row.metric || !isDisplayMetric(row.metric)) return;
+        if (!byDevice[row.device_id]) byDevice[row.device_id] = {};
+        byDevice[row.device_id][row.metric] = { value: row.value, ts: row.ts };
+      });
+      (state.snapshot.devices || []).forEach((device) => {
+        device.metrics = byDevice[device.device_id] || {};
+        device.metricKeys = Object.keys(device.metrics).sort();
+      });
     }
 
     function render(snapshot) {
-      state.snapshot = snapshot || {};
+      state.snapshot = Object.assign({}, state.snapshot || {}, snapshot || {});
       state.deviceMap = buildDeviceMap(state.snapshot.devices || []);
       resetDeviceDrafts(state.snapshot.devices || []);
       saveCachedSnapshot(state.snapshot);
@@ -1812,13 +1878,79 @@
         section.classList.toggle('hidden', section.getAttribute('data-page') !== target);
       });
       if (persist !== false) setStored(DATA_PAGE_KEY, target);
+      if (target === 'database' && !state.storage && !state.storageLoading) loadStorageStatus();
+      if (target === 'definitions' && !state.definitionDataLoaded && !state.definitionDataLoading) loadDefinitionData();
+      if (target === 'mappings' && !state.mappingDataLoaded && !state.mappingDataLoading) loadMappingData();
+    }
+
+    function loadDefinitionData() {
+      state.definitionDataLoading = true;
+      callServer('apiGetDefinitionData', [], (data) => {
+        state.definitionDataLoading = false;
+        state.definitionDataLoaded = true;
+        state.snapshot = Object.assign({}, state.snapshot || {}, data || {});
+        renderDefinitions();
+        renderKeyCatalog();
+      });
+    }
+
+    function loadMappingData() {
+      state.mappingDataLoading = true;
+      callServer('apiGetMetricMappingData', [], (data) => {
+        state.mappingDataLoading = false;
+        state.mappingDataLoaded = true;
+        state.snapshot = Object.assign({}, state.snapshot || {}, data || {});
+        renderMetricMappings();
+      });
+    }
+
+    function loadStorageStatus() {
+      state.storageLoading = true;
+      callServer('apiGetStorageStatus', [], (status) => {
+        state.storageLoading = false;
+        state.storage = status || {};
+        renderStorageStatus();
+      });
+    }
+
+    function renderStorageStatus() {
+      const storage = state.storage || {};
+      const migration = storage.migration || {};
+      const cards = [
+        { label: 'Storage Mode', val: storage.mode || '-', foot: 'Schema v' + (storage.schema_version || 2), ico: ICO.layers, cls: storage.mode === 'wide' ? 'kpi-ok' : '' },
+        { label: 'Partitions', val: Number(storage.partition_count || 0), foot: '分割テーブル', ico: ICO.box, cls: '' },
+        { label: 'History Rows', val: Number(storage.total_rows || 0), foot: '保持 ' + Number(storage.retention_days || 7) + ' 日', ico: ICO.pulse, cls: '' },
+        { label: 'Migration', val: migration.status || '未開始', foot: migration.error || '', ico: ICO.warn, cls: migration.error ? 'kpi-bad' : '' }
+      ];
+      $('storageKpis').innerHTML = cards.map((c) =>
+        '<div class="kpi ' + c.cls + '"><div class="kpi-top"><span class="kpi-label">' + esc(c.label) + '</span>' +
+        '<span class="kpi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' + c.ico + '</svg></span></div>' +
+        '<div class="kpi-val">' + esc(c.val) + '</div><div class="kpi-foot">' + esc(c.foot) + '</div></div>'
+      ).join('');
+      $('storageMigrationStatus').textContent = migration.migration_id
+        ? [migration.migration_id, '進捗 ' + Number(migration.cursor_row || 0) + ' / ' + (Number(migration.source_rows || 0) + 1), '移行 ' + Number(migration.migrated_groups || 0) + ' uplink'].join(' · ')
+        : '移行は開始されていません。';
+      $('storagePartitionRows').innerHTML = (storage.partitions || []).map((row) => `
+        <tr>
+          <td><code>${esc(row.sheet_name)}</code></td>
+          <td>${esc(row.device_model)}</td>
+          <td>${esc(row.event || '-')}</td>
+          <td>${esc(row.report_type || '-')}</td>
+          <td>${Number(row.metric_count || 0)}</td>
+          <td>${Number(row.rows || 0)}</td>
+          <td><span class="pill ${row.status === 'active' ? '' : 'off'}">${esc(row.status || '')}</span></td>
+        </tr>`).join('') || '<tr><td colspan="7" class="muted">分割テーブルはまだありません。</td></tr>';
+      $('storageStartBtn').disabled = /^(running|ready_for_validation|validated|finalized)$/.test(migration.status || '');
+      $('storageRetryBtn').disabled = !/^(error|validation_failed)$/.test(migration.status || '');
+      $('storageValidateBtn').disabled = migration.status !== 'ready_for_validation';
+      $('storageFinalizeBtn').disabled = migration.status !== 'validated';
     }
 
     function renderDevices() {
       const q = state.deviceQuery.toLowerCase();
       const rows = (state.snapshot.devices || []).filter((d) => {
         const draft = state.deviceDrafts[d.device_id] || d;
-        const hay = [d.device_id, draft.name, draft.area_id, draft.location, draft.type, draft.sensor_type].join(' ').toLowerCase();
+        const hay = [d.device_id, draft.name, draft.device_model, draft.area_id, draft.location, draft.type, draft.sensor_type].join(' ').toLowerCase();
         return !q || hay.indexOf(q) > -1;
       }).sort((a, b) => String(a.sensor_type || '').localeCompare(String(b.sensor_type || '')) || String(a.area_id || a.device_id).localeCompare(String(b.area_id || b.device_id)));
       $('deviceRows').innerHTML = rows.map((d) => {
@@ -1826,7 +1958,7 @@
         return `
         <tr class="${d.device_id === state.editingDeviceId ? 'editing' : ''}" data-device-id="${esc(attrEscape(d.device_id))}">
           <td><code>${esc(d.device_id)}</code><div><span class="pill ${isDeviceOnline(d) ? '' : 'off'}">${isDeviceOnline(d) ? 'Online' : 'Offline'}</span></div></td>
-          <td><input data-device-field="name" value="${esc(attrEscape(v.name || ''))}"></td>
+          <td><input data-device-field="name" value="${esc(attrEscape(v.name || ''))}"><input data-device-field="device_model" placeholder="Device Model" value="${esc(attrEscape(v.device_model || ''))}" style="margin-top:6px"></td>
           <td><input data-device-field="area_id" list="dl_area" placeholder="エリア" value="${esc(attrEscape(v.area_id || ''))}"><input data-device-field="location" list="dl_location" placeholder="場所" value="${esc(attrEscape(v.location || ''))}" style="margin-top:6px"></td>
           <td><input data-device-field="sensor_type" list="dl_sensor_type" placeholder="センサー" value="${esc(attrEscape(v.sensor_type || ''))}"><input data-device-field="type" list="dl_type" placeholder="種別" value="${esc(attrEscape(v.type || ''))}" style="margin-top:6px"></td>
           <td><input data-device-field="power_source" list="dl_power" placeholder="電源" value="${esc(attrEscape(v.power_source || ''))}"><input data-device-field="report_interval_min" type="number" min="0.1" step="0.1" placeholder="min" value="${esc(attrEscape(v.report_interval_min || ''))}" style="margin-top:6px"></td>
@@ -1846,6 +1978,7 @@
         state.deviceDrafts[d.device_id] = {
           device_id: d.device_id || '',
           name: d.name || '',
+          device_model: d.device_model || '',
           area_id: d.area_id || '',
           location: d.location || '',
           type: d.type || '',
@@ -2204,7 +2337,12 @@
         status: 'active',
         source: 'manual'
       });
-      callServer('apiSaveMetricMapping', [mapping], toastRender('Key マッピングを保存しました'));
+      callServer('apiSaveMetricMapping', [mapping], (snapshot) => {
+        render(snapshot);
+        state.mappingDataLoaded = false;
+        loadMappingData();
+        showToast('Key マッピングを保存しました');
+      });
     };
 
     window.reanalyzeMetricMapping = function (mappingId) {
@@ -2213,7 +2351,12 @@
 
     window.disableMetricMapping = function (row) {
       const mapping = Object.assign({}, row, { status: 'disabled', source: 'manual' });
-      callServer('apiSaveMetricMapping', [mapping], toastRender('Key マッピングを無効にしました'));
+      callServer('apiSaveMetricMapping', [mapping], (snapshot) => {
+        render(snapshot);
+        state.mappingDataLoaded = false;
+        loadMappingData();
+        showToast('Key マッピングを無効にしました');
+      });
     };
 
     function renderLatest() {
@@ -2326,6 +2469,7 @@
       const isEdit = mode === 'edit';
       $('device_id').value = d.device_id || '';
       $('device_name').value = d.name || '';
+      $('device_model').value = d.device_model || '';
       $('device_area_id').value = d.area_id || '';
       $('device_location').value = d.location || '';
       $('device_type').value = d.type || '';
@@ -2443,7 +2587,12 @@
     };
 
     window.toggleKeyCatalogVisibility = function (key, enabled) {
-      callServer('apiSaveKeyCatalogVisibility', [key, enabled], toastRender(enabled ? '表示対象にしました' : '非表示にしました'));
+      callServer('apiSaveKeyCatalogVisibility', [key, enabled], (snapshot) => {
+        render(snapshot);
+        state.definitionDataLoaded = false;
+        loadDefinitionData();
+        showToast(enabled ? '表示対象にしました' : '非表示にしました');
+      });
     };
 
     window.selectLatestDevice = function (deviceId) {
@@ -2466,6 +2615,7 @@
       return {
         device_id: $('device_id').value,
         name: $('device_name').value,
+        device_model: $('device_model').value,
         area_id: $('device_area_id').value,
         location: $('device_location').value,
         type: $('device_type').value,
@@ -3090,13 +3240,28 @@
     });
     $('definitionForm').addEventListener('submit', (ev) => {
       ev.preventDefault();
-      callServer('apiSaveDefinition', [collectDefinition()], toastRender('定義を保存しました'));
+      callServer('apiSaveDefinition', [collectDefinition()], (snapshot) => {
+        render(snapshot);
+        state.definitionDataLoaded = false;
+        loadDefinitionData();
+        showToast('定義を保存しました');
+      });
     });
     $('seedDefsBtn').addEventListener('click', () => {
-      callServer('apiSeedKnownMetricDefinitions', [], toastRender('既知キーを追加しました'));
+      callServer('apiSeedKnownMetricDefinitions', [], (snapshot) => {
+        render(snapshot);
+        state.definitionDataLoaded = false;
+        loadDefinitionData();
+        showToast('既知キーを追加しました');
+      });
     });
     $('seedKeyCatalogBtn').addEventListener('click', () => {
-      callServer('apiSeedKeyCatalog', [], toastRender('キーDBを更新しました'));
+      callServer('apiSeedKeyCatalog', [], (snapshot) => {
+        render(snapshot);
+        state.definitionDataLoaded = false;
+        loadDefinitionData();
+        showToast('キーDBを更新しました');
+      });
     });
     $('syncLatestKeysBtn').addEventListener('click', () => {
       callServer('apiSyncLatestKeysToKeyCatalog', [], toastRender('最新値のkeyをキーDBへ追加しました'));
@@ -3113,6 +3278,8 @@
       callServer('apiProcessPendingMetricMappings', [], (res) => {
         const result = res && res.result || {};
         if (res && res.snapshot) render(res.snapshot);
+        state.mappingDataLoaded = false;
+        loadMappingData();
         showToast(result.ok
           ? ('解析: ' + Number(result.processed || 0) + '件 / 自動反映: ' + Number(result.active || 0) + '件')
           : ('解析を実行できませんでした: ' + (result.reason || result.error || '設定を確認してください')));
@@ -3121,7 +3288,12 @@
     $('deleteDefBtn').addEventListener('click', () => {
       const id = $('def_id').value.trim();
       if (!id || !confirm('定義 "' + id + '" を削除しますか?')) return;
-      callServer('apiDeleteDefinition', [id], toastRender('定義を削除しました'));
+      callServer('apiDeleteDefinition', [id], (snapshot) => {
+        render(snapshot);
+        state.definitionDataLoaded = false;
+        loadDefinitionData();
+        showToast('定義を削除しました');
+      });
     });
     $('testDefBtn').addEventListener('click', () => {
       const scope = prompt('スコープ JSON', '{"temperature":25,"humidity":60}') || '';
@@ -3150,6 +3322,44 @@
       callServer('apiTestIngest', [], (res) => {
         $('ingestInfo').innerHTML = '<code>' + esc(JSON.stringify(res)) + '</code>';
         load();
+      });
+    });
+    $('storageStartBtn').addEventListener('click', () => {
+      if (!confirm('Storage V2 の二重書き込みと履歴移行を開始しますか？')) return;
+      callServer('apiStartStorageMigration', [], (status) => {
+        state.storage = status || {};
+        renderStorageStatus();
+        showToast('Storage V2 移行を開始しました');
+      });
+    });
+    $('storageRetryBtn').addEventListener('click', () => {
+      callServer('apiRetryStorageMigration', [], (status) => {
+        state.storage = status || {};
+        renderStorageStatus();
+        showToast('移行処理を再開しました');
+      });
+    });
+    $('storageValidateBtn').addEventListener('click', () => {
+      callServer('apiValidateStorageMigration', [], (status) => {
+        state.storage = status || {};
+        renderStorageStatus();
+        const ok = status && status.migration && status.migration.status === 'validated';
+        showToast(ok ? '移行データの検証が完了しました' : '検証結果を確認してください', !ok);
+      });
+    });
+    $('storageFinalizeBtn').addEventListener('click', () => {
+      if (!confirm('旧 Readings を別 Spreadsheet に完全コピーし、確認後に主データベースから削除して wide モードへ切り替えます。続行しますか？')) return;
+      callServer('apiFinalizeStorageMigration', [], (status) => {
+        state.storage = status || {};
+        renderStorageStatus();
+        showToast('Storage V2 へ正式切替しました');
+      });
+    });
+    $('storageMaintenanceBtn').addEventListener('click', () => {
+      callServer('apiRunStorageMaintenance', [], (result) => {
+        showToast('履歴整理: ' + Number(result && result.deleted || 0) + ' 行削除');
+        state.storage = null;
+        loadStorageStatus();
       });
     });
 

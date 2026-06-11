@@ -78,6 +78,68 @@
       --map-card-shadow: 0 18px 36px -22px rgba(15,23,42,.44), 0 2px 8px rgba(15,23,42,.12);
       --shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 8px 22px -16px rgba(15,23,42,.4);
       --shadow-2: 0 1px 0 rgba(255,255,255,.7) inset, 0 24px 50px -28px rgba(15,23,42,.35);
+      --accent: #0d9488;
+      --accent-2: #2563eb;
+      --accent-3: #7c3aed;
+      --grad: linear-gradient(115deg, #0ea5a4 0%, #3b82f6 55%, #8b5cf6 100%);
+      --grad-soft: linear-gradient(115deg, rgba(13,148,136,.14), rgba(124,58,237,.14));
+      --glow: 0 8px 24px -8px rgba(13,148,136,.38);
+    }
+    body.theme-light {
+      background:
+        radial-gradient(900px 520px at 4% -10%, rgba(13,148,136,.18), transparent 58%),
+        radial-gradient(1000px 620px at 106% -8%, rgba(124,58,237,.15), transparent 56%),
+        radial-gradient(700px 500px at 80% 120%, rgba(37,99,235,.12), transparent 60%),
+        var(--bg);
+      background-attachment: fixed;
+    }
+    body.theme-light .page-ico { color: #fff; }
+    body.theme-light header {
+      background: linear-gradient(115deg, #0d9488 0%, #2563eb 55%, #7c3aed 100%);
+      border-bottom: 1px solid rgba(255,255,255,.22);
+    }
+    body.theme-light header h1 {
+      background: linear-gradient(100deg, #ffffff 0%, #d6fff8 30%, #ffffff 55%, #e4dcff 78%, #ffffff 100%);
+      background-size: 220% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      filter: drop-shadow(0 1px 4px rgba(15,23,42,.3));
+    }
+    body.theme-light header .brand-sub { color: rgba(255,255,255,.82); }
+    body.theme-light header .brand-copy::after {
+      background: linear-gradient(90deg, rgba(255,255,255,.9), rgba(255,255,255,.35), transparent);
+      box-shadow: 0 0 14px rgba(255,255,255,.35);
+    }
+    body.theme-light header .logo {
+      background: transparent;
+      box-shadow: none;
+    }
+    body.theme-light header .logo::before {
+      inset: -8px;
+      background: radial-gradient(circle at 38% 30%,
+        rgba(8,47,46,.95) 0%,
+        rgba(16,38,95,.9) 46%,
+        rgba(46,16,101,.65) 70%,
+        rgba(46,16,101,0) 96%);
+      filter: blur(4px);
+    }
+    body.theme-light header .logo-img { width: 44px; height: 44px; filter: drop-shadow(0 2px 8px rgba(45,212,191,.45)); }
+    body.theme-light header .menu-toggle,
+    body.theme-light header .icon-btn {
+      background: rgba(255,255,255,.16);
+      border-color: rgba(255,255,255,.36);
+      color: #fff;
+    }
+    body.theme-light header .menu-toggle:hover,
+    body.theme-light header .icon-btn:hover { background: rgba(255,255,255,.28); color: #fff; }
+    body.theme-light header .clock-time { color: #fff; }
+    body.theme-light header .clock-date { color: rgba(255,255,255,.78); }
+    body.theme-light header .live-dot {
+      border-color: rgba(255,255,255,.4);
+      background: rgba(255,255,255,.16);
+      color: #d9fff3;
     }
     * { box-sizing: border-box; }
     body {
@@ -534,15 +596,17 @@
     }
     .page-head .status:empty { display: none; }
     .page-head .status.error { color: var(--bad); border-color: rgba(251,113,133,.3); background: var(--bad-soft); }
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; margin-bottom: 18px; }
+    .devices-page .page-wrap { max-width: none; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 14px; margin-bottom: 18px; }
     .kpi {
       position: relative;
       overflow: hidden;
-      border: 1px solid var(--line);
+      border: 1px solid var(--map-card-border);
       border-radius: var(--r-lg);
       padding: 16px 16px 14px;
-      background: var(--panel);
-      box-shadow: var(--shadow);
+      background: var(--map-card-bg);
+      box-shadow: var(--map-card-shadow);
+      backdrop-filter: blur(14px) saturate(135%);
     }
     .kpi::after {
       content: "";
@@ -566,12 +630,14 @@
     .trend svg { width: 11px; height: 11px; }
     .spark { display: block; width: 100%; height: 30px; margin-top: 8px; overflow: visible; }
     .dash-grid { display: grid; grid-template-columns: minmax(0,1fr) 360px; gap: 16px; align-items: start; }
+    @media (min-width: 1800px) { .dash-grid { grid-template-columns: minmax(0,1fr) 420px; } }
+    @media (max-width: 1100px) { .dash-grid { grid-template-columns: 1fr; } .side-stack { position: static; } }
     .card {
-      border: 1px solid var(--line);
+      border: 1px solid var(--map-card-border);
       border-radius: var(--r-lg);
-      background: var(--panel);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(8px);
+      background: var(--map-card-bg);
+      box-shadow: var(--map-card-shadow);
+      backdrop-filter: blur(14px) saturate(135%);
     }
     .card-head {
       display: flex;
@@ -594,12 +660,16 @@
     .dev-list { display: grid; gap: 10px; }
     .dev-area-group {
       display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(440px,1fr));
+      align-items: stretch;
       gap: 9px;
       padding-top: 10px;
       border-top: 1px solid var(--line);
     }
+    @media (max-width: 560px) { .dev-area-group { grid-template-columns: 1fr; } }
     .dev-area-group:first-child { padding-top: 0; border-top: 0; }
     .dev-area-title {
+      grid-column: 1 / -1;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -618,6 +688,7 @@
     .dev {
       position: relative;
       display: grid;
+      align-content: start;
       gap: 9px;
       border: 1px solid var(--line);
       border-radius: var(--r-md);
@@ -632,11 +703,11 @@
     .dev.compact .metric { padding: 6px 7px; }
     .dev.wide { border-color: var(--card-border-2); background: linear-gradient(135deg, var(--panel-2), var(--panel)); }
     .dev-head { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: center; }
-    .dev-name { font: 800 16px/1.25 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }
+    .dev-name { font: 800 16px/1.25 var(--font-display); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .dev-id { font: 600 11px var(--font-mono); color: var(--muted); margin-top: 2px; }
     .dev-actions { display: flex; align-items: center; gap: 8px; justify-self: end; }
-    .dev-meta { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-    .dev-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--muted-2); }
+    .dev-meta { color: var(--muted); font-size: 12px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dev-meta .dot { display: inline-block; vertical-align: middle; width: 3px; height: 3px; border-radius: 50%; background: var(--muted-2); margin: 0 7px; }
     .metrics-shell { display: grid; gap: 7px; }
     .metric-page-nav { display: flex; align-items: center; justify-content: flex-end; gap: 6px; min-height: 24px; }
     .metric-page-count {
@@ -661,11 +732,15 @@
     }
     .metric-page-btn:hover { border-color: rgba(45,212,191,.5); color: var(--accent); }
     .metric-page-btn svg { width: 13px; height: 13px; }
-    .metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 8px; }
-    .metric { border: 1px solid var(--line); border-radius: 7px; padding: 8px 9px; background: var(--panel); }
-    .metric-k { color: var(--muted); font-size: 10.5px; font-weight: 700; display: flex; align-items: center; gap: 5px; }
-    .metric-k svg { width: 12px; height: 12px; opacity: .8; }
-    .metric-v { font: 800 17px/1.1 var(--font-display); font-variant-numeric: tabular-nums; margin-top: 3px; }
+    .metrics { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+    .metrics.rows-2 { grid-template-rows: repeat(2, 1fr); min-height: 138px; }
+    .dev.compact .metrics.rows-2 { min-height: 0; grid-template-rows: none; }
+    @media (max-width: 560px) { .metrics { grid-template-columns: repeat(2, minmax(0,1fr)); } .metrics.rows-2 { min-height: 0; grid-template-rows: none; } }
+    .metric { border: 1px solid var(--line); border-radius: 7px; padding: 8px 9px; background: var(--panel); min-width: 0; }
+    .metric-k { color: var(--muted); font-size: 10.5px; font-weight: 700; display: flex; align-items: center; gap: 5px; min-width: 0; }
+    .metric-k span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .metric-k svg { flex: none; width: 12px; height: 12px; opacity: .8; }
+    .metric-v { font: 800 17px/1.1 var(--font-display); font-variant-numeric: tabular-nums; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .metric-v u { font-size: 11px; color: var(--muted); font-weight: 700; text-decoration: none; margin-left: 1px; }
     .mbar { height: 3px; border-radius: 99px; background: var(--panel-hi); margin-top: 6px; overflow: hidden; }
     .mbar > i { display: block; height: 100%; border-radius: 99px; background: var(--grad); }
@@ -771,6 +846,105 @@
       color: var(--muted);
       max-width: 560px;
     }
+    .page-wrap.meeting-wrap { max-width:none; }
+    .meeting-wrap { display:grid; gap:16px; align-content:start; }
+    .devices-page .page-wrap,
+    .page-wrap.meeting-wrap {
+      margin: 8px;
+      min-height: calc(100vh - var(--header-h) - 16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--r-lg);
+      background:
+        radial-gradient(900px 460px at 52% 6%, rgba(91,157,246,.17), transparent 60%),
+        radial-gradient(560px 340px at 8% 96%, rgba(45,212,191,.13), transparent 64%),
+        linear-gradient(135deg, rgba(246,249,255,.09), rgba(91,157,246,.045)),
+        var(--panel);
+      box-shadow:
+        var(--shadow-2),
+        0 0 54px -22px rgba(45,212,191,.48),
+        0 30px 80px -44px rgba(91,157,246,.42);
+    }
+    .meeting-body { display:grid; grid-template-columns:minmax(170px,210px) minmax(0,1fr); gap:14px; align-items:start; }
+    @media (max-width:920px) { .meeting-body { grid-template-columns:1fr; } }
+    .meeting-summary { display:grid; gap:12px; }
+    .meeting-summary-item.static { cursor:default; }
+    .meeting-summary-item.static:hover { transform:none; border-color:var(--map-card-border); background:var(--map-card-bg); }
+    .meeting-summary-item.usage .meeting-summary-ico { color:var(--accent-2); background:rgba(91,157,246,.13); }
+    .meeting-summary-item { display:flex; align-items:center; gap:12px; padding:12px 15px; border:1px solid var(--map-card-border); border-radius:var(--r-md); background:var(--map-card-bg); box-shadow:var(--map-card-shadow); backdrop-filter:blur(14px) saturate(135%); cursor:pointer; user-select:none; transition:.16s; }
+    .meeting-summary-item:hover { border-color:var(--card-border-2); background:var(--map-card-bg-strong); transform:translateY(-1px); }
+    .meeting-summary-item.on { border-color:rgba(45,212,191,.55); background:var(--map-card-bg-strong); box-shadow:var(--map-card-shadow), 0 0 0 1px rgba(45,212,191,.3) inset; }
+    .meeting-summary-ico { flex:none; width:36px; height:36px; display:grid; place-items:center; border-radius:10px; background:var(--panel-2); color:var(--muted); }
+    .meeting-summary-ico svg { width:17px; height:17px; }
+    .meeting-summary-item.total .meeting-summary-ico { color:var(--accent); background:var(--grad-soft); }
+    .meeting-summary-item.occupied .meeting-summary-ico { color:var(--bad); background:var(--bad-soft); }
+    .meeting-summary-item.pending .meeting-summary-ico { color:var(--warn); background:var(--warn-soft); }
+    .meeting-summary-item.available .meeting-summary-ico { color:var(--ok); background:var(--ok-soft); }
+    .meeting-summary-label { color:var(--muted); font-size:11px; font-weight:800; }
+    .meeting-summary-value { margin-top:3px; font:800 24px/1 var(--font-display); font-variant-numeric:tabular-nums; }
+    .meeting-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(max(330px,calc((100% - 56px)/5)),1fr)); gap:14px; }
+    .meeting-room { --room-color:var(--muted-2); position:relative; overflow:hidden; display:flex; flex-direction:column; padding:16px 16px 16px 19px; border:1px solid var(--map-card-border); border-radius:var(--r-md); background:var(--map-card-bg); box-shadow:var(--map-card-shadow); backdrop-filter:blur(14px) saturate(135%); min-width:0; transition:.16s; }
+    .meeting-room::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--room-color); opacity:.9; }
+    .meeting-room:hover { border-color:var(--card-border-2); transform:translateY(-1px); }
+    .meeting-room.occupied { --room-color:var(--bad); }
+    .meeting-room.pending { --room-color:var(--warn); }
+    .meeting-room.available { --room-color:var(--ok); }
+    .meeting-room.offline { opacity:.78; }
+    .meeting-room-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+    .meeting-room-name { font:800 17px/1.25 var(--font-display); color:var(--ink); overflow-wrap:anywhere; }
+    .meeting-room-time { margin-top:4px; color:var(--muted); font-size:11px; }
+    .meeting-room-status { flex:none; display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border:1px solid var(--line); border-radius:6px; font-size:11px; font-weight:800; }
+    .meeting-room-status::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+    .meeting-room-status.occupied { color:var(--bad); background:var(--bad-soft); border-color:rgba(251,113,133,.3); }
+    .meeting-room-status.occupied::before { animation:meetingPulse 1.8s ease-out infinite; }
+    .meeting-room-status.pending { color:var(--warn); background:rgba(251,191,36,.08); border-color:rgba(251,191,36,.3); }
+    .meeting-room-status.available { color:var(--ok); background:var(--ok-soft); border-color:rgba(45,212,191,.3); }
+    .meeting-room-status.offline { color:var(--muted); background:var(--panel-2); }
+    @keyframes meetingPulse { 0% { box-shadow:0 0 0 0 rgba(251,113,133,.45); } 70%,100% { box-shadow:0 0 0 6px rgba(251,113,133,0); } }
+    .meeting-main { display:grid; grid-template-columns:110px minmax(0,1fr); gap:14px; margin-top:15px; flex:1 1 auto; min-height:112px; }
+    .meeting-count { display:grid; place-items:center; align-content:center; min-height:88px; border-right:1px solid var(--line); }
+    .meeting-count strong { font:800 36px/1 var(--font-display); font-variant-numeric:tabular-nums; color:var(--room-color); }
+    .meeting-room.offline .meeting-count strong { color:var(--muted); }
+    .meeting-count span { color:var(--muted); font-size:11px; margin-top:7px; }
+    .meeting-env { display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:8px; align-content:start; }
+    .meeting-env-item > div { min-width:0; }
+    .meeting-env-item { display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:7px; background:var(--panel-2); min-width:0; }
+    .meeting-env-item.wide { grid-column:1 / -1; }
+    .meeting-env-item svg { flex:none; width:15px; height:15px; color:var(--muted); }
+    .meeting-env-item.lit svg, .meeting-env-item.lit strong { color:var(--warn); }
+    .meeting-env-item.dim svg, .meeting-env-item.dim strong { color:var(--muted); }
+    .meeting-env-item.ok strong { color:var(--ok); }
+    .meeting-env-item.warn svg, .meeting-env-item.warn strong { color:var(--warn); }
+    .meeting-env-item.bad svg, .meeting-env-item.bad strong { color:var(--bad); }
+    .meeting-env-item span { display:block; color:var(--muted); font-size:10px; font-weight:800; }
+    .meeting-env-item strong { display:block; margin-top:3px; font:800 15px/1.1 var(--font-display); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .meeting-timeline { margin-top:15px; padding-top:12px; border-top:1px solid var(--line); }
+    .meeting-room .meeting-timeline { margin-top:auto; padding-top:12px; }
+    .meeting-room .meeting-main { margin-bottom:15px; }
+    .meeting-timeline-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px; color:var(--muted); font:800 10.5px var(--font-display); }
+    .meeting-timeline-head b { color:var(--ink-dim); font:700 10.5px var(--font-mono); }
+    .meeting-people-chart { display:block; width:100%; height:38px; margin-bottom:6px; border-radius:5px; background:var(--panel-2); }
+    .meeting-track { position:relative; height:14px; border-radius:5px; background:var(--panel-2); overflow:hidden; }
+    .meeting-track-segment { position:absolute; top:0; bottom:0; min-width:2px; border-radius:3px; background:linear-gradient(90deg,var(--accent),var(--accent-2)); opacity:.88; }
+    .meeting-track-now { position:absolute; top:0; bottom:0; width:2px; background:var(--ink); opacity:.9; box-shadow:0 0 5px rgba(0,0,0,.4); }
+    .meeting-axis { display:flex; justify-content:space-between; color:var(--muted); font:600 9px var(--font-display); margin-top:5px; }
+    .meeting-empty { padding:48px 20px; text-align:center; color:var(--muted); border:1px dashed var(--line); border-radius:var(--r-md); }
+    .meeting-analytics { display:grid; grid-template-columns:minmax(170px,220px) minmax(250px,1fr) minmax(0,1.9fr); gap:14px; align-items:stretch; }
+    @media (max-width:1240px) {
+      .meeting-analytics { grid-template-columns:minmax(170px,220px) minmax(0,1fr); }
+      .meeting-analytics .meeting-heat-card { grid-column:1 / -1; }
+    }
+    @media (max-width:760px) { .meeting-analytics { grid-template-columns:1fr; } }
+    .meeting-analytics .card-body { overflow-x:auto; }
+    .meeting-usage-card .card-body { display:grid; gap:7px; align-content:center; justify-items:center; height:100%; min-height:150px; text-align:center; }
+    .meeting-usage-label { color:var(--muted); font-size:11px; font-weight:800; }
+    .meeting-usage-value { font:800 40px/1 var(--font-display); font-variant-numeric:tabular-nums; background:var(--grad); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+    .meeting-usage-sub { color:var(--muted); font-size:10px; }
+    .meeting-heatmap { display:grid; gap:3px; min-width:460px; }
+    .meeting-heat-label { align-self:center; padding-right:8px; color:var(--ink-dim); font-size:11.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .meeting-heat-hour { color:var(--muted); font:600 9px var(--font-display); text-align:center; align-self:end; padding-bottom:2px; }
+    .meeting-heat-cell { height:24px; border-radius:4px; background:var(--panel-2); }
+    .meeting-heat-legend { display:flex; align-items:center; justify-content:flex-end; gap:5px; margin-top:10px; color:var(--muted); font-size:10px; }
+    .meeting-heat-swatch { width:16px; height:10px; border-radius:3px; }
     .placeholder .ph-ico {
       width: 60px; height: 60px; display: grid; place-items: center;
       border-radius: 18px; background: var(--grad-soft); color: var(--accent);
@@ -1269,6 +1443,9 @@
       .map-page .page-wrap { min-height: auto; padding: 16px; }
       #stageWrap { height: auto; min-height: 420px; }
       #stage { width: 100%; }
+      .meeting-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .meeting-grid { grid-template-columns:1fr; }
+      .meeting-main { grid-template-columns:86px minmax(0,1fr); }
     }
   </style>
 </head>
@@ -1407,7 +1584,20 @@
       </div>
 
       <div class="page camera-page hidden" data-page="meeting">
-        <div class="page-wrap"><section class="placeholder"><span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/></svg></span><span class="ph-tag">COMING SOON</span><h2 data-i18n="dashboard.meeting.title"></h2><p data-i18n="dashboard.meeting.text"></p></section></div>
+        <div class="page-wrap meeting-wrap">
+          <div class="page-head">
+            <div>
+              <h2 class="page-title"><span class="page-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/></svg></span><span class="page-txt" data-i18n="dashboard.meeting.title"></span></h2>
+              <div class="page-desc" data-i18n="dashboard.meeting.text"></div>
+            </div>
+            <div id="meetingStatus" class="status"></div>
+          </div>
+          <div id="meetingAnalytics"></div>
+          <div class="meeting-body">
+            <div id="meetingSummary" class="meeting-summary"></div>
+            <div id="meetingRooms" class="meeting-grid"></div>
+          </div>
+        </div>
       </div>
 
       <div class="page camera-page hidden" data-page="pmc">
@@ -1440,7 +1630,33 @@
             parkingTitle: '車位管理カメラ',
             parkingText: '車位管理カメラの稼働状況、占有状態、イベント情報をここに表示します。'
           },
-          meeting: { title: '会議室Now', text: '会議室の利用状況、予約、センサー情報をここに統合します。' }
+          meeting: {
+            title: '会議室Now',
+            text: '人数センサーと環境センサーから、現在の利用状況を表示します。',
+            total: '会議室',
+            occupied: '使用中',
+            pending: '確認中',
+            available: '空室',
+            offline: 'Offline',
+            people: '現在人数',
+            light: '照明',
+            lightOn: '点灯',
+            lightOff: '消灯',
+            temperature: '温度',
+            humidity: '湿度',
+            co2: 'CO2',
+            tempHumidity: '温度 / 湿度',
+            peak: '最大',
+            timeline: '本日の利用状況',
+            usageNone: '利用なし',
+            usageRate: '全体使用率',
+            rankTitle: '本日の使用率',
+            heatmapTitle: '時間帯ヒートマップ（過去7日）',
+            heatLow: '低',
+            heatHigh: '高',
+            noRooms: 'area_id が「会議室」で、人数センサーと場所が設定されたデバイスがありません。',
+            noFilteredRooms: '条件に一致する会議室がありません。'
+          }
         }
       }
     };
@@ -1454,10 +1670,13 @@
     const DASHBOARD_THEME_KEY = 'iotDashboard.theme';
     const DASHBOARD_METRIC_PREFS_KEY = 'iotDashboard.deviceMetricPrefs';
     const DASHBOARD_LOGO_KEY = 'iotDashboard.logoUrl';
-    const DASHBOARD_ALLOWED_STORAGE_KEYS = [DASHBOARD_CACHE_KEY, DASHBOARD_PAGE_KEY, DASHBOARD_QUERY_KEY, DASHBOARD_MENU_KEY, DASHBOARD_REFRESH_KEY, DASHBOARD_IOT_GROUP_KEY, DASHBOARD_THEME_KEY, DASHBOARD_METRIC_PREFS_KEY, DASHBOARD_LOGO_KEY];
+    const DASHBOARD_MEETING_CACHE_KEY = 'iotDashboard.meetingState';
+    const DASHBOARD_ALLOWED_STORAGE_KEYS = [DASHBOARD_CACHE_KEY, DASHBOARD_PAGE_KEY, DASHBOARD_QUERY_KEY, DASHBOARD_MENU_KEY, DASHBOARD_REFRESH_KEY, DASHBOARD_IOT_GROUP_KEY, DASHBOARD_THEME_KEY, DASHBOARD_METRIC_PREFS_KEY, DASHBOARD_LOGO_KEY, DASHBOARD_MEETING_CACHE_KEY];
     const DASHBOARD_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
     const DEFAULT_LOGO_URL = 'https://www.dropbox.com/scl/fi/bwxb55mrt1qg4aqih5bxt/icon_dark.png?rlkey=g2mb3yooo636lr4qfa8zg8dlb&st=icn9wq0m&dl=1';
-    const state = { data: null, deviceMap: {}, query: '', filter: 'all', timer: 0, metricEditorDeviceId: '', metricPages: {}, version: '', lastVersionAt: 0 };
+    const DASHBOARD_REQUEST_TIMEOUT_MS = 45000;
+    const DASHBOARD_STALE_CHECK_MS = 30000;
+    const state = { data: null, deviceMap: {}, query: '', filter: 'all', timer: 0, metricEditorDeviceId: '', metricPages: {}, version: '', lastVersionAt: 0, lastSuccessfulAt: 0, requests: {}, meeting: null, meetingVersion: '', meetingLoaded: false, meetingFilter: 'all' };
     const $ = (id) => document.getElementById(id);
 
     function t(path) {
@@ -1478,12 +1697,27 @@
 
     function callServer(name, args, ok, options) {
       const silent = options && options.silent;
+      const requestId = Date.now() + ':' + Math.random();
+      const previous = state.requests[name];
+      if (previous && previous.timer) clearTimeout(previous.timer);
+      const timeoutTimer = setTimeout(() => {
+        const active = state.requests[name];
+        if (!active || active.id !== requestId) return;
+        delete state.requests[name];
+        setStatus('通信がタイムアウトしました。再試行します。', true);
+        scheduleRefresh(60);
+      }, DASHBOARD_REQUEST_TIMEOUT_MS);
+      state.requests[name] = { id: requestId, timer: timeoutTimer };
       if (!silent) {
         setStatus(t('common.status.loading'));
         document.querySelectorAll('button').forEach((b) => b.disabled = true);
       }
       google.script.run
         .withSuccessHandler((res) => {
+          const active = state.requests[name];
+          if (!active || active.id !== requestId) return;
+          clearTimeout(active.timer);
+          delete state.requests[name];
           if (!silent) {
             document.querySelectorAll('button').forEach((b) => b.disabled = false);
             setStatus(t('common.status.ready'));
@@ -1491,24 +1725,333 @@
           ok(res);
         })
         .withFailureHandler((err) => {
+          const active = state.requests[name];
+          if (!active || active.id !== requestId) return;
+          clearTimeout(active.timer);
+          delete state.requests[name];
           if (!silent) document.querySelectorAll('button').forEach((b) => b.disabled = false);
           setStatus(err && err.message ? err.message : String(err), true);
+          scheduleRefresh(60);
         })[name](...args);
     }
 
-    function load(silent) {
+    function load(silent, force) {
+      if (state.requests.apiGetDashboardState && !force) return;
       callServer('apiGetDashboardState', [state.version || ''], render, { silent: !!silent });
+    }
+
+    function loadMeeting(silent, force) {
+      if (state.requests.apiGetMeetingRoomState && !force) return;
+      if (!silent && $('meetingStatus')) $('meetingStatus').textContent = '会議室データを取得しています...';
+      callServer('apiGetMeetingRoomState', [state.meetingVersion || ''], renderMeeting, { silent: !!silent });
+    }
+
+    function renderMeeting(data) {
+      if (data && data.unchanged) {
+        state.meetingLoaded = true;
+        if ($('meetingStatus')) $('meetingStatus').textContent = '表示中';
+        return;
+      }
+      state.meeting = data || {};
+      state.meetingVersion = state.meeting.version || '';
+      state.meetingLoaded = true;
+      saveCachedMeeting(state.meeting);
+      renderMeetingSummary();
+      renderMeetingRooms();
+      renderMeetingAnalytics();
+      if ($('meetingStatus')) $('meetingStatus').textContent = shortDate(state.meeting.generated_at);
+    }
+
+    const MEETING_SUMMARY_ICONS = {
+      total: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+      occupied: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/>',
+      pending: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+      available: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/>',
+      offline: '<path d="M1 1l22 22"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><path d="M12 20h.01"/>',
+      usage: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'
+    };
+
+    function renderMeetingSummary() {
+      if (['all', 'AVAILABLE', 'PENDING_EMPTY', 'OCCUPIED'].indexOf(state.meetingFilter) < 0) state.meetingFilter = 'all';
+      const summary = (state.meeting && state.meeting.summary) || {};
+      const items = [
+        ['total', 'all', 'ALL'],
+        ['available', 'AVAILABLE', t('dashboard.meeting.available')],
+        ['pending', 'PENDING_EMPTY', t('dashboard.meeting.pending')],
+        ['occupied', 'OCCUPIED', t('dashboard.meeting.occupied')]
+      ];
+      $('meetingSummary').innerHTML = items.map((item) =>
+        '<div class="meeting-summary-item ' + item[0] + (state.meetingFilter === item[1] ? ' on' : '') + '" data-meeting-filter="' + item[1] + '" role="button" tabindex="0">' +
+        '<span class="meeting-summary-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + MEETING_SUMMARY_ICONS[item[0]] + '</svg></span>' +
+        '<div><div class="meeting-summary-label">' + esc(item[2]) + '</div><div class="meeting-summary-value">' + esc(Number(summary[item[0]] || 0)) + '</div></div></div>'
+      ).join('');
+    }
+
+    function meetingElapsedBusinessMin() {
+      const now = new Date();
+      const cur = now.getHours() * 60 + now.getMinutes();
+      return Math.max(0, Math.min(cur, 22 * 60) - 8 * 60);
+    }
+
+    function meetingUsageMinutes(records) {
+      let totalMin = 0;
+      (records || []).forEach((record) => {
+        const start = new Date(record.start);
+        const end = new Date(record.end);
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
+        totalMin += Math.max(0, (end.getTime() - start.getTime()) / 60000);
+      });
+      return totalMin;
+    }
+
+    function meetingOverallUsagePct() {
+      const rooms = (state.meeting && state.meeting.rooms) || [];
+      const elapsed = meetingElapsedBusinessMin();
+      if (!rooms.length || elapsed <= 0) return null;
+      const used = rooms.reduce((sum, room) => sum + meetingUsageMinutes(room.timeline || []), 0);
+      return Math.round(used / (elapsed * rooms.length) * 100);
+    }
+
+    function renderMeetingAnalytics() {
+      const el = $('meetingAnalytics');
+      if (!el) return;
+      const rooms = (state.meeting && state.meeting.rooms) || [];
+      if (!rooms.length) { el.innerHTML = ''; return; }
+      const elapsed = meetingElapsedBusinessMin();
+      const ranked = rooms.map((room) => {
+        const min = meetingUsageMinutes(room.timeline || []);
+        return { location: room.location, min: min, pct: elapsed > 0 ? Math.min(100, Math.round(min / elapsed * 100)) : 0 };
+      }).sort((a, b) => b.min - a.min);
+      const rankHtml = ranked.map((item) =>
+        '<div class="bar-item"><div class="bar-top"><b>' + esc(item.location) + '</b><span>' + esc(item.pct + '% / ' + meetingDurationLabel(item.min)) + '</span></div>' +
+        '<div class="bar-track"><i style="width:' + item.pct + '%"></i></div></div>'
+      ).join('');
+      const rankCard = '<div class="card"><div class="card-head"><div class="card-title"><span class="bar"></span><span>' + esc(t('dashboard.meeting.rankTitle')) + '</span></div></div>' +
+        '<div class="card-body"><div class="bar-list">' + rankHtml + '</div></div></div>';
+      const usagePct = meetingOverallUsagePct();
+      const usageCard = '<div class="card meeting-usage-card"><div class="card-body">' +
+        '<div class="meeting-usage-label">' + esc(t('dashboard.meeting.usageRate')) + '</div>' +
+        '<div class="meeting-usage-value">' + esc(usagePct === null ? '--' : usagePct + '%') + '</div>' +
+        '<div class="meeting-usage-sub">8:00 - 22:00</div></div></div>';
+      el.innerHTML = '<div class="meeting-analytics">' + usageCard + rankCard + renderMeetingHeatmapCard(rooms) + '</div>';
+    }
+
+    function meetingDurationLabel(minutes) {
+      const m = Math.round(minutes);
+      if (m <= 0) return t('dashboard.meeting.usageNone');
+      const h = Math.floor(m / 60);
+      const r = m % 60;
+      if (h && r) return h + '時間' + r + '分';
+      if (h) return h + '時間';
+      return r + '分';
+    }
+
+    function renderMeetingHeatmapCard(rooms) {
+      const heat = state.meeting && state.meeting.heatmap;
+      if (!heat || !heat.rooms) return '';
+      const startHour = Number(heat.start_hour) || 8;
+      const endHour = Number(heat.end_hour) || 22;
+      const slots = endHour - startHour;
+      let cells = '<div></div>';
+      for (let h = startHour; h < endHour; h++) {
+        cells += '<div class="meeting-heat-hour">' + (h % 2 === 0 ? h : '') + '</div>';
+      }
+      rooms.forEach((room) => {
+        const ratios = heat.rooms[room.location] || [];
+        cells += '<div class="meeting-heat-label" title="' + esc(attrEscape(room.location)) + '">' + esc(room.location) + '</div>';
+        for (let i = 0; i < slots; i++) {
+          const ratio = Math.max(0, Math.min(1, Number(ratios[i]) || 0));
+          const alpha = ratio <= 0 ? 0 : (0.12 + ratio * 0.78);
+          const style = alpha > 0 ? ' style="background:rgba(45,212,191,' + alpha.toFixed(3) + ')"' : '';
+          cells += '<div class="meeting-heat-cell"' + style + ' title="' + esc(attrEscape(room.location + ' ' + (startHour + i) + ':00 — ' + Math.round(ratio * 100) + '%')) + '"></div>';
+        }
+      });
+      const legend = '<div class="meeting-heat-legend"><span>' + esc(t('dashboard.meeting.heatLow')) + '</span>' +
+        [0.12, 0.3, 0.5, 0.7, 0.9].map((a) => '<span class="meeting-heat-swatch" style="background:rgba(45,212,191,' + a + ')"></span>').join('') +
+        '<span>' + esc(t('dashboard.meeting.heatHigh')) + '</span></div>';
+      return '<div class="card meeting-heat-card"><div class="card-head"><div class="card-title"><span class="bar"></span><span>' + esc(t('dashboard.meeting.heatmapTitle')) + '</span></div></div>' +
+        '<div class="card-body"><div class="meeting-heatmap" style="grid-template-columns:minmax(90px,140px) repeat(' + slots + ',minmax(16px,1fr))">' + cells + '</div>' + legend + '</div></div>';
+    }
+
+    function renderMeetingRooms() {
+      const rooms = (state.meeting && state.meeting.rooms) || [];
+      const filtered = state.meetingFilter === 'all' ? rooms : rooms.filter((room) => room.status === state.meetingFilter);
+      $('meetingRooms').innerHTML = filtered.map(renderMeetingRoom).join('') ||
+        '<div class="meeting-empty">' + esc(t(rooms.length ? 'dashboard.meeting.noFilteredRooms' : 'dashboard.meeting.noRooms')) + '</div>';
+    }
+
+    function renderMeetingRoom(room) {
+      const statusMap = {
+        OCCUPIED: ['occupied', t('dashboard.meeting.occupied')],
+        PENDING_EMPTY: ['pending', t('dashboard.meeting.pending')],
+        AVAILABLE: ['available', t('dashboard.meeting.available')],
+        OFFLINE: ['offline', t('dashboard.meeting.offline')]
+      };
+      const status = statusMap[room.status] || statusMap.OFFLINE;
+      const count = room.count === null || room.count === undefined ? '--' : room.count;
+      const lightValue = room.light && hasMetricValue(room.light) ? Number(room.light.value) : NaN;
+      const light = isFinite(lightValue) ? (lightValue >= 2 ? t('dashboard.meeting.lightOn') : t('dashboard.meeting.lightOff')) : '--';
+      const co2Value = room.co2 && hasMetricValue(room.co2) ? Number(room.co2.value) : NaN;
+      const co2Level = isFinite(co2Value) ? (co2Value >= 1500 ? 'bad' : co2Value >= 1000 ? 'warn' : 'ok') : '';
+      const lightLevel = isFinite(lightValue) ? (lightValue >= 2 ? 'lit' : 'dim') : '';
+      const envIcons = {
+        light: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 1 3.6 10.8c-.5.4-.6 1-.6 1.7v.5H9v-.5c0-.7-.1-1.3-.6-1.7A6 6 0 0 1 12 3z"/>',
+        temperature: '<path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>',
+        co2: '<path d="M9.59 4.59A2 2 0 1 1 11 8H2"/><path d="M12.59 19.41A2 2 0 1 0 14 16H2"/><path d="M17.73 7.73A2.5 2.5 0 1 1 19.5 12H2"/>'
+      };
+      const hasTemp = !!(room.temperature && hasMetricValue(room.temperature));
+      const hasHumidity = !!(room.humidity && hasMetricValue(room.humidity));
+      const env = [];
+      if (isFinite(lightValue)) {
+        env.push([t('dashboard.meeting.light'), light, envIcons.light, lightLevel]);
+      }
+      if (isFinite(co2Value)) {
+        env.push([t('dashboard.meeting.co2'), meetingMetricText(room.co2, 'ppm'), envIcons.co2, co2Level]);
+      }
+      if (hasTemp && hasHumidity) {
+        env.push([t('dashboard.meeting.tempHumidity'), meetingMetricText(room.temperature, '°C') + ' / ' + meetingMetricText(room.humidity, '%'), envIcons.temperature, 'wide']);
+      } else if (hasTemp) {
+        env.push([t('dashboard.meeting.temperature'), meetingMetricText(room.temperature, '°C'), envIcons.temperature, '']);
+      } else if (hasHumidity) {
+        env.push([t('dashboard.meeting.humidity'), meetingMetricText(room.humidity, '%'), envIcons.temperature, '']);
+      }
+      if (env.length === 1) env[0][3] += ' wide';
+      return '<article class="meeting-room ' + status[0] + '">' +
+        '<div class="meeting-room-head"><div><div class="meeting-room-name">' + esc(room.location) + '</div><div class="meeting-room-time">' + esc(shortDate(room.people_updated_at) || '--') + '</div></div>' +
+        '<span class="meeting-room-status ' + status[0] + '">' + esc(status[1]) + '</span></div>' +
+        '<div class="meeting-main"><div class="meeting-count"><strong>' + esc(count) + '</strong><span>' + esc(t('dashboard.meeting.people')) + '</span></div>' +
+        '<div class="meeting-env">' + env.map((item) =>
+          '<div class="meeting-env-item' + (item[3] ? ' ' + item[3] : '') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + item[2] + '</svg>' +
+          '<div><span>' + esc(item[0]) + '</span><strong>' + esc(item[1]) + '</strong></div></div>'
+        ).join('') + '</div></div>' +
+        '<div class="meeting-timeline"><div class="meeting-timeline-head"><span>' + esc(t('dashboard.meeting.timeline')) + '</span><b>' + esc(meetingTimelineSummaryText(room)) + '</b></div>' +
+        renderMeetingPeopleChart(room.series || []) +
+        '<div class="meeting-track">' + renderMeetingSegments(room.timeline || []) + renderMeetingNowMarker() + '</div>' +
+        '<div class="meeting-axis"><span>08:00</span><span>11:30</span><span>15:00</span><span>18:30</span><span>22:00</span></div></div>' +
+        '</article>';
+    }
+
+    function meetingUsageText(records) {
+      return meetingDurationLabel(meetingUsageMinutes(records));
+    }
+
+    function meetingTimelineSummaryText(room) {
+      const usage = meetingUsageText(room.timeline || []);
+      const peak = meetingSeriesPoints(room.series || []).reduce((max, p) => Math.max(max, p.v), 0);
+      return peak > 0 ? usage + ' ・ ' + t('dashboard.meeting.peak') + peak + '人' : usage;
+    }
+
+    function meetingSeriesPoints(series) {
+      return (series || [])
+        .map((p) => ({ t: Number(p && p[0]), v: Number(p && p[1]) }))
+        .filter((p) => isFinite(p.t) && isFinite(p.v));
+    }
+
+    function renderMeetingPeopleChart(series) {
+      const pts = meetingSeriesPoints(series);
+      if (!pts.length) return '';
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0, 0).getTime();
+      const rangeMs = 14 * 60 * 60 * 1000;
+      const limit = Math.min(now.getTime(), start + rangeMs);
+      if (limit <= start) return '';
+      const W = 100;
+      const H = 38;
+      const max = Math.max(1, pts.reduce((m, p) => Math.max(m, p.v), 0));
+      const x = (tms) => Math.max(0, Math.min(W, (tms - start) / rangeMs * W));
+      const y = (v) => H - 3 - (v / max) * (H - 8);
+      // step-after line: carry the last value seen before 08:00 as the baseline
+      let baseline = null;
+      const visible = [];
+      pts.forEach((p) => {
+        if (p.t > limit) return;
+        if (p.t <= start) baseline = p.v;
+        else visible.push(p);
+      });
+      if (baseline === null && !visible.length) return '';
+      const startVal = baseline !== null ? baseline : null;
+      let d = '';
+      let curY = null;
+      if (startVal !== null) {
+        curY = y(startVal);
+        d = 'M0 ' + curY.toFixed(2);
+      }
+      visible.forEach((p) => {
+        const px = x(p.t).toFixed(2);
+        const py = y(p.v);
+        if (curY === null) {
+          d = 'M' + px + ' ' + py.toFixed(2);
+        } else {
+          d += ' H' + px + ' V' + py.toFixed(2);
+        }
+        curY = py;
+      });
+      d += ' H' + x(limit).toFixed(2);
+      const firstX = startVal !== null ? 0 : x(visible[0].t);
+      const area = d + ' V' + (H - 1) + ' H' + firstX.toFixed(2) + ' Z';
+      return '<svg class="meeting-people-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
+        '<path d="' + area + '" fill="rgba(91,157,246,.16)" stroke="none"/>' +
+        '<path d="' + d + '" fill="none" stroke="#5b9df6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+        '</svg>';
+    }
+
+    function renderMeetingNowMarker() {
+      const now = new Date();
+      const pct = (now.getHours() * 60 + now.getMinutes() - 8 * 60) / (14 * 60) * 100;
+      if (pct < 0 || pct > 100) return '';
+      return '<i class="meeting-track-now" style="left:' + pct.toFixed(2) + '%"></i>';
+    }
+
+    function renderMeetingSegments(records) {
+      const startHour = 8;
+      const durationMin = 14 * 60;
+      return (records || []).map((record) => {
+        const start = new Date(record.start);
+        const end = new Date(record.end);
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return '';
+        const startMin = start.getHours() * 60 + start.getMinutes() - startHour * 60;
+        const endMin = end.getHours() * 60 + end.getMinutes() - startHour * 60;
+        const left = Math.max(0, Math.min(100, startMin / durationMin * 100));
+        const right = Math.max(left, Math.min(100, endMin / durationMin * 100));
+        return '<i class="meeting-track-segment" style="left:' + left + '%;width:' + (right - left) + '%"></i>';
+      }).join('');
+    }
+
+    function meetingMetricText(metric, unit) {
+      if (!metric || !hasMetricValue(metric)) return '--';
+      return formatValue(metric.value, unit);
+    }
+
+    function saveCachedMeeting(data) {
+      try {
+        localStorage.setItem(DASHBOARD_MEETING_CACHE_KEY, JSON.stringify({
+          data: data,
+          cached_at: new Date().toISOString()
+        }));
+      } catch (err) {}
+    }
+
+    function applyCachedMeeting() {
+      try {
+        const cached = JSON.parse(localStorage.getItem(DASHBOARD_MEETING_CACHE_KEY) || 'null');
+        if (!cached || isExpiredCache(cached, DASHBOARD_CACHE_MAX_AGE_MS)) return;
+        renderMeeting(cached.data || cached);
+      } catch (err) {
+        try { localStorage.removeItem(DASHBOARD_MEETING_CACHE_KEY); } catch (_) {}
+      }
     }
 
     function render(data) {
       // Server returned "no change since last fetch" — skip rerender entirely.
       if (data && data.unchanged) {
         state.lastVersionAt = Date.now();
+        state.lastSuccessfulAt = Date.now();
         scheduleRefresh();
         return;
       }
       state.data = data || {};
       state.version = (data && data.version) || '';
+      state.lastSuccessfulAt = Date.now();
       state.deviceMap = buildDeviceMap(state.data.devices || []);
       syncMetricPrefsWithServer(state.data.devices || []);
       saveCachedDashboard(state.data);
@@ -1748,7 +2291,7 @@
         const cardType = dashboardCardType(d);
         return '<div class="dev ' + cardType + ' ' + (!isOnline(d) ? 'off' : '') + '">' +
           '<div class="dev-head">' +
-          '<div><div class="dev-name">' + esc(deviceDisplayTitle(d) || d.device_id) + '</div><div class="dev-id">' + esc(d.device_id) + '</div></div>' +
+          '<div><div class="dev-name" title="' + esc(attrEscape(deviceDisplayTitle(d) || d.device_id)) + '">' + esc(deviceDisplayTitle(d) || d.device_id) + '</div><div class="dev-id">' + esc(d.device_id) + '</div></div>' +
           '<div class="dev-actions">' +
           renderBatteryBadge(d, 'device-battery') +
           '<span class="pill ' + (!isOnline(d) ? 'off' : '') + '">' + esc(isOnline(d) ? t('dashboard.label.on') : t('dashboard.label.off')) + '</span>' +
@@ -1792,9 +2335,10 @@
         const meta = metricMeta(m);
         const raw = hasMetricValue(hit) ? Number(hit.value) : NaN;
         const pct = isFinite(raw) ? Math.max(4, Math.min(100, Math.round(raw / metricMax(m) * 100))) : 0;
+        const valueText = hasMetricValue(hit) ? formatValue(hit.value, meta.unit) : '--';
         return '<div class="metric">' +
-          '<div class="metric-k">' + metricIcon(m) + '<span>' + esc(meta.label || m) + '</span></div>' +
-          '<div class="metric-v">' + esc(hasMetricValue(hit) ? formatValue(hit.value, meta.unit) : '--') + '</div>' +
+          '<div class="metric-k" title="' + esc(attrEscape(meta.label || m)) + '">' + metricIcon(m) + '<span>' + esc(meta.label || m) + '</span></div>' +
+          '<div class="metric-v" title="' + esc(attrEscape(valueText)) + '">' + esc(valueText) + '</div>' +
           '<div class="mbar"><i style="width:' + pct + '%"></i></div>' +
           '</div>';
       }).join('');
@@ -1804,8 +2348,8 @@
           '<button class="metric-page-btn" type="button" title="前へ" onclick="shiftDeviceMetricPage(\'' + esc(attrEscape(deviceId)) + '\', -1, ' + total + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>' +
           '<button class="metric-page-btn" type="button" title="次へ" onclick="shiftDeviceMetricPage(\'' + esc(attrEscape(deviceId)) + '\', 1, ' + total + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>' +
           '</div>'
-        : '';
-      return '<div class="metrics-shell">' + nav + '<div class="metrics">' + metrics + '</div></div>';
+        : '<div class="metric-page-nav"></div>';
+      return '<div class="metrics-shell">' + nav + '<div class="metrics' + (total > 3 ? ' rows-2' : '') + '">' + metrics + '</div></div>';
     }
 
     function shiftDeviceMetricPage(deviceId, delta, total) {
@@ -2409,6 +2953,7 @@
       const data = cached.data || cached;
       state.data = data;
       render(data);
+      state.lastSuccessfulAt = 0;
       setStatus(t('common.status.cached'));
     }
 
@@ -2436,7 +2981,7 @@
             localStorage.removeItem(key);
             continue;
           }
-          if (key === DASHBOARD_CACHE_KEY) {
+          if (key === DASHBOARD_CACHE_KEY || key === DASHBOARD_MEETING_CACHE_KEY) {
             const cached = JSON.parse(localStorage.getItem(key) || 'null');
             if (isExpiredCache(cached, maxAgeMs)) localStorage.removeItem(key);
           }
@@ -2460,6 +3005,10 @@
       });
       if (persist !== false) setStored(DASHBOARD_PAGE_KEY, target);
       if (target === 'map') setTimeout(fitStageToWrap, 0);
+      if (target === 'meeting') {
+        if (!state.meetingLoaded) applyCachedMeeting();
+        loadMeeting(!!state.meetingLoaded);
+      }
     }
 
     function normalizePage(page) {
@@ -2469,10 +3018,30 @@
       return page || 'dashboard';
     }
 
-    function scheduleRefresh() {
+    function scheduleRefresh(delaySeconds) {
       clearTimeout(state.timer);
-      const seconds = selectedRefreshIntervalSec();
-      state.timer = setTimeout(() => load(true), Math.max(60, seconds) * 1000);
+      const seconds = Number(delaySeconds) || selectedRefreshIntervalSec();
+      state.timer = setTimeout(() => {
+        load(true);
+        const meetingPage = document.querySelector('[data-page="meeting"]');
+        if (meetingPage && !meetingPage.classList.contains('hidden')) loadMeeting(true);
+      }, Math.max(60, seconds) * 1000);
+    }
+
+    function refreshAfterResume() {
+      if (document.visibilityState === 'hidden') return;
+      clearTimeout(state.timer);
+      load(true, true);
+      const meetingPage = document.querySelector('[data-page="meeting"]');
+      if (meetingPage && !meetingPage.classList.contains('hidden')) loadMeeting(true, true);
+    }
+
+    function refreshIfStale() {
+      if (document.visibilityState === 'hidden') return;
+      const allowedMs = selectedRefreshIntervalSec() * 1500 + 15000;
+      if (!state.lastSuccessfulAt || Date.now() - state.lastSuccessfulAt > allowedMs) {
+        refreshAfterResume();
+      }
     }
 
     function selectedRefreshIntervalSec() {
@@ -2619,7 +3188,30 @@
       const before = ev.clientX < box.left + box.width / 2;
       over.parentNode.insertBefore(dragging, before ? over : over.nextSibling);
     });
+    function toggleMeetingFilter(node) {
+      const filter = node.getAttribute('data-meeting-filter') || 'all';
+      state.meetingFilter = state.meetingFilter === filter ? 'all' : filter;
+      renderMeetingSummary();
+      renderMeetingRooms();
+    }
+    $('meetingSummary').addEventListener('click', (ev) => {
+      const item = ev.target.closest('[data-meeting-filter]');
+      if (item) toggleMeetingFilter(item);
+    });
+    $('meetingSummary').addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter' && ev.key !== ' ') return;
+      const item = ev.target.closest('[data-meeting-filter]');
+      if (!item) return;
+      ev.preventDefault();
+      toggleMeetingFilter(item);
+    });
     window.addEventListener('resize', fitStageToWrap);
+    window.addEventListener('focus', refreshIfStale);
+    window.addEventListener('online', refreshAfterResume);
+    window.addEventListener('pageshow', refreshIfStale);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refreshIfStale();
+    });
     $('stage').addEventListener('click', (ev) => {
       if (ev.target.closest('.popup-close')) {
         ev.stopPropagation();
@@ -2679,6 +3271,7 @@
     applyLogoConfig({});
     tickClock();
     setInterval(tickClock, 1000);
+    setInterval(refreshIfStale, DASHBOARD_STALE_CHECK_MS);
     applyCachedDashboard();
     load();
   </script>

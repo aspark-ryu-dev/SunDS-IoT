@@ -14,7 +14,16 @@ dashboard background, layout widgets, and JSON payload samples.
 3. Push/deploy only when intentionally syncing to Apps Script.
 
 `setup()` creates or upgrades these sheets without destroying existing data:
-`Readings`, `Latest`, `Devices`, `Definitions`, `Config`, `Layout`.
+`Readings`, `Latest`, `CanonicalLatest`, `Devices`, `Definitions`,
+`KeyCatalog`, `MetricMappings`, `MeetingEvents`, `Config`, `Layout`.
+
+`Latest` keeps received raw metric names for compatibility. `CanonicalLatest`
+stores active semantic mappings such as `state.people.current.total` and
+`trigger.line.0.total.in`.
+
+Unknown keys are queued in `MetricMappings`. Configure `GEMINI_API_KEY` in
+Script Properties to enable five-minute background analysis. The optional
+`GEMINI_MODEL` property defaults to `gemini-3.5-flash`.
 
 The admin UI is intentionally unauthenticated for internal use. Keep the Web App
 URL private.

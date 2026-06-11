@@ -3,7 +3,7 @@
  * Backend project: HTTP POST ingestion and internal management UI.
  */
 
-const BUILD_VERSION = 'v2026-05-22-dashboard-device-controls';
+const BUILD_VERSION = 'v2026-06-12-ai-key-mapping';
 
 function doGet(e) {
   if (isLightweightCallback_(e)) {

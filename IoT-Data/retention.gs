@@ -71,9 +71,11 @@ function _purgeOldReadingsImpl_() {
 
     if (deleteCount > 0) sh.deleteRows(2, deleteCount);
 
+    const meetingDeleted = purgeOldMeetingEvents_(cutoff);
     const result = {
       ok: true,
       deleted: deleteCount,
+      meeting_events_deleted: meetingDeleted,
       remaining: total - deleteCount,
       cutoff: cutoff.toISOString(),
       capped: deleteCount >= RETENTION_MAX_DELETE_PER_RUN
@@ -83,6 +85,22 @@ function _purgeOldReadingsImpl_() {
   } finally {
     lock.releaseLock();
   }
+}
+
+function purgeOldMeetingEvents_(cutoff) {
+  const sh = getSheet_(SHEET_MEETING_EVENTS);
+  const idx = headerIndex_(sh);
+  const lastRow = sh.getLastRow();
+  if (lastRow <= 1) return 0;
+  const values = sh.getRange(2, idx.ts + 1, lastRow - 1, 1).getValues();
+  let count = 0;
+  for (let i = 0; i < values.length; i++) {
+    const date = toDate_(values[i][0]);
+    if (date && date.getTime() >= cutoff.getTime()) break;
+    count++;
+  }
+  if (count) sh.deleteRows(2, count);
+  return count;
 }
 
 /** Set the retention window (days) in Config. Run from the editor, e.g. setRetentionDays(7). */

@@ -88,6 +88,11 @@ function getAdminSnapshot_() {
     devices: devices,
     definitions: readDefinitions_(),
     keyCatalog: readKeyCatalog_(),
+    metricMappings: readMetricMappings_(),
+    mappingConfig: {
+      gemini_configured: !!String(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || '').trim(),
+      gemini_model: String(PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL') || DEFAULT_GEMINI_MODEL)
+    },
     latest: latest,
     dashboard: {
       config: getDashboardConfig_(),

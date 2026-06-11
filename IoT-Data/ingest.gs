@@ -91,8 +91,11 @@ function handlePost_(e) {
 
     // 6. writes
     const deviceState = touchDevice_(parsed.device_id, parsed.device_name, ts);
-    appendReadings_(parsed.device_id, parsed.metrics, ts);
+    const compiled = compileIngestMetrics_(parsed, ts);
+    appendReadings_(parsed.device_id, compiled, ts, parsed.context);
     upsertLatest_(parsed.device_id, parsed.metrics, ts);
+    upsertCanonicalLatest_(parsed.device_id, compiled, parsed.context, ts);
+    recordMeetingEventForIngest_(deviceState, compiled, ts);
     const derived = applyDefinitionsForDevice_(parsed.device_id, ts);
 
     // 7. done
@@ -104,6 +107,7 @@ function handlePost_(e) {
       device_enabled: deviceState.enabled,
       device_registered: deviceState.registered,
       metrics: parsed.metrics.length,
+      canonical_metrics: compiled.filter(function (item) { return !!item.mapping; }).length,
       derived: derived.length,
       ts: ts.toISOString()
     };
@@ -118,7 +122,17 @@ function handlePost_(e) {
  * number / numeric-string / boolean values become metrics.
  */
 function parseIngestPayload_(payload) {
-  const result = { device_id: '', device_key: '', device_name: '', metrics: [] };
+  const result = {
+    device_id: '',
+    device_key: '',
+    device_name: '',
+    metrics: [],
+    context: {
+      event: findScalarValueDeep_(payload, ['event']),
+      report_type: normalizeReportType_(findScalarValueDeep_(payload, ['report_type', 'reportType'])),
+      device_model: findScalarValueDeep_(payload, ['device_model', 'model', 'device_type', 'device'])
+    }
+  };
 
   const idHit = findDeviceId_(payload);
   result.device_id = idHit.value;
@@ -130,6 +144,11 @@ function parseIngestPayload_(payload) {
   result.metrics = dedupeMetrics_(result.metrics);
 
   return result;
+}
+
+function findScalarValueDeep_(payload, keys) {
+  const hit = findKeyValueDeep_(payload, keys, 0);
+  return hit.value;
 }
 
 function parsePostPayload_(e) {
@@ -359,12 +378,23 @@ function sanitizeMetricName_(key) {
 }
 
 /** Append one Readings row per metric. Raw JSON is intentionally not stored. */
-function appendReadings_(device_id, metrics, ts) {
+function appendReadings_(device_id, metrics, ts, context) {
   const sh = getSheet_(SHEET_READINGS);
+  const idx = headerIndex_(sh);
+  const width = Math.max.apply(null, Object.keys(idx).map(function (name) { return idx[name]; })) + 1;
   const rows = metrics.map(function (m) {
-    return [ts, device_id, m.metric, m.value, ''];
+    const row = new Array(width).fill('');
+    setByHeader_(row, idx, 'ts', ts);
+    setByHeader_(row, idx, 'device_id', device_id);
+    setByHeader_(row, idx, 'metric', m.metric);
+    setByHeader_(row, idx, 'value', m.value);
+    setByHeader_(row, idx, 'raw_json', '');
+    setByHeader_(row, idx, 'event', context && context.event || '');
+    setByHeader_(row, idx, 'report_type', context && context.report_type || '');
+    setByHeader_(row, idx, 'canonical_key', m.mapping && m.mapping.canonical_key || '');
+    return row;
   });
-  sh.getRange(sh.getLastRow() + 1, 1, rows.length, 5).setValues(rows);
+  sh.getRange(sh.getLastRow() + 1, 1, rows.length, width).setValues(rows);
 }
 
 /**
@@ -461,7 +491,7 @@ function touchDevice_(device_id, deviceName, ts) {
       const enabled = parseBool_(valueByHeader_(cachedValues, idx, 'enabled'));
       updateDeviceNameIfBlank_(sh, cachedRow, idx, cachedValues, deviceName);
       sh.getRange(cachedRow, idx.last_seen + 1).setValue(ts);
-      return { enabled: enabled, registered: true };
+      return deviceIngestState_(cachedValues, idx, enabled, true);
     }
   }
 
@@ -477,13 +507,31 @@ function touchDevice_(device_id, deviceName, ts) {
         const isEnabled = parseBool_(enabled[i][0]);
         updateDeviceNameIfBlank_(sh, row, idx, current, deviceName);
         sh.getRange(row, idx.last_seen + 1).setValue(ts);
-        return { enabled: isEnabled, registered: true };
+        return deviceIngestState_(current, idx, isEnabled, true);
       }
     }
   }
   sh.appendRow(deviceRow_(idx, device_id, deviceName, ts));
   cache.put(cacheKey, String(sh.getLastRow()), 21600);
-  return { enabled: false, registered: false };
+  return {
+    device_id: device_id,
+    name: deviceName || '',
+    location: '',
+    dashboard_order: 999999,
+    enabled: false,
+    registered: false
+  };
+}
+
+function deviceIngestState_(row, idx, enabled, registered) {
+  return {
+    device_id: String(valueByHeader_(row, idx, 'device_id') || ''),
+    name: String(valueByHeader_(row, idx, 'name') || ''),
+    location: String(valueByHeader_(row, idx, 'location') || '').trim(),
+    dashboard_order: normalizeDashboardOrder_(valueByHeader_(row, idx, 'dashboard_order')),
+    enabled: enabled,
+    registered: registered
+  };
 }
 
 function updateDeviceNameIfBlank_(sheet, row, idx, current, deviceName) {
@@ -580,11 +628,11 @@ function jsonOut_(obj) {
 
 function ensureIngestReady_() {
   const cache = CacheService.getScriptCache();
-  if (cache.get('iot_ingest_ready_v5') === '1') return;
+  if (cache.get('iot_ingest_ready_v6') === '1') return;
   ensureScriptProps_();
   ensureSheets_();
   seedConfigDefaults_();
-  cache.put('iot_ingest_ready_v5', '1', 21600);
+  cache.put('iot_ingest_ready_v6', '1', 21600);
 }
 
 function testIngest() {

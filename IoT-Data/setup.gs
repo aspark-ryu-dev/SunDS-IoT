@@ -8,13 +8,23 @@ function setup() {
   CacheService.getScriptCache().remove('iot_ingest_ready_v3');
   CacheService.getScriptCache().remove('iot_ingest_ready_v4');
   CacheService.getScriptCache().remove('iot_ingest_ready_v5');
+  CacheService.getScriptCache().remove('iot_ingest_ready_v6');
   CacheService.getScriptCache().remove('iot_latest_index_v2');
+  CacheService.getScriptCache().remove('iot_metric_mappings_v1');
+  CacheService.getScriptCache().remove('iot_canonical_latest_index_v1');
   ensureScriptProps_();
   ensureSheets_();
+  Logger.log('setup: sheets ready');
   seedConfigDefaults_();
+  Logger.log('setup: config ready');
   seedKeyCatalog_();
+  Logger.log('setup: key catalog ready');
   seedKnownMetricDefinitions_();
+  Logger.log('setup: definitions ready');
+  seedKnownMetricMappingsFromLatest_();
+  Logger.log('setup: canonical latest ready');
   ensureRetentionTrigger_();
+  ensureMetricMappingTrigger_();
   Logger.log('IoT-Data setup complete.');
 }
 

@@ -548,11 +548,15 @@ function seedKeyCatalog_() {
   const idx = headerIndex_(sh);
   const values = sh.getDataRange().getValues();
   const existing = {};
+  let changed = false;
   for (let r = 1; r < values.length; r++) {
     const key = String(valueByHeader_(values[r], idx, 'key') || '').trim();
-    if (key) existing[key] = r + 1;
+    if (key) existing[key] = r;
     if (key && isSystemMetadataKey_(key) && idx.enabled !== undefined) {
-      sh.getRange(r + 1, idx.enabled + 1).setValue(false);
+      if (values[r][idx.enabled] !== false) {
+        values[r][idx.enabled] = false;
+        changed = true;
+      }
     }
   }
 
@@ -560,21 +564,24 @@ function seedKeyCatalog_() {
   const rows = [];
   Object.keys(keySources).sort().forEach(function (key) {
     const meta = keyCatalogMetaForKey_(key, keySources[key]);
-    if (existing[key]) {
-      fillKeyCatalogBlanks_(sh, existing[key], idx, meta);
+    if (existing[key] !== undefined) {
+      changed = fillKeyCatalogBlanksRow_(values[existing[key]], idx, meta) || changed;
     } else {
       rows.push(keyCatalogToRow_(meta, idx));
     }
   });
 
+  if (changed) {
+    sh.getRange(1, 1, values.length, values[0].length).setValues(values);
+  }
   if (rows.length) {
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, sh.getLastColumn()).setValues(rows);
   }
   return { added: rows.length };
 }
 
-function fillKeyCatalogBlanks_(sheet, rowNumber, idx, meta) {
-  const row = sheet.getRange(rowNumber, 1, 1, sheet.getLastColumn()).getValues()[0];
+function fillKeyCatalogBlanksRow_(row, idx, meta) {
+  let changed = false;
   ['label_ja', 'data_type', 'unit', 'source', 'models', 'enabled'].forEach(function (key) {
     if (idx[key] === undefined) return;
     const current = String(row[idx[key]] || '').trim();
@@ -583,8 +590,19 @@ function fillKeyCatalogBlanks_(sheet, rowNumber, idx, meta) {
       if (key !== 'label_ja') return;
       if (source && source !== 'device-examples' && source !== 'latest') return;
     }
-    sheet.getRange(rowNumber, idx[key] + 1).setValue(meta[key]);
+    if (row[idx[key]] !== meta[key]) {
+      row[idx[key]] = meta[key];
+      changed = true;
+    }
   });
+  return changed;
+}
+
+function fillKeyCatalogBlanks_(sheet, rowNumber, idx, meta) {
+  const row = sheet.getRange(rowNumber, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (fillKeyCatalogBlanksRow_(row, idx, meta)) {
+    sheet.getRange(rowNumber, 1, 1, row.length).setValues([row]);
+  }
 }
 
 function keyCatalogToRow_(meta, idx) {
@@ -598,12 +616,16 @@ function keyCatalogToRow_(meta, idx) {
   setByHeader_(row, idx, 'models', meta.models);
   setByHeader_(row, idx, 'note', meta.note);
   setByHeader_(row, idx, 'enabled', meta.enabled);
+  setByHeader_(row, idx, 'canonical_key', meta.canonical_key || '');
+  setByHeader_(row, idx, 'scope', meta.scope || '');
+  setByHeader_(row, idx, 'mapping_status', meta.mapping_status || '');
   return row;
 }
 
 function keyCatalogMetaForKey_(key, source) {
   const meta = metricMetaForKey_(key);
   const models = modelsForMetricKey_(key);
+  const mapping = metricMappingSummaryForRawKey_(key);
   return {
     key: key,
     label_ja: meta.label,
@@ -612,7 +634,10 @@ function keyCatalogMetaForKey_(key, source) {
     source: source || (models.length ? 'device-examples' : 'latest'),
     models: models.join(','),
     note: '',
-    enabled: true
+    enabled: true,
+    canonical_key: mapping.canonical_key || '',
+    scope: mapping.scope || '',
+    mapping_status: mapping.mapping_status || ''
   };
 }
 
@@ -636,16 +661,20 @@ function syncLatestKeysToKeyCatalog_() {
     const idx = headerIndex_(sh);
     const values = sh.getDataRange().getValues();
     const existing = {};
+    let changed = false;
     for (let r = 1; r < values.length; r++) {
       const key = String(valueByHeader_(values[r], idx, 'key') || '').trim();
-      if (key) existing[key] = r + 1;
+      if (key) existing[key] = r;
     }
     const rows = [];
     keys.forEach(function (key) {
       const meta = keyCatalogMetaForKey_(key, 'latest');
-      if (existing[key]) fillKeyCatalogBlanks_(sh, existing[key], idx, meta);
+      if (existing[key] !== undefined) {
+        changed = fillKeyCatalogBlanksRow_(values[existing[key]], idx, meta) || changed;
+      }
       else rows.push(keyCatalogToRow_(meta, idx));
     });
+    if (changed) sh.getRange(1, 1, values.length, values[0].length).setValues(values);
     if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, sh.getLastColumn()).setValues(rows);
     return { added: rows.length };
   } catch (err) {
@@ -1039,7 +1068,10 @@ function readKeyCatalog_() {
       source: String(valueByHeader_(values[r], idx, 'source') || ''),
       models: String(valueByHeader_(values[r], idx, 'models') || ''),
       note: String(valueByHeader_(values[r], idx, 'note') || ''),
-      enabled: parseBool_(valueByHeader_(values[r], idx, 'enabled'))
+      enabled: parseBool_(valueByHeader_(values[r], idx, 'enabled')),
+      canonical_key: String(valueByHeader_(values[r], idx, 'canonical_key') || ''),
+      scope: String(valueByHeader_(values[r], idx, 'scope') || ''),
+      mapping_status: String(valueByHeader_(values[r], idx, 'mapping_status') || '')
     });
   }
   return out.sort(function (a, b) { return a.key.localeCompare(b.key); });

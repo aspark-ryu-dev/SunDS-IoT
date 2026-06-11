@@ -102,14 +102,17 @@ function seedKnownMetricDefinitions_() {
   const sh = getSheet_(SHEET_DEFINITIONS);
   const values = sh.getDataRange().getValues();
   const exists = {};
+  let changed = false;
   for (let r = 1; r < values.length; r++) {
     const id = String(values[r][0] || '').trim();
     if (id) exists[id] = true;
     if (String(values[r][1] || '').trim().toLowerCase() === 'raw') {
-      sh.getRange(r + 1, 2).setValue('metric');
+      values[r][1] = 'metric';
+      changed = true;
     }
     if (isTemperatureMetricKey_(id) && String(values[r][3] || '').trim() === 'C') {
-      sh.getRange(r + 1, 4).setValue('°C');
+      values[r][3] = '°C';
+      changed = true;
     }
   }
 
@@ -120,6 +123,9 @@ function seedKnownMetricDefinitions_() {
     return [key, 'metric', meta.label, meta.unit, 'device-examples', '', '{"origin":"device-examples"}', true];
   });
 
+  if (changed) {
+    sh.getRange(1, 1, values.length, values[0].length).setValues(values);
+  }
   if (rows.length) {
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, 8).setValues(rows);
   }

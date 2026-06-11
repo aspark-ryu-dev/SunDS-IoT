@@ -240,6 +240,7 @@ function latestByDevice_() {
   const lastRow = sh.getLastRow();
   if (lastRow <= 1) return {};
   const values = sh.getRange(2, 1, lastRow - 1, 4).getValues();
+  const canonicalMeta = canonicalMetaByDeviceRaw_();
   const out = {};
   for (let r = 0; r < values.length; r++) {
     const deviceId = String(values[r][0] || '').trim();
@@ -249,7 +250,13 @@ function latestByDevice_() {
     if (!out[deviceId]) out[deviceId] = {};
     out[deviceId][metric] = {
       value: values[r][2],
-      ts: dateOut_(values[r][3])
+      ts: dateOut_(values[r][3]),
+      canonical_key: canonicalMeta[deviceId + '\u0001' + metric]
+        ? canonicalMeta[deviceId + '\u0001' + metric].canonical_key
+        : '',
+      scope: canonicalMeta[deviceId + '\u0001' + metric]
+        ? canonicalMeta[deviceId + '\u0001' + metric].scope
+        : ''
     };
   }
   return out;
@@ -261,6 +268,35 @@ function filterDisplayMetrics_(metrics, visibleMetricKeys) {
     if (!isSystemMetadataKey_(key) && isVisibleMetricKey_(key, visibleMetricKeys) && isDashboardDisplayMetric_(key)) out[key] = metrics[key];
   });
   return out;
+}
+
+function canonicalMetaByDeviceRaw_() {
+  try {
+    const sh = getSheet_(SHEET_CANONICAL_LATEST);
+    const values = sh.getDataRange().getValues();
+    if (values.length <= 1) return {};
+    const idx = headerIndex_(sh);
+    const out = {};
+    for (let r = 1; r < values.length; r++) {
+      const deviceId = String(valueByHeader_(values[r], idx, 'device_id') || '').trim();
+      const rawKey = String(valueByHeader_(values[r], idx, 'raw_key') || '').trim();
+      const canonical = String(valueByHeader_(values[r], idx, 'canonical_key') || '').trim();
+      if (!deviceId || !rawKey || !canonical) continue;
+      const key = deviceId + '\u0001' + rawKey;
+      const ts = toDate_(valueByHeader_(values[r], idx, 'ts'));
+      if (!out[key] || (ts && ts.getTime() >= out[key].time)) {
+        out[key] = {
+          canonical_key: canonical,
+          scope: canonical.split('.')[0],
+          time: ts ? ts.getTime() : 0
+        };
+      }
+    }
+    return out;
+  } catch (err) {
+    Logger.log('canonicalMetaByDeviceRaw_ skipped: ' + err.message);
+    return {};
+  }
 }
 
 function isDashboardDisplayMetric_(metric) {

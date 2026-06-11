@@ -3,7 +3,7 @@
  * Public read-only dashboard for the shared IoT spreadsheet.
  */
 
-const BUILD_VERSION = 'v2026-05-27-sunds-title-sync-debug';
+const BUILD_VERSION = 'v2026-06-12-resilient-refresh';
 
 function doGet(e) {
   const tpl = HtmlService.createTemplateFromFile('index');

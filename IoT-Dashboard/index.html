@@ -935,10 +935,10 @@
     .meeting-room .meeting-main { margin-bottom:15px; }
     .meeting-timeline-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px; color:var(--muted); font:800 10.5px var(--font-display); }
     .meeting-timeline-head b { color:var(--ink-dim); font:700 10.5px var(--font-mono); }
-    .meeting-people-chart { display:block; width:100%; height:38px; margin-bottom:6px; border-radius:5px; background:var(--panel-2); }
-    .meeting-track { position:relative; height:14px; border-radius:5px; background:var(--panel-2); overflow:hidden; }
-    .meeting-track-segment { position:absolute; top:0; bottom:0; min-width:2px; border-radius:3px; background:linear-gradient(90deg,var(--accent),var(--accent-2)); opacity:.88; }
-    .meeting-track-now { position:absolute; top:0; bottom:0; width:2px; background:var(--ink); opacity:.9; box-shadow:0 0 5px rgba(0,0,0,.4); }
+    .meeting-track { position:relative; height:44px; border-radius:5px; background:var(--panel-2); overflow:hidden; }
+    .meeting-track-segment { position:absolute; top:0; bottom:0; min-width:2px; background:linear-gradient(90deg,var(--accent),var(--accent-2)); opacity:.24; z-index:1; }
+    .meeting-track-chart { position:absolute; inset:0; z-index:2; display:block; width:100%; height:100%; pointer-events:none; }
+    .meeting-track-now { position:absolute; top:0; bottom:0; z-index:3; width:2px; background:var(--ink); opacity:.9; box-shadow:0 0 5px rgba(0,0,0,.4); }
     .meeting-axis { display:flex; justify-content:space-between; color:var(--muted); font:600 9px var(--font-display); margin-top:5px; }
     .meeting-empty { padding:48px 20px; text-align:center; color:var(--muted); border:1px dashed var(--line); border-radius:var(--r-md); }
     .meeting-side .card-body { overflow-x:auto; }
@@ -2098,8 +2098,7 @@
           '<div><span>' + esc(item[0]) + '</span><strong>' + (item[4] || esc(item[1])) + '</strong></div></div>'
         ).join('') + '</div></div>' +
         '<div class="meeting-timeline"><div class="meeting-timeline-head"><span>' + esc(t('dashboard.meeting.timeline')) + '</span><b>' + esc(meetingTimelineSummaryText(room)) + '</b></div>' +
-        renderMeetingPeopleChart(room.series || []) +
-        '<div class="meeting-track">' + renderMeetingSegments(room.timeline || []) + renderMeetingNowMarker() + '</div>' +
+        '<div class="meeting-track">' + renderMeetingSegments(room.timeline || []) + renderMeetingPeopleChart(room.series || []) + renderMeetingNowMarker() + '</div>' +
         '<div class="meeting-axis"><span>08:00</span><span>11:30</span><span>15:00</span><span>18:30</span><span>22:00</span></div></div>' +
         '</article>';
     }
@@ -2162,9 +2161,9 @@
       d += ' H' + x(limit).toFixed(2);
       const firstX = startVal !== null ? 0 : x(visible[0].t);
       const area = d + ' V' + (H - 1) + ' H' + firstX.toFixed(2) + ' Z';
-      return '<svg class="meeting-people-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
-        '<path d="' + area + '" fill="rgba(91,157,246,.16)" stroke="none"/>' +
-        '<path d="' + d + '" fill="none" stroke="#5b9df6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+      return '<svg class="meeting-track-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' +
+        '<path d="' + area + '" fill="rgba(91,157,246,.13)" stroke="none"/>' +
+        '<path d="' + d + '" fill="none" stroke="var(--accent-2)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
         '</svg>';
     }
 

@@ -4,7 +4,7 @@
  * _shared_util.gs (gitignored in IoT-* folders).
  */
 
-const OFFLINE_INTERVAL_MULTIPLIER = 1.1;
+const OFFLINE_INTERVAL_MULTIPLIER = 2.1;
 
 function setByHeader_(row, idx, key, value) {
   if (idx[key] === undefined) return;

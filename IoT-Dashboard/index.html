@@ -1704,14 +1704,12 @@
         const active = state.requests[name];
         if (!active || active.id !== requestId) return;
         delete state.requests[name];
-        if (!silent) document.querySelectorAll('button').forEach((b) => b.disabled = false);
         setStatus('通信がタイムアウトしました。再試行します。', true);
         scheduleRefresh(60);
       }, DASHBOARD_REQUEST_TIMEOUT_MS);
       state.requests[name] = { id: requestId, timer: timeoutTimer };
       if (!silent) {
         setStatus(t('common.status.loading'));
-        document.querySelectorAll('button').forEach((b) => b.disabled = true);
       }
       google.script.run
         .withSuccessHandler((res) => {
@@ -1720,7 +1718,6 @@
           clearTimeout(active.timer);
           delete state.requests[name];
           if (!silent) {
-            document.querySelectorAll('button').forEach((b) => b.disabled = false);
             setStatus(t('common.status.ready'));
           }
           ok(res);
@@ -1730,7 +1727,6 @@
           if (!active || active.id !== requestId) return;
           clearTimeout(active.timer);
           delete state.requests[name];
-          if (!silent) document.querySelectorAll('button').forEach((b) => b.disabled = false);
           setStatus(err && err.message ? err.message : String(err), true);
           scheduleRefresh(60);
         })[name](...args);
@@ -3011,6 +3007,8 @@
         loadMeeting(!!state.meetingLoaded);
       } else if (target === 'dashboard' || target === 'map') {
         load(!!state.data);
+      } else if (!state.data && !state.requests.apiGetDashboardState) {
+        load(true);
       }
     }
 

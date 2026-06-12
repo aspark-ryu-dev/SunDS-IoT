@@ -2439,7 +2439,7 @@
     function renderDeviceList() {
       const q = state.query.toLowerCase();
       const rows = (state.data.devices || []).filter((d) => {
-        const hay = [d.device_id, d.name, d.area_id, d.location, d.type, d.sensor_type].join(' ').toLowerCase();
+        const hay = [d.device_id, d.note, d.name, d.area_id, d.location, d.type, d.sensor_type].join(' ').toLowerCase();
         const queryOk = !q || hay.indexOf(q) > -1;
         const filterOk = state.filter === 'all' || (state.filter === 'on' ? isOnline(d) : !isOnline(d));
         return queryOk && filterOk;
@@ -2454,7 +2454,7 @@
       const html = Object.keys(grouped).sort().map((area) => {
         const devices = grouped[area].sort((a, b) =>
           dashboardSortOrder(a) - dashboardSortOrder(b) ||
-          String(deviceDisplayTitle(a) || a.device_id).localeCompare(String(deviceDisplayTitle(b) || b.device_id))
+          String(dashboardDeviceTitle(a)).localeCompare(String(dashboardDeviceTitle(b)))
         );
         return '<div class="dev-area-group">' +
           '<div class="dev-area-title">' + esc(area) + '</div>' +
@@ -2463,7 +2463,7 @@
         const cardType = dashboardCardType(d);
         return '<div class="dev ' + cardType + ' ' + (!isOnline(d) ? 'off' : '') + '">' +
           '<div class="dev-head">' +
-          '<div><div class="dev-name" title="' + esc(attrEscape(deviceDisplayTitle(d) || d.device_id)) + '">' + esc(deviceDisplayTitle(d) || d.device_id) + '</div><div class="dev-id">' + esc(d.device_id) + '</div></div>' +
+          '<div><div class="dev-name" title="' + esc(attrEscape(dashboardDeviceTitle(d))) + '">' + esc(dashboardDeviceTitle(d)) + '</div><div class="dev-id">' + esc(d.device_id) + '</div></div>' +
           '<div class="dev-actions">' +
           renderBatteryBadge(d, 'device-battery') +
           '<span class="pill ' + (!isOnline(d) ? 'off' : '') + '">' + esc(isOnline(d) ? t('dashboard.label.on') : t('dashboard.label.off')) + '</span>' +
@@ -2606,6 +2606,11 @@
       const model = device.sensor_type || device.type || device.name || '';
       const place = displayLocation(device);
       return [model, place].filter(Boolean).join(' / ');
+    }
+
+    function dashboardDeviceTitle(device) {
+      if (!device) return '';
+      return String(device.note || '').trim() || String(device.device_id || '').trim();
     }
 
     function deviceClickTitle(device, item) {

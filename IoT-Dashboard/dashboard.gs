@@ -172,9 +172,11 @@ function readDevicesWithMetrics_(offlineTimeoutMin, visibleMetricKeys) {
   const latest = latestByDevice_();
   const now = new Date();
   const out = [];
+  const seenDeviceIds = {};
   for (let r = 1; r < values.length; r++) {
     const deviceId = String(valueByHeader_(values[r], idx, 'device_id') || '').trim();
-    if (!deviceId) continue;
+    if (!deviceId || seenDeviceIds[deviceId]) continue;
+    seenDeviceIds[deviceId] = true;
     const enabled = parseBool_(valueByHeader_(values[r], idx, 'enabled'));
     if (!enabled) continue;
     const metrics = filterDisplayMetrics_(latest[deviceId] || {}, visibleMetricKeys);

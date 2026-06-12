@@ -10,8 +10,10 @@
 ## Spreadsheet Ownership
 
 - Shared Spreadsheet ID is defined in each project README and script properties.
-- `IoT-Data` owns bootstrap for `Readings`, `Latest`, `Devices`, `Definitions`, `Config`, and `Layout`.
-- `IoT-Dashboard` reads `Devices`, `Latest`, `Config`, and `Layout`.
+- `IoT-Data` owns all runtime Spreadsheet writes and bootstrap for shared sheets.
+- `IoT-Data` writes raw `Latest` values with `event/report_type/device_model`, history partitions, device heartbeats, and lightweight indexes.
+- `IoT-Dashboard` is runtime read-only and reads `Devices`, `Latest`, `MetricMappings`, `Definitions`, `Config`, `Layout`, and `MeetingSamples`.
+- Canonical mapping selection, derived expressions, Online/Offline state, card aggregation, and meeting timelines are Dashboard read-model responsibilities.
 - Schema migrations must append missing headers only.
 
 ## UI and i18n

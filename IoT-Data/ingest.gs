@@ -18,7 +18,7 @@ const DEVICE_ROW_CACHE_PREFIX = 'iot_device_row_v2:';
 const DEVICE_INDEX_CACHE_KEY = 'iot_device_index_v1';
 const LATEST_INDEX_CACHE_KEY = 'iot_latest_index_v2';
 const LATEST_SCOPE_CACHE_PREFIX = 'iot_latest_scope_v1:';
-const INGEST_READY_CACHE_KEY = 'iot_ingest_ready_v8';
+const INGEST_READY_CACHE_KEY = 'iot_ingest_ready_v9';
 const DEVICE_ID_KEYS = [
   // LoRaWAN devices: devEUI only.
   'deveui',
@@ -96,25 +96,13 @@ function handlePost_(e) {
 
     // 6. writes
     const deviceState = touchDevice_(parsed.device_id, parsed.device_name, parsed.context.device_model, ts);
-    upsertLatest_(parsed.device_id, parsed.metrics, ts);
-    const compiled = runIngestStep_('metric_mapping', warnings, function () {
-      return compileIngestMetrics_(parsed, ts);
-    }, parsed.metrics.map(function (metric) {
-      return { metric: metric.metric, value: metric.value, mapping: null };
-    }));
-    runIngestStep_('canonical_latest', warnings, function () {
-      upsertCanonicalLatest_(parsed.device_id, compiled, parsed.context, ts);
-    });
+    upsertLatest_(parsed.device_id, parsed.metrics, ts, parsed.context);
     runIngestStep_('meeting', warnings, function () {
-      recordMeetingEventForIngest_(deviceState, compiled, ts);
+      recordMeetingSampleForIngest_(deviceState, parsed.metrics, ts);
     });
-    const derived = runIngestStep_('definitions', warnings, function () {
-      return applyDefinitionsForDevice_(parsed.device_id, ts);
-    }, []);
     if (storageMode !== STORAGE_MODE_WIDE) {
       runIngestStep_('legacy_history', warnings, function () {
-        appendReadings_(parsed.device_id, compiled, ts, parsed.context);
-        appendDerivedReadings_(parsed.device_id, derived, ts, parsed.context);
+        appendReadings_(parsed.device_id, parsed.metrics, ts, parsed.context);
       });
     }
     let wideResult = null;
@@ -125,8 +113,8 @@ function handlePost_(e) {
           parsed.device_id,
           resolveStorageDeviceModel_(deviceState, parsed.context, parsed.device_id),
           parsed.context,
-          compiled,
-          derived,
+          parsed.metrics,
+          [],
           ts
         );
       }, null);
@@ -141,8 +129,8 @@ function handlePost_(e) {
       device_enabled: deviceState.enabled,
       device_registered: deviceState.registered,
       metrics: parsed.metrics.length,
-      canonical_metrics: compiled.filter(function (item) { return !!item.mapping; }).length,
-      derived: derived.length,
+      canonical_metrics: 0,
+      derived: 0,
       storage_mode: storageMode,
       storage_warning: wideResult && wideResult.rejected_keys.length
         ? 'metric_limit:' + wideResult.rejected_keys.join(',')
@@ -473,7 +461,7 @@ function appendReadings_(device_id, metrics, ts, context) {
  * Batched: clustered row updates are coalesced into a single read-modify-write,
  * cutting per-uplink Sheets API calls from O(N metrics) to ~O(1) in the common case.
  */
-function upsertLatest_(device_id, metrics, ts) {
+function upsertLatest_(device_id, metrics, ts, context) {
   const sh = getSheet_(SHEET_LATEST);
   const idx = headerIndex_(sh);
   const index = latestRowIndex_(sh, idx);
@@ -483,8 +471,8 @@ function upsertLatest_(device_id, metrics, ts) {
     const m = metrics[i];
     const key = latestKey_(device_id, m.metric);
     const row = index[key];
-    if (row) updates.push({ row: row, value: m.value, key: key });
-    else appends.push(latestRow_(idx, device_id, m.metric, m.value, ts, key));
+    if (row) updates.push({ row: row, value: m.value, key: key, context: context || {} });
+    else appends.push(latestRow_(idx, device_id, m.metric, m.value, ts, key, context));
   }
   if (updates.length) applyLatestUpdates_(sh, idx, updates, ts);
   if (appends.length) {
@@ -542,7 +530,7 @@ function applyLatestUpdates_(sh, idx, updates, ts) {
   const contig = (idx.value !== undefined && idx.ts === idx.value + 1 && idx.latest_key === idx.value + 2);
   if (!contig) {
     for (let i = 0; i < updates.length; i++) {
-      setLatestValues_(sh, updates[i].row, idx, updates[i].value, ts, updates[i].key);
+      setLatestValues_(sh, updates[i].row, idx, updates[i].value, ts, updates[i].key, updates[i].context);
     }
     return;
   }
@@ -558,12 +546,43 @@ function applyLatestUpdates_(sh, idx, updates, ts) {
       matrix[updates[i].row - minRow] = [updates[i].value, ts, updates[i].key];
     }
     range.setValues(matrix);
+    applyLatestContextUpdates_(sh, idx, updates);
     return;
   }
   // Sparse: per-row write (still single setValues each, fast path).
   for (let i = 0; i < updates.length; i++) {
     sh.getRange(updates[i].row, idx.value + 1, 1, 3).setValues([[updates[i].value, ts, updates[i].key]]);
   }
+  applyLatestContextUpdates_(sh, idx, updates);
+}
+
+function applyLatestContextUpdates_(sh, idx, updates) {
+  if (idx.event === undefined || idx.report_type === undefined || idx.device_model === undefined) return;
+  updates.sort(function (a, b) { return a.row - b.row; });
+  const minRow = updates[0].row;
+  const maxRow = updates[updates.length - 1].row;
+  const span = maxRow - minRow + 1;
+  if (updates.length >= 2 && span <= updates.length * 4) {
+    const range = sh.getRange(minRow, idx.event + 1, span, 3);
+    const matrix = range.getValues();
+    updates.forEach(function (update) {
+      matrix[update.row - minRow] = latestContextValues_(update.context);
+    });
+    range.setValues(matrix);
+    return;
+  }
+  updates.forEach(function (update) {
+    sh.getRange(update.row, idx.event + 1, 1, 3).setValues([latestContextValues_(update.context)]);
+  });
+}
+
+function latestContextValues_(context) {
+  context = context || {};
+  return [
+    String(context.event || ''),
+    normalizeReportType_(context.report_type),
+    String(context.device_model || '')
+  ];
 }
 
 /**
@@ -709,7 +728,7 @@ function latestKey_(deviceId, metric) {
   return String(deviceId || '') + '\u0001' + String(metric || '');
 }
 
-function latestRow_(idx, deviceId, metric, value, ts, key) {
+function latestRow_(idx, deviceId, metric, value, ts, key, context) {
   const width = Math.max.apply(null, Object.keys(idx).map(function (name) { return idx[name]; })) + 1;
   const row = new Array(width).fill('');
   row[idx.device_id] = deviceId;
@@ -717,6 +736,10 @@ function latestRow_(idx, deviceId, metric, value, ts, key) {
   row[idx.value] = value;
   row[idx.ts] = ts;
   if (idx.latest_key !== undefined) row[idx.latest_key] = key;
+  const contextValues = latestContextValues_(context);
+  if (idx.event !== undefined) row[idx.event] = contextValues[0];
+  if (idx.report_type !== undefined) row[idx.report_type] = contextValues[1];
+  if (idx.device_model !== undefined) row[idx.device_model] = contextValues[2];
   return row;
 }
 
@@ -732,14 +755,20 @@ function deviceRow_(idx, deviceId, deviceName, deviceModel, ts) {
   return row;
 }
 
-function setLatestValues_(sheet, row, idx, value, ts, key) {
+function setLatestValues_(sheet, row, idx, value, ts, key, context) {
   if (idx.value !== undefined && idx.ts === idx.value + 1 && idx.latest_key === idx.value + 2) {
     sheet.getRange(row, idx.value + 1, 1, 3).setValues([[value, ts, key]]);
+    if (idx.event !== undefined && idx.report_type !== undefined && idx.device_model !== undefined) {
+      sheet.getRange(row, idx.event + 1, 1, 3).setValues([latestContextValues_(context)]);
+    }
     return;
   }
   if (idx.value !== undefined) sheet.getRange(row, idx.value + 1).setValue(value);
   if (idx.ts !== undefined) sheet.getRange(row, idx.ts + 1).setValue(ts);
   if (idx.latest_key !== undefined) sheet.getRange(row, idx.latest_key + 1).setValue(key);
+  if (idx.event !== undefined) sheet.getRange(row, idx.event + 1).setValue(String(context && context.event || ''));
+  if (idx.report_type !== undefined) sheet.getRange(row, idx.report_type + 1).setValue(normalizeReportType_(context && context.report_type));
+  if (idx.device_model !== undefined) sheet.getRange(row, idx.device_model + 1).setValue(String(context && context.device_model || ''));
 }
 
 // parseBool_ is in shared/util.gs.
@@ -755,12 +784,12 @@ function ensureIngestReady_() {
   if (cache.get(INGEST_READY_CACHE_KEY) === '1') return;
   ensureScriptProps_();
   const props = PropertiesService.getScriptProperties();
-  if (props.getProperty('RUNTIME_SCHEMA_VERSION') !== 'storage-v3-retention30') {
+  if (props.getProperty('RUNTIME_SCHEMA_VERSION') !== 'storage-v4-latest-context') {
     ensureRuntimeSchemaV2_();
     seedConfigDefaults_();
     upgradeRetentionDefault_();
     ensureRetentionTrigger_();
-    props.setProperty('RUNTIME_SCHEMA_VERSION', 'storage-v3-retention30');
+    props.setProperty('RUNTIME_SCHEMA_VERSION', 'storage-v4-latest-context');
   }
   cache.put(INGEST_READY_CACHE_KEY, '1', 21600);
 }
@@ -770,6 +799,8 @@ function ensureRuntimeSchemaV2_() {
   const required = [
     SHEET_CONFIG,
     SHEET_DEVICES,
+    SHEET_LATEST,
+    SHEET_METRIC_MAPPINGS,
     SHEET_MEETING_SAMPLES,
     SHEET_READING_PARTITIONS,
     SHEET_STORAGE_MIGRATIONS

@@ -17,13 +17,21 @@ dashboard background, layout widgets, and JSON payload samples.
 `Readings`, `Latest`, `CanonicalLatest`, `Devices`, `Definitions`,
 `KeyCatalog`, `MetricMappings`, `MeetingEvents`, `Config`, `Layout`.
 
-`Latest` keeps received raw metric names for compatibility. `CanonicalLatest`
-stores active semantic mappings such as `state.people.current.total` and
-`trigger.line.0.total.in`.
+`Latest` keeps received raw metric names plus the latest
+`event/report_type/device_model` context. Dashboard compiles canonical keys and
+derived definitions at read time. `CanonicalLatest` remains as a compatibility
+index for administration and older deployments, but device POST does not need
+to update it synchronously.
 
-Unknown keys are queued in `MetricMappings`. Configure `GEMINI_API_KEY` in
-Script Properties to enable five-minute background analysis. The optional
-`GEMINI_MODEL` property defaults to `gemini-3.5-flash`.
+Unknown keys are discovered from `Latest` by the five-minute mapping task, so
+mapping work does not block device POST. Configure `GEMINI_API_KEY` in Script
+Properties to enable AI analysis. The optional `GEMINI_MODEL` property defaults
+to `gemini-3.5-flash`.
+
+The POST path owns all Spreadsheet writes: device heartbeat, raw `Latest`,
+history partitions, and lightweight `MeetingSamples`. Display aggregation,
+canonical mapping selection, derived expressions, Online/Offline state, and
+meeting-room timelines are computed by IoT-Dashboard.
 
 The admin UI is intentionally unauthenticated for internal use. Keep the Web App
 URL private.

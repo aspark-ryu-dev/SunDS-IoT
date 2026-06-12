@@ -22,7 +22,7 @@ let SPREADSHEET_MEMO = null;
 
 const HEADERS = {
   Readings: ['ts', 'device_id', 'metric', 'value', 'raw_json', 'event', 'report_type', 'canonical_key'],
-  Latest: ['device_id', 'metric', 'value', 'ts', 'latest_key'],
+  Latest: ['device_id', 'metric', 'value', 'ts', 'latest_key', 'event', 'report_type', 'device_model'],
   Devices: ['device_id', 'name', 'note', 'enabled', 'last_seen', 'first_seen', 'area_id', 'location', 'type', 'sensor_type', 'power_source', 'report_interval_min', 'dashboard_order', 'dashboard_card_type', 'dashboard_metrics', 'device_model'],
   Definitions: ['id', 'type', 'name', 'unit', 'source', 'expression', 'params', 'enabled'],
   KeyCatalog: ['key', 'label_ja', 'data_type', 'unit', 'source', 'models', 'note', 'enabled', 'canonical_key', 'scope', 'mapping_status'],

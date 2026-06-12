@@ -29,7 +29,7 @@ function setup() {
   Logger.log('setup: canonical latest ready');
   ensureRetentionTrigger_();
   ensureMetricMappingTrigger_();
-  PropertiesService.getScriptProperties().setProperty('RUNTIME_SCHEMA_VERSION', 'storage-v3-retention30');
+  PropertiesService.getScriptProperties().setProperty('RUNTIME_SCHEMA_VERSION', 'storage-v4-latest-context');
   Logger.log('IoT-Data setup complete.');
 }
 

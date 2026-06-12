@@ -3,7 +3,7 @@
  * Public read-only dashboard for the shared IoT spreadsheet.
  */
 
-const BUILD_VERSION = 'v2026-06-12-navigation-nonblocking';
+const BUILD_VERSION = 'v2026-06-12-dashboard-read-compute';
 
 function doGet(e) {
   const tpl = HtmlService.createTemplateFromFile('index');

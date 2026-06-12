@@ -48,8 +48,9 @@ const METRIC_META = {
   power_consumption: { label: '電力量', unit: 'kWh' },
   power_factor: { label: '力率', unit: '' }
 };
-const DASHBOARD_STATE_CACHE_KEY = 'iot_dashboard_state_v3';
+const DASHBOARD_STATE_CACHE_KEY = 'iot_dashboard_state_v4_read_compute';
 const DASHBOARD_STATE_CACHE_SEC = 5;
+const DASHBOARD_MAPPING_CACHE_KEY = 'iot_dashboard_metric_mappings_v1';
 /**
  * Returns the full dashboard snapshot, or a tiny "unchanged" response when
  * the client already holds the latest version.
@@ -239,26 +240,48 @@ function latestByDevice_() {
   const sh = getSheet_(SHEET_LATEST);
   const lastRow = sh.getLastRow();
   if (lastRow <= 1) return {};
-  const values = sh.getRange(2, 1, lastRow - 1, 4).getValues();
-  const canonicalMeta = canonicalMetaByDeviceRaw_();
+  const idx = headerIndex_(sh);
+  const values = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
+  const mappings = readActiveMetricMappingIndex_();
+  const deviceModels = readDashboardDeviceModelIndex_();
   const out = {};
   for (let r = 0; r < values.length; r++) {
-    const deviceId = String(values[r][0] || '').trim();
-    const metric = String(values[r][1] || '').trim();
+    const deviceId = String(valueByHeader_(values[r], idx, 'device_id') || '').trim();
+    const metric = String(valueByHeader_(values[r], idx, 'metric') || '').trim();
     if (!deviceId || !metric) continue;
     if (isSystemMetadataKey_(metric)) continue;
     if (!out[deviceId]) out[deviceId] = {};
+    const context = {
+      event: String(valueByHeader_(values[r], idx, 'event') || ''),
+      report_type: String(valueByHeader_(values[r], idx, 'report_type') || ''),
+      device_model: String(valueByHeader_(values[r], idx, 'device_model') || deviceModels[deviceId] || '')
+    };
+    const mapping = findDashboardMetricMapping_(mappings, context, metric);
     out[deviceId][metric] = {
-      value: values[r][2],
-      ts: dateOut_(values[r][3]),
-      canonical_key: canonicalMeta[deviceId + '\u0001' + metric]
-        ? canonicalMeta[deviceId + '\u0001' + metric].canonical_key
-        : '',
-      scope: canonicalMeta[deviceId + '\u0001' + metric]
-        ? canonicalMeta[deviceId + '\u0001' + metric].scope
-        : ''
+      value: valueByHeader_(values[r], idx, 'value'),
+      ts: dateOut_(valueByHeader_(values[r], idx, 'ts')),
+      canonical_key: mapping ? mapping.canonical_key : '',
+      scope: mapping ? mapping.scope : '',
+      event: context.event,
+      report_type: normalizeDashboardReportType_(context.report_type)
     };
   }
+  applyDashboardDefinitions_(out);
+  return out;
+}
+
+function readDashboardDeviceModelIndex_() {
+  const out = {};
+  try {
+    const sh = getSheet_(SHEET_DEVICES);
+    const idx = headerIndex_(sh);
+    if (idx.device_id === undefined || idx.device_model === undefined || sh.getLastRow() <= 1) return out;
+    const values = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
+    values.forEach(function (row) {
+      const id = String(valueByHeader_(row, idx, 'device_id') || '').trim();
+      if (id) out[id] = String(valueByHeader_(row, idx, 'device_model') || '').trim();
+    });
+  } catch (err) {}
   return out;
 }
 
@@ -270,33 +293,138 @@ function filterDisplayMetrics_(metrics, visibleMetricKeys) {
   return out;
 }
 
-function canonicalMetaByDeviceRaw_() {
+function readActiveMetricMappingIndex_() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(DASHBOARD_MAPPING_CACHE_KEY);
+  if (cached) {
+    try { return JSON.parse(cached); } catch (err) {}
+  }
   try {
-    const sh = getSheet_(SHEET_CANONICAL_LATEST);
+    const sh = getSheet_(SHEET_METRIC_MAPPINGS);
     const values = sh.getDataRange().getValues();
     if (values.length <= 1) return {};
     const idx = headerIndex_(sh);
     const out = {};
     for (let r = 1; r < values.length; r++) {
-      const deviceId = String(valueByHeader_(values[r], idx, 'device_id') || '').trim();
+      if (String(valueByHeader_(values[r], idx, 'status') || '') !== 'active') continue;
       const rawKey = String(valueByHeader_(values[r], idx, 'raw_key') || '').trim();
       const canonical = String(valueByHeader_(values[r], idx, 'canonical_key') || '').trim();
-      if (!deviceId || !rawKey || !canonical) continue;
-      const key = deviceId + '\u0001' + rawKey;
-      const ts = toDate_(valueByHeader_(values[r], idx, 'ts'));
-      if (!out[key] || (ts && ts.getTime() >= out[key].time)) {
-        out[key] = {
-          canonical_key: canonical,
-          scope: canonical.split('.')[0],
-          time: ts ? ts.getTime() : 0
-        };
-      }
+      if (!rawKey || !canonical) continue;
+      const mapping = {
+        device_model: String(valueByHeader_(values[r], idx, 'device_model') || ''),
+        event: String(valueByHeader_(values[r], idx, 'event') || ''),
+        report_type: normalizeDashboardReportType_(valueByHeader_(values[r], idx, 'report_type')),
+        raw_key: rawKey,
+        canonical_key: canonical,
+        scope: String(valueByHeader_(values[r], idx, 'scope') || canonical.split('.')[0])
+      };
+      out[dashboardMappingLookupKey_(mapping.device_model, mapping.event, mapping.report_type, rawKey)] = mapping;
     }
+    const json = JSON.stringify(out);
+    if (json.length < 95000) cache.put(DASHBOARD_MAPPING_CACHE_KEY, json, 60);
     return out;
   } catch (err) {
-    Logger.log('canonicalMetaByDeviceRaw_ skipped: ' + err.message);
+    Logger.log('readActiveMetricMappingIndex_ skipped: ' + err.message);
     return {};
   }
+}
+
+function findDashboardMetricMapping_(index, context, rawKey) {
+  const model = normalizeDashboardMappingText_(context.device_model);
+  const event = normalizeDashboardMappingText_(context.event);
+  const reportType = normalizeDashboardReportType_(context.report_type);
+  const candidates = [
+    dashboardMappingLookupKey_(model, event, reportType, rawKey),
+    dashboardMappingLookupKey_('', event, reportType, rawKey),
+    dashboardMappingLookupKey_(model, '', reportType, rawKey),
+    dashboardMappingLookupKey_('', '', reportType, rawKey),
+    dashboardMappingLookupKey_('', '', '', rawKey)
+  ];
+  for (let i = 0; i < candidates.length; i++) {
+    if (index[candidates[i]]) return index[candidates[i]];
+  }
+  return null;
+}
+
+function dashboardMappingLookupKey_(model, event, reportType, rawKey) {
+  return [
+    normalizeDashboardMappingText_(model),
+    normalizeDashboardMappingText_(event),
+    normalizeDashboardReportType_(reportType),
+    String(rawKey || '').trim()
+  ].join('\u0001');
+}
+
+function normalizeDashboardMappingText_(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizeDashboardReportType_(value) {
+  const raw = normalizeDashboardMappingText_(value);
+  if (raw === 'periodic') return 'interval';
+  return raw === 'trigger' || raw === 'interval' ? raw : '';
+}
+
+function applyDashboardDefinitions_(byDevice) {
+  const definitions = readDashboardDefinitions_();
+  if (!definitions.length) return;
+  Object.keys(byDevice || {}).forEach(function (deviceId) {
+    const metrics = byDevice[deviceId];
+    const scope = {};
+    Object.keys(metrics).forEach(function (key) {
+      const value = Number(metrics[key].value);
+      if (isFinite(value)) scope[key] = value;
+    });
+    definitions.forEach(function (definition) {
+      if (!(definition.source === '*' || definition.source === '' || definition.source === deviceId)) return;
+      const result = evalExpression_(definition.expression, scope);
+      if (!result.ok) return;
+      scope[definition.id] = result.value;
+      metrics[definition.id] = {
+        value: result.value,
+        ts: newestMetricTimestamp_(metrics),
+        canonical_key: '',
+        scope: 'derived'
+      };
+    });
+  });
+}
+
+function readDashboardDefinitions_() {
+  try {
+    const sh = getSheet_(SHEET_DEFINITIONS);
+    const values = sh.getDataRange().getValues();
+    if (values.length <= 1) return [];
+    const idx = headerIndex_(sh);
+    const out = [];
+    for (let r = 1; r < values.length; r++) {
+      const type = String(valueByHeader_(values[r], idx, 'type') || '').toLowerCase();
+      const expression = String(valueByHeader_(values[r], idx, 'expression') || '').trim();
+      if (!/^(expr|expression|formula)$/.test(type) || !expression ||
+          !parseBool_(valueByHeader_(values[r], idx, 'enabled'))) continue;
+      out.push({
+        id: String(valueByHeader_(values[r], idx, 'id') || '').trim(),
+        source: String(valueByHeader_(values[r], idx, 'source') || '*').trim(),
+        expression: expression
+      });
+    }
+    return out.filter(function (definition) { return !!definition.id; });
+  } catch (err) {
+    return [];
+  }
+}
+
+function newestMetricTimestamp_(metrics) {
+  let newest = '';
+  let time = 0;
+  Object.keys(metrics || {}).forEach(function (key) {
+    const date = toDate_(metrics[key] && metrics[key].ts);
+    if (date && date.getTime() >= time) {
+      time = date.getTime();
+      newest = date.toISOString();
+    }
+  });
+  return newest;
 }
 
 function isDashboardDisplayMetric_(metric) {

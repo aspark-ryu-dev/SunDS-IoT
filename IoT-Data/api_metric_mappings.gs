@@ -63,15 +63,21 @@ function apiProcessPendingMetricMappings() {
 }
 
 function processPendingMetricMappings() {
+  const discovered = discoverMetricMappingsFromLatest_();
   const apiKey = String(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || '').trim();
   if (!apiKey) {
-    return { ok: false, skipped: true, reason: 'GEMINI_API_KEY is not configured' };
+    return {
+      ok: true,
+      skipped: true,
+      discovered: discovered,
+      reason: 'GEMINI_API_KEY is not configured'
+    };
   }
 
   const pending = readMetricMappings_().filter(function (row) {
     return row.status === 'pending';
   }).slice(0, METRIC_MAPPING_BATCH_SIZE);
-  if (!pending.length) return { ok: true, processed: 0, active: 0, review: 0 };
+  if (!pending.length) return { ok: true, discovered: discovered, processed: 0, active: 0, review: 0 };
 
   let generated;
   try {
@@ -126,7 +132,39 @@ function processPendingMetricMappings() {
       review++;
     }
   });
-  return { ok: true, processed: pending.length, active: active, review: review };
+  return { ok: true, discovered: discovered, processed: pending.length, active: active, review: review };
+}
+
+function discoverMetricMappingsFromLatest_() {
+  const sh = getSheet_(SHEET_LATEST);
+  ensureHeaders_(sh, HEADERS.Latest);
+  const values = sh.getDataRange().getValues();
+  if (values.length <= 1) return 0;
+  const idx = headerIndex_(sh);
+  const devices = readDeviceModels_();
+  const existing = loadMetricMappingIndex_();
+  const additions = [];
+  const seen = {};
+  for (let r = values.length - 1; r >= 1 && additions.length < 100; r--) {
+    const rawKey = String(valueByHeader_(values[r], idx, 'metric') || '').trim();
+    const deviceId = String(valueByHeader_(values[r], idx, 'device_id') || '').trim();
+    if (!rawKey || !deviceId) continue;
+    const context = {
+      event: String(valueByHeader_(values[r], idx, 'event') || ''),
+      report_type: String(valueByHeader_(values[r], idx, 'report_type') || ''),
+      device_model: String(valueByHeader_(values[r], idx, 'device_model') || devices[deviceId] || '')
+    };
+    const lookupKey = mappingLookupKey_(context.device_model, context.event, context.report_type, rawKey);
+    if (seen[lookupKey] || findMetricMapping_(existing, context, rawKey)) continue;
+    seen[lookupKey] = true;
+    const sampleValue = valueByHeader_(values[r], idx, 'value');
+    const mapping = compileKnownMetricMapping_(rawKey, sampleValue, context) ||
+      createPendingMetricMapping_(context, rawKey, sampleValue, new Date());
+    additions.push(mapping);
+    existing[lookupKey] = mapping;
+  }
+  if (additions.length) appendMetricMappings_(additions);
+  return additions.length;
 }
 
 function ensureMetricMappingTrigger_() {

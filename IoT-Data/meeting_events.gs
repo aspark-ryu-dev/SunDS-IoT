@@ -6,6 +6,35 @@
 
 const MEETING_PENDING_MINUTES = 5;
 
+function recordMeetingSampleForIngest_(deviceState, metrics, ts) {
+  if (!deviceState || !deviceState.enabled || !deviceState.location) return false;
+  const people = currentPeopleFromRawMetrics_(metrics);
+  if (people === null) return false;
+  return appendMeetingSample_(ts, deviceState.device_id, deviceState.location, people);
+}
+
+function currentPeopleFromRawMetrics_(metrics) {
+  let direct = null;
+  let areaTotal = 0;
+  let hasArea = false;
+  (metrics || []).forEach(function (item) {
+    const key = String(item && item.metric || '').toLowerCase();
+    const value = numberOrNull_(item && item.value);
+    if (value === null) return;
+    if (key === 'current_total' || key === 'people_count_all') {
+      direct = value;
+      return;
+    }
+    if (/^current_counted_\d+$/.test(key) ||
+        /^region_(?:data|trigger_data)_region_count_data_\d+_total_current_total$/.test(key) ||
+        /^region_trigger_data_region_count_data_\d+_total_current_total$/.test(key)) {
+      areaTotal += value;
+      hasArea = true;
+    }
+  });
+  return direct !== null ? direct : hasArea ? areaTotal : null;
+}
+
 function recordMeetingEventForIngest_(deviceState, compiled, ts) {
   if (!deviceState || !deviceState.enabled || !deviceState.location) return;
   const people = currentPeopleFromCompiled_(compiled);

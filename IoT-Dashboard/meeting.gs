@@ -193,21 +193,23 @@ function readMeetingDevices_(offlineFallback) {
 }
 
 function readCanonicalLatestForMeeting_() {
-  const sh = getSheet_(SHEET_CANONICAL_LATEST);
-  const values = sh.getDataRange().getValues();
-  const idx = headerIndex_(sh);
+  const latest = latestByDevice_();
   const out = {};
-  for (let r = 1; r < values.length; r++) {
-    const deviceId = String(valueByHeader_(values[r], idx, 'device_id') || '').trim();
-    const canonical = String(valueByHeader_(values[r], idx, 'canonical_key') || '').trim();
-    if (!deviceId || !canonical || canonical.indexOf('state.') !== 0) continue;
+  Object.keys(latest).forEach(function (deviceId) {
     if (!out[deviceId]) out[deviceId] = {};
-    out[deviceId][canonical] = {
-      value: valueByHeader_(values[r], idx, 'value'),
-      ts: dateOut_(valueByHeader_(values[r], idx, 'ts')),
-      raw_key: String(valueByHeader_(values[r], idx, 'raw_key') || '')
-    };
-  }
+    Object.keys(latest[deviceId] || {}).forEach(function (rawKey) {
+      const metric = latest[deviceId][rawKey];
+      const canonical = String(metric && metric.canonical_key || '');
+      if (canonical.indexOf('state.') !== 0) return;
+      const current = out[deviceId][canonical];
+      if (current && metricTime_(current) > metricTime_(metric)) return;
+      out[deviceId][canonical] = {
+        value: metric.value,
+        ts: metric.ts,
+        raw_key: rawKey
+      };
+    });
+  });
   return out;
 }
 
@@ -251,6 +253,27 @@ function meetingStatus_(online, count, lastEvent) {
 }
 
 function readMeetingEvents_() {
+  const legacy = readLegacyMeetingEvents_();
+  const derived = readMeetingEventsFromSamples_();
+  const locations = {};
+  Object.keys(legacy).forEach(function (location) { locations[location] = true; });
+  Object.keys(derived).forEach(function (location) { locations[location] = true; });
+  const out = {};
+  Object.keys(locations).forEach(function (location) {
+    const sampleEvents = derived[location] || [];
+    if (!sampleEvents.length) {
+      out[location] = legacy[location] || [];
+      return;
+    }
+    const firstSampleTime = metricTime_(sampleEvents[0]);
+    out[location] = (legacy[location] || []).filter(function (event) {
+      return metricTime_(event) < firstSampleTime;
+    }).concat(sampleEvents);
+  });
+  return out;
+}
+
+function readLegacyMeetingEvents_() {
   const sh = getSheet_(SHEET_MEETING_EVENTS);
   const lastRow = sh.getLastRow();
   if (lastRow <= 1) return {};
@@ -276,6 +299,49 @@ function readMeetingEvents_() {
   }
   Object.keys(out).forEach(function (location) {
     out[location].sort(function (a, b) { return metricTime_(a) - metricTime_(b); });
+  });
+  return out;
+}
+
+function readMeetingEventsFromSamples_() {
+  const sh = getSpreadsheet_().getSheetByName(SHEET_MEETING_SAMPLES);
+  if (!sh || sh.getLastRow() <= 1) return {};
+  const idx = headerIndex_(sh);
+  if (idx.ts === undefined || idx.location === undefined || idx.count === undefined) return {};
+  const now = new Date();
+  const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - MEETING_EVENT_HISTORY_DAYS, 0, 0, 0, 0).getTime();
+  const firstRow = findFirstReadingRowAtOrAfter_(sh, idx.ts + 1, sh.getLastRow(), cutoff);
+  if (!firstRow) return {};
+  const values = sh.getRange(firstRow, 1, sh.getLastRow() - firstRow + 1, sh.getLastColumn()).getValues();
+  const samples = {};
+  values.forEach(function (row) {
+    const location = String(valueByHeader_(row, idx, 'location') || '').trim();
+    const ts = dateOut_(valueByHeader_(row, idx, 'ts'));
+    const count = Number(valueByHeader_(row, idx, 'count'));
+    if (!location || !ts || !isFinite(count)) return;
+    if (!samples[location]) samples[location] = [];
+    samples[location].push({
+      ts: ts,
+      count: count,
+      device_id: String(valueByHeader_(row, idx, 'device_id') || '')
+    });
+  });
+  const out = {};
+  Object.keys(samples).forEach(function (location) {
+    samples[location].sort(function (a, b) { return metricTime_(a) - metricTime_(b); });
+    let previous = '';
+    out[location] = [];
+    samples[location].forEach(function (sample) {
+      const status = sample.count > 0 ? 'OCCUPIED' : 'PENDING_EMPTY';
+      if (status === previous) return;
+      previous = status;
+      out[location].push({
+        ts: sample.ts,
+        status: status,
+        count: sample.count,
+        device_id: sample.device_id
+      });
+    });
   });
   return out;
 }

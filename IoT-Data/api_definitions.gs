@@ -227,7 +227,7 @@ function applyDefinitionsForDevice_(device_id, ts) {
   });
 
   if (derived.length) {
-    upsertLatest_(device_id, derived, ts);
+    upsertLatest_(device_id, derived, ts, {});
   }
   return derived;
 }

@@ -17,7 +17,7 @@ const DEFAULT_SPREADSHEET_ID = '1HZwK5W8Yhd15sNypNO9Ydfx4G0NSehvEoTm8ZmKRygE';
 let SPREADSHEET_MEMO = null;
 
 const LAYOUT_HEADERS = ['item_id', 'bind_type', 'bind_ref', 'x_norm', 'y_norm', 'label', 'style', 'enabled'];
-const LATEST_HEADERS = ['device_id', 'metric', 'value', 'ts', 'latest_key'];
+const LATEST_HEADERS = ['device_id', 'metric', 'value', 'ts', 'latest_key', 'event', 'report_type', 'device_model'];
 const CANONICAL_LATEST_HEADERS = ['device_id', 'canonical_key', 'value', 'ts', 'raw_key', 'event', 'report_type', 'mapping_id', 'latest_key'];
 const MEETING_EVENT_HEADERS = ['ts', 'location', 'status', 'count', 'device_id'];
 const MEETING_SAMPLE_HEADERS = ['ts', 'device_id', 'location', 'count', 'sample_key'];
@@ -41,48 +41,23 @@ function getSheet_(name) {
   return sh;
 }
 
-/** Idempotent: create the Layout sheet if missing, ensure its header, freeze row 1. */
+/** Read-only setup check. IoT-Data owns all shared Spreadsheet writes. */
 function ensureSheets_() {
   const ss = getSpreadsheet_();
-  let sh = ss.getSheetByName(SHEET_LAYOUT);
-  if (!sh) sh = ss.insertSheet(SHEET_LAYOUT);
-  const firstRow = sh.getRange(1, 1, 1, LAYOUT_HEADERS.length).getValues()[0];
-  const needsHeader = firstRow.join('') === '' || firstRow.some(function (cell, i) {
-    return String(cell).trim().toLowerCase() !== LAYOUT_HEADERS[i];
-  });
-  if (needsHeader) {
-    sh.getRange(1, 1, 1, LAYOUT_HEADERS.length).setValues([LAYOUT_HEADERS]);
-  }
-  sh.setFrozenRows(1);
-
-  const latest = ss.getSheetByName(SHEET_LATEST);
-  if (latest) ensureHeaders_(latest, LATEST_HEADERS);
-
-  const canonicalLatest = ss.getSheetByName(SHEET_CANONICAL_LATEST);
-  if (canonicalLatest) ensureHeaders_(canonicalLatest, CANONICAL_LATEST_HEADERS);
-  const meetingEvents = ss.getSheetByName(SHEET_MEETING_EVENTS);
-  if (meetingEvents) ensureHeaders_(meetingEvents, MEETING_EVENT_HEADERS);
-  const meetingSamples = ss.getSheetByName(SHEET_MEETING_SAMPLES);
-  if (meetingSamples) ensureHeaders_(meetingSamples, MEETING_SAMPLE_HEADERS);
-}
-
-function ensureHeaders_(sheet, requiredHeaders) {
-  const lastCol = Math.max(1, sheet.getLastColumn());
-  let row = sheet.getRange(1, 1, 1, Math.max(lastCol, requiredHeaders.length)).getValues()[0];
-  const existing = {};
-  row.forEach(function (cell) {
-    const key = String(cell || '').trim().toLowerCase();
-    if (key) existing[key] = true;
-  });
-  requiredHeaders.forEach(function (header) {
-    const key = String(header).trim().toLowerCase();
-    if (!existing[key]) {
-      row.push(header);
-      existing[key] = true;
+  [
+    SHEET_DEVICES,
+    SHEET_LATEST,
+    SHEET_DEFINITIONS,
+    SHEET_KEY_CATALOG,
+    SHEET_METRIC_MAPPINGS,
+    SHEET_CONFIG,
+    SHEET_LAYOUT,
+    SHEET_MEETING_SAMPLES
+  ].forEach(function (name) {
+    if (!ss.getSheetByName(name)) {
+      throw new Error('Sheet not found: ' + name + '. Run IoT-Data setup() first.');
     }
   });
-  while (row.length && String(row[row.length - 1] || '').trim() === '') row.pop();
-  sheet.getRange(1, 1, 1, row.length).setValues([row]);
 }
 
 /** Map a sheet's header row to { headerName: zeroBasedColumnIndex }. */

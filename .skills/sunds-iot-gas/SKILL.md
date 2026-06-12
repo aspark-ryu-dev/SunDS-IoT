@@ -24,6 +24,9 @@ description: SunDS IoT の Google Apps Script プロジェクト（IoT-Data、Io
 
 - `IoT-Data` 側で `Devices`、`Definitions`、`Config`、`Layout`、`Latest` を扱う管理 RPC を持たせる。
 - `IoT-Dashboard` 側は `apiGetDashboardState()` の読み取りだけを公開し、`canEdit` を返さない。
+- Spreadsheet への runtime 書き込みは `IoT-Data` に集約する。`IoT-Dashboard` は runtime で Sheet を作成・更新しない。
+- `IoT-Data` の `doPost` は device heartbeat、raw `Latest`、履歴、軽量 index の書き込みを優先し、canonical 選択、派生式、Online/Offline、カード集約、会議室 timeline などの表示計算は `IoT-Dashboard` の read model で行う。
+- `Latest` には raw metric と共に `event/report_type/device_model` を保存し、Dashboard が `MetricMappings` を使って read-time compile できるようにする。
 - Dashboard widget の表示指標は `Layout.style` の JSON、例 `{"metrics":["temperature","humidity","battery"]}` に保存する。壊れた JSON は空設定として扱う。
 - `Devices` の追加列は `area_id/location/type/sensor_type/power_source` を使う。旧列 `device_id/name/note/enabled/last_seen/first_seen` は維持する。
 - `Latest` は `devices[].metrics = { metricName: { value, ts } }` に合成して UI に渡す。

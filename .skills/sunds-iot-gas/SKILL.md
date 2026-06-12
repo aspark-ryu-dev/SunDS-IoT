@@ -18,7 +18,7 @@ description: SunDS IoT の Google Apps Script プロジェクト（IoT-Data、Io
 - まず `IoT-Data/README.md` と `IoT-Dashboard/README.md`、対象 `.gs` / `index.html` を読む。
 - スキーマ変更では既存 Sheet データを壊さない。ヘッダーは不足列だけ追加し、既存列の並び替えや上書きを避ける。
 - `IoT-Data` と `IoT-Dashboard` は別 GAS プロジェクトだが同じ Spreadsheet を読む。関数名の衝突はプロジェクト単位で判断する。
-- デプロイや `push.bat` / `push.ps1` 実行はユーザーが明示したときだけ行う。
+- GAS 変更は開発環境で実画面確認してから本番へ出す。コード検査だけで完了扱いにしない。
 
 ## 実装ルール
 
@@ -46,6 +46,9 @@ description: SunDS IoT の Google Apps Script プロジェクト（IoT-Data、Io
 - skill や rules を更新した場合は、`.skills/sunds-iot-gas/SKILL.md` と必要な `references/*.md` を同じコミットに含める。
 - GitHub の `master` をソースコードの正本とし、GAS editor 側だけで変更を残さない。
 - GAS 開発環境への同期は root の `npm.cmd run gas:push` または project 別 `gas:push:*` を使う。
+- 本番 deploy 前に対象 project を `gas:push:*` で開発環境へ同期し、固定の `/dev` URL をブラウザで開いて、`BUILD_VERSION`、DOM、表示データ、主要操作を実測する。
+- 開発 URL は Data `https://script.google.com/macros/s/AKfycbzUVYcbc_yx6PI5B-0jLanpukdWK2GilcjJJZsli25M/dev`、Dashboard `https://script.google.com/macros/s/AKfycbyTqs5iBRp2Ri6J5X3ZMNVNnX-i4pcPKJLRqB1tQt0/dev` を使う。
+- `/dev` 検証が失敗した状態では deploy しない。修正、再 push、再検証を繰り返し、成功後のみ本番 deploy する。
 - 本番 deploy は project 別 `npm.cmd run gas:deploy:data -- "<summary>"` / `gas:deploy:dashboard` だけを使う。
 - deploy tool は clean tree、`master`、`HEAD == origin/master` を確認し、成功後に `gas-data-v<N>` または `gas-dashboard-v<N>` tag を GitHub へ push する。
 - `.bat` / `.ps1` の重複入口、root の一時 `.clasp.json`、root 直下の実行ログを追加しない。ログと npm cache は `.local/` に置く。

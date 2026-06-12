@@ -40,9 +40,14 @@
 - After code changes are implemented and checks pass, commit and push to GitHub by default unless the user explicitly says not to.
 - GitHub `master` is the source of truth. Do not leave GAS-editor-only changes.
 - Use root `npm.cmd run gas:push` for development synchronization.
+- Before every production deploy, push the affected project to GAS development and verify the real `/dev` page in a browser. Check the expected build, DOM, live data, and interaction rather than relying only on local parsing.
+- Development URLs:
+  - Data: `https://script.google.com/macros/s/AKfycbzUVYcbc_yx6PI5B-0jLanpukdWK2GilcjJJZsli25M/dev`
+  - Dashboard: `https://script.google.com/macros/s/AKfycbyTqs5iBRp2Ri6J5X3ZMNVNnX-i4pcPKJLRqB1tQt0/dev`
+- Never deploy after a failed `/dev` verification. Fix, push again, and re-check until the development page passes.
 - Use project-specific `npm.cmd run gas:deploy:data -- "<summary>"` or `npm.cmd run gas:deploy:dashboard -- "<summary>"` for production.
 - Production deploy requires a clean `master` with `HEAD == origin/master`.
 - Successful production deploys must create and push `gas-data-v<N>` or `gas-dashboard-v<N>` tags matching the GAS deployment version.
 - Runtime logs and npm cache belong under `.local/`; do not add root-level log files or duplicate PowerShell/batch wrappers.
-- Do not run `clasp push` or production deploy commands unless the user explicitly asks.
+- Follow the requested release sequence: development push, browser verification on `/dev`, then production deploy.
 - Keep `BUILD_VERSION` current. Any UI/RPC/schema/Config/deploy-visible change must update the relevant `IoT-Data/Code.gs` or `IoT-Dashboard/Code.gs` version using `vYYYY-MM-DD-short-scope`.

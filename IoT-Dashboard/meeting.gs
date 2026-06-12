@@ -62,6 +62,7 @@ function buildMeetingRoomState_() {
     const lastEvent = lastRoomEvent_(events[location] || []);
     const count = metricNumber_(selected.metric);
     const status = meetingStatus_(selected.device.online, count, lastEvent);
+    const deviceSeries = peopleSeries[selected.device.device_id] || [];
     rooms.push({
       location: location,
       status: status,
@@ -74,7 +75,9 @@ function buildMeetingRoomState_() {
       humidity: roomEnvironmentMetric_(roomDevices, canonical, ['state.environment.humidity']),
       co2: roomEnvironmentMetric_(roomDevices, canonical, ['state.environment.co2']),
       timeline: buildMeetingTimeline_(events[location] || []),
-      series: peopleSeries[selected.device.device_id] || []
+      series: deviceSeries.length
+        ? deviceSeries
+        : buildMeetingPeopleSeriesFromEvents_(events[location] || [], count, new Date())
     });
   });
 
@@ -386,6 +389,28 @@ function buildMeetingTimeline_(events) {
       end: new Date(clippedEnd).toISOString()
     };
   }).filter(function (record) { return !!record; });
+}
+
+function buildMeetingPeopleSeriesFromEvents_(events, currentCount, now) {
+  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+  const points = [];
+  let baseline = null;
+  (events || []).forEach(function (event) {
+    const time = toDate_(event.ts);
+    const count = Number(event.count);
+    if (!time || !isFinite(count) || time.getTime() > now.getTime()) return;
+    if (time.getTime() < dayStart) {
+      baseline = count;
+      return;
+    }
+    points.push([time.getTime(), count]);
+  });
+  if (baseline !== null) points.unshift([dayStart, baseline]);
+  if (isFinite(Number(currentCount))) {
+    const currentPoint = [now.getTime(), Number(currentCount)];
+    if (!points.length || points[points.length - 1][0] < currentPoint[0]) points.push(currentPoint);
+  }
+  return downsampleMeetingSeries_(points, 160);
 }
 
 /**

@@ -599,7 +599,7 @@ function touchDevice_(device_id, deviceName, deviceModel, ts) {
     const cachedValues = sh.getRange(cachedRow, 1, 1, sh.getLastColumn()).getValues()[0];
     if (String(valueByHeader_(cachedValues, idx, 'device_id')) === device_id) {
       const enabled = parseBool_(valueByHeader_(cachedValues, idx, 'enabled'));
-      updateDeviceIngestRow_(sh, cachedRow, idx, cachedValues, deviceName, deviceModel, ts);
+      updateDeviceIngestRow_(sh, cachedRow, idx, cachedValues, deviceModel, ts);
       return deviceIngestState_(cachedValues, idx, enabled, true);
     }
   }
@@ -610,7 +610,7 @@ function touchDevice_(device_id, deviceName, deviceModel, ts) {
     cache.put(cacheKey, String(indexedRow), 21600);
     const current = sh.getRange(indexedRow, 1, 1, sh.getLastColumn()).getValues()[0];
     const isEnabled = parseBool_(valueByHeader_(current, idx, 'enabled'));
-    updateDeviceIngestRow_(sh, indexedRow, idx, current, deviceName, deviceModel, ts);
+    updateDeviceIngestRow_(sh, indexedRow, idx, current, deviceModel, ts);
     return deviceIngestState_(current, idx, isEnabled, true);
   }
   sh.appendRow(deviceRow_(idx, device_id, deviceName, deviceModel, ts));
@@ -641,10 +641,7 @@ function deviceIngestState_(row, idx, enabled, registered) {
   };
 }
 
-function updateDeviceIngestRow_(sheet, row, idx, current, deviceName, deviceModel, ts) {
-  if (idx.name !== undefined && deviceName && !String(valueByHeader_(current, idx, 'name') || '').trim()) {
-    current[idx.name] = deviceName;
-  }
+function updateDeviceIngestRow_(sheet, row, idx, current, deviceModel, ts) {
   if (idx.device_model !== undefined && deviceModel && !String(valueByHeader_(current, idx, 'device_model') || '').trim()) {
     current[idx.device_model] = deviceModel;
   }
@@ -747,7 +744,7 @@ function deviceRow_(idx, deviceId, deviceName, deviceModel, ts) {
   const width = Math.max.apply(null, Object.keys(idx).map(function (name) { return idx[name]; })) + 1;
   const row = new Array(width).fill('');
   row[idx.device_id] = deviceId;
-  if (idx.name !== undefined) row[idx.name] = deviceName || '';
+  if (idx.name !== undefined) row[idx.name] = '';
   if (idx.device_model !== undefined) row[idx.device_model] = deviceModel || '';
   if (idx.enabled !== undefined) row[idx.enabled] = false;
   if (idx.last_seen !== undefined) row[idx.last_seen] = ts;

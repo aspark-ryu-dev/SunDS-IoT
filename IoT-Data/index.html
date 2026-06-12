@@ -1593,7 +1593,7 @@
           <div class="form-grid">
             <label class="full" data-i18n-label="data.deviceEdit.deviceId"><input id="device_id" required> <span class="lock-hint" id="deviceIdHint"></span></label>
             <label class="full" data-i18n-label="data.deviceEdit.name"><input id="device_name"></label>
-            <label class="full" data-i18n-label="data.deviceEdit.deviceModel"><input id="device_model" placeholder="EM300-TH / VS125-P"></label>
+            <label class="full" data-i18n-label="data.deviceEdit.deviceModel"><input id="device_model" placeholder="センサーから自動取得" readonly></label>
           </div>
         </div>
         <div class="field-group device-edit-fields">
@@ -2028,7 +2028,7 @@
         html.push(`
         <tr class="${d.device_id === state.editingDeviceId ? 'editing' : ''}" data-device-id="${esc(attrEscape(d.device_id))}">
           <td class="device-id-cell"><code title="${esc(attrEscape(d.device_id))}">${esc(d.device_id)}</code><div><span class="pill ${isDeviceOnline(d) ? '' : 'off'}">${isDeviceOnline(d) ? 'Online' : 'Offline'}</span></div></td>
-          <td><input data-device-field="name" value="${esc(attrEscape(v.name || ''))}"><input data-device-field="device_model" placeholder="Device Model" value="${esc(attrEscape(v.device_model || ''))}" style="margin-top:6px"></td>
+          <td><input data-device-field="name" value="${esc(attrEscape(v.name || ''))}"><input placeholder="Device Model（自動取得）" value="${esc(attrEscape(v.device_model || ''))}" style="margin-top:6px" readonly></td>
           <td><input data-device-field="area_id" list="dl_area" placeholder="エリア" value="${esc(attrEscape(v.area_id || ''))}"><input data-device-field="location" list="dl_location" placeholder="場所" value="${esc(attrEscape(v.location || ''))}" style="margin-top:6px"></td>
           <td><input data-device-field="sensor_type" list="dl_sensor_type" placeholder="センサー" value="${esc(attrEscape(v.sensor_type || ''))}"><input data-device-field="type" list="dl_type" placeholder="種別" value="${esc(attrEscape(v.type || ''))}" style="margin-top:6px"></td>
           <td><input data-device-field="power_source" list="dl_power" placeholder="電源" value="${esc(attrEscape(v.power_source || ''))}"><input data-device-field="report_interval_min" type="number" min="0.1" step="0.1" placeholder="min" value="${esc(attrEscape(v.report_interval_min || ''))}" style="margin-top:6px"></td>
@@ -2580,6 +2580,7 @@
       const draftMetrics = state.deviceMetricDrafts[d.device_id] && state.deviceMetricDrafts[d.device_id].metrics;
       renderDeviceMetricToggles(d, draftMetrics || d.dashboard_metrics || []);
       $('device_id').readOnly = isEdit;
+      $('device_model').readOnly = true;
       $('deviceIdHint').textContent = isEdit ? '（変更不可）' : '';
       $('deviceDrawerTitle').textContent = isEdit ? '表示データ選択' : 'デバイス追加';
       $('deviceDrawerSub').textContent = isEdit ? ((d.device_id || '') + ' / 全デバイス保存で反映') : '新規登録';
@@ -2712,7 +2713,6 @@
       return {
         device_id: $('device_id').value,
         name: $('device_name').value,
-        device_model: $('device_model').value,
         area_id: $('device_area_id').value,
         location: $('device_location').value,
         type: $('device_type').value,

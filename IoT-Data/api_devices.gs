@@ -203,9 +203,8 @@ function normalizeDeviceInput_(device) {
 
 function writeDeviceRow_(sheet, rowNumber, idx, device, isNew) {
   const current = sheet.getRange(rowNumber, 1, 1, sheet.getLastColumn()).getValues()[0];
-  setByHeader_(current, idx, 'device_id', device.device_id);
+  if (isNew) setByHeader_(current, idx, 'device_id', device.device_id);
   setByHeader_(current, idx, 'name', device.name);
-  setByHeader_(current, idx, 'device_model', device.device_model);
   setByHeader_(current, idx, 'note', device.note);
   setByHeader_(current, idx, 'enabled', device.enabled);
   setByHeader_(current, idx, 'area_id', device.area_id);
@@ -226,7 +225,6 @@ function deviceToRow_(device, idx) {
   const row = new Array(width).fill('');
   setByHeader_(row, idx, 'device_id', device.device_id);
   setByHeader_(row, idx, 'name', device.name);
-  setByHeader_(row, idx, 'device_model', device.device_model);
   setByHeader_(row, idx, 'note', device.note);
   setByHeader_(row, idx, 'enabled', device.enabled);
   setByHeader_(row, idx, 'first_seen', new Date());

@@ -3,7 +3,7 @@
  * Backend project: HTTP POST ingestion and internal management UI.
  */
 
-const BUILD_VERSION = 'v2026-06-12-offline-x2-1';
+const BUILD_VERSION = 'v2026-06-12-device-field-ownership';
 
 function doGet(e) {
   if (isLightweightCallback_(e)) {

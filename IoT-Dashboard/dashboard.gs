@@ -186,6 +186,7 @@ function readDevicesWithMetrics_(offlineTimeoutMin, visibleMetricKeys) {
     out.push({
       device_id: deviceId,
       name: String(valueByHeader_(values[r], idx, 'name') || ''),
+      device_model: String(valueByHeader_(values[r], idx, 'device_model') || ''),
       note: String(valueByHeader_(values[r], idx, 'note') || ''),
       enabled: enabled,
       online: status.online,

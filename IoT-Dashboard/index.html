@@ -1458,7 +1458,7 @@
         </svg>
       </button>
       <span class="logo">
-        <img class="logo-img" alt="" src="https://www.dropbox.com/scl/fi/bwxb55mrt1qg4aqih5bxt/icon_dark.png?rlkey=g2mb3yooo636lr4qfa8zg8dlb&amp;st=icn9wq0m&amp;dl=1">
+        <img class="logo-img" alt="" src="https://dl.dropboxusercontent.com/scl/fi/bwxb55mrt1qg4aqih5bxt/icon_dark.png?rlkey=g2mb3yooo636lr4qfa8zg8dlb&amp;st=icn9wq0m&amp;dl=1">
       </span>
       <div class="brand-copy">
         <h1 id="title"></h1>
@@ -1673,7 +1673,7 @@
     const DASHBOARD_MEETING_CACHE_KEY = 'iotDashboard.meetingState';
     const DASHBOARD_ALLOWED_STORAGE_KEYS = [DASHBOARD_CACHE_KEY, DASHBOARD_PAGE_KEY, DASHBOARD_QUERY_KEY, DASHBOARD_MENU_KEY, DASHBOARD_REFRESH_KEY, DASHBOARD_IOT_GROUP_KEY, DASHBOARD_THEME_KEY, DASHBOARD_METRIC_PREFS_KEY, DASHBOARD_LOGO_KEY, DASHBOARD_MEETING_CACHE_KEY];
     const DASHBOARD_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-    const DEFAULT_LOGO_URL = 'https://www.dropbox.com/scl/fi/bwxb55mrt1qg4aqih5bxt/icon_dark.png?rlkey=g2mb3yooo636lr4qfa8zg8dlb&st=icn9wq0m&dl=1';
+    const DEFAULT_LOGO_URL = 'https://dl.dropboxusercontent.com/scl/fi/bwxb55mrt1qg4aqih5bxt/icon_dark.png?rlkey=g2mb3yooo636lr4qfa8zg8dlb&st=icn9wq0m&dl=1';
     const DASHBOARD_REQUEST_TIMEOUT_MS = 45000;
     const DASHBOARD_STALE_CHECK_MS = 30000;
     const state = { data: null, deviceMap: {}, query: '', filter: 'all', timer: 0, metricEditorDeviceId: '', metricPages: {}, version: '', lastVersionAt: 0, lastSuccessfulAt: 0, requests: {}, meeting: null, meetingVersion: '', meetingLoaded: false, meetingFilter: 'all' };
@@ -2370,7 +2370,9 @@
     function applyLogoConfig(config) {
       config = config || {};
       const hasLogo = Object.prototype.hasOwnProperty.call(config, 'logo_url');
-      const url = hasLogo ? (config.logo_url || DEFAULT_LOGO_URL) : getStored(DASHBOARD_LOGO_KEY, DEFAULT_LOGO_URL);
+      const raw = hasLogo ? (config.logo_url || DEFAULT_LOGO_URL) : getStored(DASHBOARD_LOGO_KEY, DEFAULT_LOGO_URL);
+      // www.dropbox.com redirects (requests show as canceled); use the direct-content host.
+      const url = String(raw).replace('https://www.dropbox.com/', 'https://dl.dropboxusercontent.com/');
       document.querySelectorAll('.logo-img').forEach((img) => img.src = url);
       setStored(DASHBOARD_LOGO_KEY, url);
     }

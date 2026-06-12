@@ -327,7 +327,18 @@ function buildMeetingTimeline_(events) {
  * index. This avoids scanning historical metric rows.
  */
 function readTodayPeopleSeries_() {
-  const sh = getSheet_(SHEET_MEETING_SAMPLES);
+  // Best-effort: the people curve must never break the meeting view, e.g. when
+  // MeetingSamples does not exist yet (IoT-Data setup not run after storage v2).
+  try {
+    return readTodayPeopleSeriesUnsafe_();
+  } catch (err) {
+    return {};
+  }
+}
+
+function readTodayPeopleSeriesUnsafe_() {
+  const sh = getSpreadsheet_().getSheetByName(SHEET_MEETING_SAMPLES);
+  if (!sh) return {};
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return {};
   const idx = headerIndex_(sh);

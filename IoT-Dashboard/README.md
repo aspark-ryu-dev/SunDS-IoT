@@ -28,8 +28,9 @@ there is no minute-by-minute full-sheet rebuild.
 - Browser `localStorage` keeps a small cached dashboard state for fast initial rendering.
 - Background-tab suspension, PC sleep, request timeout, reconnect, and page restore
   trigger a guarded refresh so a long-running display does not remain stale.
-- 会議室Now locates today's `Readings` from the sheet tail in chunks instead
-  of scanning the full timestamp column on every refresh.
+- 会議室Now locates today's `MeetingSamples` from the sheet tail in chunks instead
+  of scanning the full timestamp column on every refresh. The people curve is
+  best-effort: if the sheet is missing the rest of the view still renders.
 
 ## Files
 

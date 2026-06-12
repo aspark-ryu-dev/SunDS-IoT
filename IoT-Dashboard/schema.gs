@@ -3,7 +3,6 @@
  * This project is public read-only; IoT-Data owns sheet editing.
  */
 
-const SHEET_READINGS = 'Readings';
 const SHEET_DEVICES = 'Devices';
 const SHEET_LATEST = 'Latest';
 const SHEET_DEFINITIONS = 'Definitions';

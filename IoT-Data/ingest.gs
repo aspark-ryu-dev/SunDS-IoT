@@ -15,7 +15,10 @@
  */
 
 const DEVICE_ROW_CACHE_PREFIX = 'iot_device_row_v2:';
+const DEVICE_INDEX_CACHE_KEY = 'iot_device_index_v1';
 const LATEST_INDEX_CACHE_KEY = 'iot_latest_index_v2';
+const LATEST_SCOPE_CACHE_PREFIX = 'iot_latest_scope_v1:';
+const INGEST_READY_CACHE_KEY = 'iot_ingest_ready_v8';
 const DEVICE_ID_KEYS = [
   // LoRaWAN devices: devEUI only.
   'deveui',
@@ -85,33 +88,48 @@ function handlePost_(e) {
 
   // 5. lock — all sheet writes happen inside
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(10000)) return { ok: false, error: 'busy' };
+  if (!lock.tryLock(20000)) return { ok: false, error: 'busy', retryable: true, retry_after_sec: 2 };
   try {
     const ts = new Date();
     const storageMode = storageMode_();
+    const warnings = [];
 
     // 6. writes
     const deviceState = touchDevice_(parsed.device_id, parsed.device_name, parsed.context.device_model, ts);
-    const compiled = compileIngestMetrics_(parsed, ts);
     upsertLatest_(parsed.device_id, parsed.metrics, ts);
-    upsertCanonicalLatest_(parsed.device_id, compiled, parsed.context, ts);
-    recordMeetingEventForIngest_(deviceState, compiled, ts);
-    const derived = applyDefinitionsForDevice_(parsed.device_id, ts);
+    const compiled = runIngestStep_('metric_mapping', warnings, function () {
+      return compileIngestMetrics_(parsed, ts);
+    }, parsed.metrics.map(function (metric) {
+      return { metric: metric.metric, value: metric.value, mapping: null };
+    }));
+    runIngestStep_('canonical_latest', warnings, function () {
+      upsertCanonicalLatest_(parsed.device_id, compiled, parsed.context, ts);
+    });
+    runIngestStep_('meeting', warnings, function () {
+      recordMeetingEventForIngest_(deviceState, compiled, ts);
+    });
+    const derived = runIngestStep_('definitions', warnings, function () {
+      return applyDefinitionsForDevice_(parsed.device_id, ts);
+    }, []);
     if (storageMode !== STORAGE_MODE_WIDE) {
-      appendReadings_(parsed.device_id, compiled, ts, parsed.context);
-      appendDerivedReadings_(parsed.device_id, derived, ts, parsed.context);
+      runIngestStep_('legacy_history', warnings, function () {
+        appendReadings_(parsed.device_id, compiled, ts, parsed.context);
+        appendDerivedReadings_(parsed.device_id, derived, ts, parsed.context);
+      });
     }
     let wideResult = null;
     if (storageMode === STORAGE_MODE_DUAL || storageMode === STORAGE_MODE_WIDE) {
-      wideResult = appendWideReading_(
-        Utilities.getUuid(),
-        parsed.device_id,
-        resolveStorageDeviceModel_(deviceState, parsed.context, parsed.device_id),
-        parsed.context,
-        compiled,
-        derived,
-        ts
-      );
+      wideResult = runIngestStep_('wide_history', warnings, function () {
+        return appendWideReading_(
+          Utilities.getUuid(),
+          parsed.device_id,
+          resolveStorageDeviceModel_(deviceState, parsed.context, parsed.device_id),
+          parsed.context,
+          compiled,
+          derived,
+          ts
+        );
+      }, null);
     }
 
     // 7. done
@@ -129,10 +147,22 @@ function handlePost_(e) {
       storage_warning: wideResult && wideResult.rejected_keys.length
         ? 'metric_limit:' + wideResult.rejected_keys.join(',')
         : '',
+      warnings: warnings,
       ts: ts.toISOString()
     };
   } finally {
     lock.releaseLock();
+  }
+}
+
+function runIngestStep_(name, warnings, fn, fallback) {
+  try {
+    const value = fn();
+    return value === undefined ? fallback : value;
+  } catch (err) {
+    warnings.push(name);
+    try { logError_('doPost:' + name, err); } catch (_) {}
+    return fallback;
   }
 }
 
@@ -469,6 +499,26 @@ function upsertLatest_(device_id, metrics, ts) {
     }
     extendLatestIndexCache_(index, newKeys);
   }
+  mergeLatestScopeCache_(device_id, metrics);
+}
+
+function mergeLatestScopeCache_(deviceId, metrics) {
+  const cache = CacheService.getScriptCache();
+  const key = latestScopeCacheKey_(deviceId);
+  let scope = {};
+  try { scope = JSON.parse(cache.get(key) || '{}'); } catch (err) {}
+  (metrics || []).forEach(function (metric) {
+    if (!metric || !metric.metric) return;
+    scope[metric.metric] = metric.value;
+  });
+  try {
+    const json = JSON.stringify(scope);
+    if (json.length < 95000) cache.put(key, json, 21600);
+  } catch (err) {}
+}
+
+function latestScopeCacheKey_(deviceId) {
+  return LATEST_SCOPE_CACHE_PREFIX + storageHash_(deviceId, 28);
 }
 
 /** Merge new (key,row) pairs into the live index map AND the script cache. */
@@ -530,38 +580,25 @@ function touchDevice_(device_id, deviceName, deviceModel, ts) {
     const cachedValues = sh.getRange(cachedRow, 1, 1, sh.getLastColumn()).getValues()[0];
     if (String(valueByHeader_(cachedValues, idx, 'device_id')) === device_id) {
       const enabled = parseBool_(valueByHeader_(cachedValues, idx, 'enabled'));
-      updateDeviceNameIfBlank_(sh, cachedRow, idx, cachedValues, deviceName);
-      updateDeviceModelIfBlank_(sh, cachedRow, idx, cachedValues, deviceModel);
-      sh.getRange(cachedRow, idx.last_seen + 1).setValue(ts);
-      if (idx.device_model !== undefined && !String(valueByHeader_(cachedValues, idx, 'device_model') || '').trim()) {
-        cachedValues[idx.device_model] = deviceModel || '';
-      }
+      updateDeviceIngestRow_(sh, cachedRow, idx, cachedValues, deviceName, deviceModel, ts);
       return deviceIngestState_(cachedValues, idx, enabled, true);
     }
   }
 
-  const lastRow = sh.getLastRow();
-  if (lastRow > 1) {
-    const ids = sh.getRange(2, idx.device_id + 1, lastRow - 1, 1).getValues();
-    const enabled = sh.getRange(2, idx.enabled + 1, lastRow - 1, 1).getValues();
-    for (let i = 0; i < ids.length; i++) {
-      if (String(ids[i][0]) === device_id) {
-        const row = i + 2;
-        cache.put(cacheKey, String(row), 21600);
-        const current = sh.getRange(row, 1, 1, sh.getLastColumn()).getValues()[0];
-        const isEnabled = parseBool_(enabled[i][0]);
-        updateDeviceNameIfBlank_(sh, row, idx, current, deviceName);
-        updateDeviceModelIfBlank_(sh, row, idx, current, deviceModel);
-        sh.getRange(row, idx.last_seen + 1).setValue(ts);
-        if (idx.device_model !== undefined && !String(valueByHeader_(current, idx, 'device_model') || '').trim()) {
-          current[idx.device_model] = deviceModel || '';
-        }
-        return deviceIngestState_(current, idx, isEnabled, true);
-      }
-    }
+  const deviceIndex = deviceRowIndex_(sh, idx);
+  const indexedRow = Number(deviceIndex[device_id] || 0);
+  if (indexedRow > 1) {
+    cache.put(cacheKey, String(indexedRow), 21600);
+    const current = sh.getRange(indexedRow, 1, 1, sh.getLastColumn()).getValues()[0];
+    const isEnabled = parseBool_(valueByHeader_(current, idx, 'enabled'));
+    updateDeviceIngestRow_(sh, indexedRow, idx, current, deviceName, deviceModel, ts);
+    return deviceIngestState_(current, idx, isEnabled, true);
   }
   sh.appendRow(deviceRow_(idx, device_id, deviceName, deviceModel, ts));
-  cache.put(cacheKey, String(sh.getLastRow()), 21600);
+  const newRow = sh.getLastRow();
+  cache.put(cacheKey, String(newRow), 21600);
+  deviceIndex[device_id] = newRow;
+  saveDeviceRowIndex_(deviceIndex);
   return {
     device_id: device_id,
     name: deviceName || '',
@@ -585,16 +622,45 @@ function deviceIngestState_(row, idx, enabled, registered) {
   };
 }
 
-function updateDeviceNameIfBlank_(sheet, row, idx, current, deviceName) {
-  if (!deviceName || idx.name === undefined) return;
-  if (String(valueByHeader_(current, idx, 'name') || '').trim()) return;
-  sheet.getRange(row, idx.name + 1).setValue(deviceName);
+function updateDeviceIngestRow_(sheet, row, idx, current, deviceName, deviceModel, ts) {
+  if (idx.name !== undefined && deviceName && !String(valueByHeader_(current, idx, 'name') || '').trim()) {
+    current[idx.name] = deviceName;
+  }
+  if (idx.device_model !== undefined && deviceModel && !String(valueByHeader_(current, idx, 'device_model') || '').trim()) {
+    current[idx.device_model] = deviceModel;
+  }
+  if (idx.last_seen !== undefined) current[idx.last_seen] = ts;
+  sheet.getRange(row, 1, 1, current.length).setValues([current]);
 }
 
-function updateDeviceModelIfBlank_(sheet, row, idx, current, deviceModel) {
-  if (!deviceModel || idx.device_model === undefined) return;
-  if (String(valueByHeader_(current, idx, 'device_model') || '').trim()) return;
-  sheet.getRange(row, idx.device_model + 1).setValue(deviceModel);
+function deviceRowIndex_(sheet, idx) {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(DEVICE_INDEX_CACHE_KEY);
+  if (cached) {
+    try { return JSON.parse(cached); } catch (err) {}
+  }
+  const out = {};
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    const ids = sheet.getRange(2, idx.device_id + 1, lastRow - 1, 1).getValues();
+    ids.forEach(function (row, offset) {
+      const id = String(row[0] || '').trim();
+      if (id) out[id] = offset + 2;
+    });
+  }
+  saveDeviceRowIndex_(out);
+  return out;
+}
+
+function saveDeviceRowIndex_(index) {
+  try {
+    const json = JSON.stringify(index || {});
+    if (json.length < 95000) CacheService.getScriptCache().put(DEVICE_INDEX_CACHE_KEY, json, 21600);
+  } catch (err) {}
+}
+
+function clearDeviceIndexCache_() {
+  CacheService.getScriptCache().remove(DEVICE_INDEX_CACHE_KEY);
 }
 
 function deviceRowCacheKey_(deviceId) {
@@ -686,15 +752,17 @@ function jsonOut_(obj) {
 
 function ensureIngestReady_() {
   const cache = CacheService.getScriptCache();
-  if (cache.get('iot_ingest_ready_v7') === '1') return;
+  if (cache.get(INGEST_READY_CACHE_KEY) === '1') return;
   ensureScriptProps_();
   const props = PropertiesService.getScriptProperties();
-  if (props.getProperty('RUNTIME_SCHEMA_VERSION') !== 'storage-v2') {
+  if (props.getProperty('RUNTIME_SCHEMA_VERSION') !== 'storage-v3-retention30') {
     ensureRuntimeSchemaV2_();
     seedConfigDefaults_();
-    props.setProperty('RUNTIME_SCHEMA_VERSION', 'storage-v2');
+    upgradeRetentionDefault_();
+    ensureRetentionTrigger_();
+    props.setProperty('RUNTIME_SCHEMA_VERSION', 'storage-v3-retention30');
   }
-  cache.put('iot_ingest_ready_v7', '1', 21600);
+  cache.put(INGEST_READY_CACHE_KEY, '1', 21600);
 }
 
 function ensureRuntimeSchemaV2_() {

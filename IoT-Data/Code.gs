@@ -3,7 +3,7 @@
  * Backend project: HTTP POST ingestion and internal management UI.
  */
 
-const BUILD_VERSION = 'v2026-06-12-storage-v2';
+const BUILD_VERSION = 'v2026-06-12-ingest-device-retention';
 
 function doGet(e) {
   if (isLightweightCallback_(e)) {

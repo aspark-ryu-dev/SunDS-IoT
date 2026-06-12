@@ -22,10 +22,12 @@ function apiSaveDevice(device) {
     for (let r = 1; r < values.length; r++) {
       if (String(values[r][idx.device_id] || '') === clean.device_id) {
         writeDeviceRow_(sh, r + 1, idx, clean, false);
+        clearDeviceIndexCache_();
         return getAdminSnapshot_();
       }
     }
     sh.appendRow(deviceToRow_(clean, idx));
+    clearDeviceIndexCache_();
     return getAdminSnapshot_();
   } finally {
     lock.releaseLock();
@@ -76,6 +78,7 @@ function apiSaveDevices(devices, dashboardSettingsByDevice) {
       if (!rowById[deviceId]) return;
       saveDeviceDashboardSettingsRow_(sh, rowById[deviceId], idx, dashboardSettingsByDevice[deviceId]);
     });
+    clearDeviceIndexCache_();
     return getAdminSnapshot_();
   } finally {
     lock.releaseLock();
@@ -112,6 +115,8 @@ function apiDeleteDevice(deviceId) {
       }
     }
     if (!deleted) throw new Error('Device not found: ' + target);
+    clearDeviceIndexCache_();
+    CacheService.getScriptCache().remove(deviceRowCacheKey_(target));
 
     const layoutSheet = getSheet_(SHEET_LAYOUT);
     ensureHeaders_(layoutSheet, HEADERS.Layout);

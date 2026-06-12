@@ -11,6 +11,7 @@ function setup() {
   CacheService.getScriptCache().remove('iot_ingest_ready_v5');
   CacheService.getScriptCache().remove('iot_ingest_ready_v6');
   CacheService.getScriptCache().remove('iot_ingest_ready_v7');
+  CacheService.getScriptCache().remove(INGEST_READY_CACHE_KEY);
   CacheService.getScriptCache().remove('iot_latest_index_v2');
   CacheService.getScriptCache().remove('iot_metric_mappings_v1');
   CacheService.getScriptCache().remove('iot_canonical_latest_index_v1');
@@ -18,6 +19,7 @@ function setup() {
   ensureSheets_();
   Logger.log('setup: sheets ready');
   seedConfigDefaults_();
+  upgradeRetentionDefault_();
   Logger.log('setup: config ready');
   seedKeyCatalog_();
   Logger.log('setup: key catalog ready');
@@ -27,7 +29,7 @@ function setup() {
   Logger.log('setup: canonical latest ready');
   ensureRetentionTrigger_();
   ensureMetricMappingTrigger_();
-  PropertiesService.getScriptProperties().setProperty('RUNTIME_SCHEMA_VERSION', 'storage-v2');
+  PropertiesService.getScriptProperties().setProperty('RUNTIME_SCHEMA_VERSION', 'storage-v3-retention30');
   Logger.log('IoT-Data setup complete.');
 }
 
@@ -44,7 +46,7 @@ function seedConfigDefaults_() {
   const defaults = {
     refresh_interval_sec: 60,
     offline_timeout_min: 15,
-    retention_days: 7,
+    retention_days: 30,
     schema_version: 1,
     storage_schema_version: 2,
     storage_mode: 'legacy',
@@ -62,6 +64,21 @@ function seedConfigDefaults_() {
     return [key, defaults[key]];
   });
   if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, 2).setValues(rows);
+  CacheService.getScriptCache().remove(CONFIG_CACHE_KEY);
+}
+
+function upgradeRetentionDefault_() {
+  const sh = getSheet_(SHEET_CONFIG);
+  const values = sh.getDataRange().getValues();
+  for (let r = 1; r < values.length; r++) {
+    if (String(values[r][0] || '') !== 'retention_days') continue;
+    const current = Number(values[r][1]);
+    if (!isFinite(current) || current === 7) sh.getRange(r + 1, 2).setValue(30);
+    CacheService.getScriptCache().remove(CONFIG_CACHE_KEY);
+    return;
+  }
+  sh.appendRow(['retention_days', 30]);
+  CacheService.getScriptCache().remove(CONFIG_CACHE_KEY);
 }
 
 function showSecrets() {

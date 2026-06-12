@@ -1,7 +1,7 @@
 /**
  * IoT-Data — Readings retention.
  *
- * Deletes history older than `retention_days` (default 7) from legacy history,
+ * Deletes history older than `retention_days` (default 30) from legacy history,
  * Storage V2 partitions, MeetingSamples, and MeetingEvents.
  *
  * Readings are appended in timestamp-ascending order, so old rows form a
@@ -29,7 +29,7 @@ function purgeOldReadings() {
 function _purgeOldReadingsImpl_() {
   ensureIngestReady_();
 
-  const retentionDays = Number(getConfig_('retention_days', 7));
+  const retentionDays = Number(getConfig_('retention_days', 30));
   if (!isFinite(retentionDays) || retentionDays <= 0) {
     const skipped = { ok: true, skipped: true, reason: 'retention disabled (retention_days <= 0)' };
     Logger.log('purgeOldReadings: ' + JSON.stringify(skipped));
@@ -112,6 +112,8 @@ function purgeStoragePartitions_(cutoff) {
     if (empty && String(valueByHeader_(values[r], idx, 'status') || '') !== 'archived') {
       if (idx.status !== undefined) catalog.getRange(r + 1, idx.status + 1).setValue('archived');
       if (idx.updated_at !== undefined) catalog.getRange(r + 1, idx.updated_at + 1).setValue(new Date());
+      const partitionId = String(valueByHeader_(values[r], idx, 'partition_id') || '');
+      if (partitionId) CacheService.getScriptCache().remove('iot_partition_v2:' + partitionId);
       archived++;
     }
   }
@@ -125,6 +127,14 @@ function setRetentionDays(days) {
   setConfig_('retention_days', n);
   Logger.log('retention_days = ' + n);
   return n;
+}
+
+function apiSetRetentionDays(days) {
+  const retentionDays = setRetentionDays(days);
+  ensureRetentionTrigger_();
+  const status = getStorageStatus_();
+  status.retention_days = retentionDays;
+  return status;
 }
 
 /** Public wrapper to install the daily trigger from the Apps Script editor. */

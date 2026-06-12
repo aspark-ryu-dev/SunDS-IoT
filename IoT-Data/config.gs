@@ -9,7 +9,14 @@ function getConfig_(key, defaultValue) {
   return (v === '' || v === null || v === undefined) ? defaultValue : v;
 }
 
+const CONFIG_CACHE_KEY = 'iot_config_v1';
+
 function getConfigMap_() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(CONFIG_CACHE_KEY);
+  if (cached) {
+    try { return JSON.parse(cached); } catch (err) {}
+  }
   const sh = getSheet_(SHEET_CONFIG);
   const values = sh.getDataRange().getValues();
   const out = {};
@@ -17,6 +24,7 @@ function getConfigMap_() {
     const key = String(values[r][0] || '').trim();
     if (key) out[key] = values[r][1];
   }
+  try { cache.put(CONFIG_CACHE_KEY, JSON.stringify(out), 21600); } catch (err) {}
   return out;
 }
 
@@ -32,6 +40,8 @@ function setConfig_(key, value) {
         CacheService.getScriptCache().remove('iot_ingest_ready_v3');
         CacheService.getScriptCache().remove('iot_ingest_ready_v4');
         CacheService.getScriptCache().remove('iot_ingest_ready_v7');
+        CacheService.getScriptCache().remove(INGEST_READY_CACHE_KEY);
+        CacheService.getScriptCache().remove(CONFIG_CACHE_KEY);
         return;
       }
     }
@@ -39,6 +49,8 @@ function setConfig_(key, value) {
     CacheService.getScriptCache().remove('iot_ingest_ready_v3');
     CacheService.getScriptCache().remove('iot_ingest_ready_v4');
     CacheService.getScriptCache().remove('iot_ingest_ready_v7');
+    CacheService.getScriptCache().remove(INGEST_READY_CACHE_KEY);
+    CacheService.getScriptCache().remove(CONFIG_CACHE_KEY);
   } finally {
     lock.releaseLock();
   }

@@ -193,7 +193,7 @@ function compileIngestMetrics_(parsed, ts) {
     });
   });
 
-  if (rowsToAdd.length) appendMetricMappings_(rowsToAdd);
+  if (rowsToAdd.length) appendMetricMappings_(rowsToAdd, { defer_catalog_sync: true });
   return compiled;
 }
 
@@ -355,7 +355,7 @@ function createPendingMetricMapping_(context, rawKey, sampleValue, ts) {
   };
 }
 
-function appendMetricMappings_(mappings) {
+function appendMetricMappings_(mappings, options) {
   if (!mappings.length) return;
   const sh = getSheet_(SHEET_METRIC_MAPPINGS);
   const idx = headerIndex_(sh);
@@ -373,7 +373,7 @@ function appendMetricMappings_(mappings) {
   if (rows.length) {
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, sh.getLastColumn()).setValues(rows);
     clearMetricMappingCache_();
-    syncMappingsToKeyCatalog_(addedMappings);
+    if (!(options && options.defer_catalog_sync)) syncMappingsToKeyCatalog_(addedMappings);
   }
 }
 

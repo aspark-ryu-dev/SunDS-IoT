@@ -13,6 +13,7 @@ const STORAGE_PARTITION_BASE_HEADERS = ['reading_id', 'ts', 'device_id', 'empty_
 const STORAGE_MAX_METRIC_COLUMNS = 512;
 const STORAGE_MIGRATION_BATCH_ROWS = 1500;
 const STORAGE_MIGRATION_HANDLER = 'continueStorageMigration';
+const STORAGE_HEADER_CACHE_PREFIX = 'iot_partition_headers_v1:';
 
 function storageMode_() {
   const mode = String(getConfig_('storage_mode', STORAGE_MODE_LEGACY) || '').toLowerCase();
@@ -40,12 +41,9 @@ function appendWideReading_(readingId, deviceId, deviceModel, context, rawMetric
     metrics.push({ key: 'derived__' + sanitizeMetricName_(item.metric), value: item.value });
   });
 
-  const existingHeaders = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0];
-  const headerMap = {};
-  existingHeaders.forEach(function (header, index) {
-    const key = String(header || '').trim();
-    if (key) headerMap[key] = index;
-  });
+  const headerState = partitionHeaderState_(sh);
+  const existingHeaders = headerState.headers;
+  const headerMap = headerState.map;
 
   const missing = [];
   metrics.forEach(function (item) {
@@ -60,14 +58,16 @@ function appendWideReading_(readingId, deviceId, deviceModel, context, rawMetric
   const acceptedMissing = missing.slice(0, capacity);
   const rejected = missing.slice(capacity);
   if (acceptedMissing.length) {
-    const startColumn = sh.getLastColumn() + 1;
+    const startColumn = existingHeaders.length + 1;
     sh.getRange(1, startColumn, 1, acceptedMissing.length).setValues([acceptedMissing]);
     acceptedMissing.forEach(function (key, offset) {
       headerMap[key] = startColumn - 1 + offset;
+      existingHeaders.push(key);
     });
+    savePartitionHeaderState_(sh.getName(), existingHeaders);
   }
 
-  const width = sh.getLastColumn();
+  const width = existingHeaders.length;
   const row = new Array(width).fill('');
   row[headerMap.reading_id] = readingId;
   row[headerMap.ts] = ts;
@@ -84,7 +84,9 @@ function appendWideReading_(readingId, deviceId, deviceModel, context, rawMetric
   });
   row[headerMap.empty_keys] = emptyKeys.length ? JSON.stringify(emptyKeys) : '';
   sh.getRange(sh.getLastRow() + 1, 1, 1, width).setValues([row]);
-  updatePartitionCatalog_(partition.partition_id, Math.min(STORAGE_MAX_METRIC_COLUMNS, currentMetricCount + acceptedMissing.length));
+  if (acceptedMissing.length) {
+    updatePartitionCatalog_(partition.partition_id, Math.min(STORAGE_MAX_METRIC_COLUMNS, currentMetricCount + acceptedMissing.length));
+  }
 
   if (rejected.length) {
     logError_('appendWideReading_', new Error('Partition metric limit exceeded'), {
@@ -98,6 +100,40 @@ function appendWideReading_(readingId, deviceId, deviceModel, context, rawMetric
     sheet_name: partition.sheet_name,
     rejected_keys: rejected
   };
+}
+
+function partitionHeaderState_(sheet) {
+  const cache = CacheService.getScriptCache();
+  const key = STORAGE_HEADER_CACHE_PREFIX + sheet.getName();
+  const cached = cache.get(key);
+  if (cached) {
+    try {
+      const headers = JSON.parse(cached);
+      return { headers: headers, map: storageHeaderMap_(headers) };
+    } catch (err) {}
+  }
+  const headers = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0];
+  savePartitionHeaderState_(sheet.getName(), headers);
+  return { headers: headers, map: storageHeaderMap_(headers) };
+}
+
+function storageHeaderMap_(headers) {
+  const out = {};
+  (headers || []).forEach(function (header, index) {
+    const key = String(header || '').trim();
+    if (key) out[key] = index;
+  });
+  return out;
+}
+
+function savePartitionHeaderState_(sheetName, headers) {
+  try {
+    CacheService.getScriptCache().put(
+      STORAGE_HEADER_CACHE_PREFIX + sheetName,
+      JSON.stringify(headers || []),
+      21600
+    );
+  } catch (err) {}
 }
 
 function ensureReadingPartition_(deviceModel, eventName, reportType) {
@@ -118,6 +154,10 @@ function ensureReadingPartition_(deviceModel, eventName, reportType) {
     if (String(valueByHeader_(values[r], idx, 'partition_id')) !== partitionId) continue;
     const sheetName = String(valueByHeader_(values[r], idx, 'sheet_name') || '');
     ensurePhysicalPartitionSheet_(sheetName);
+    if (String(valueByHeader_(values[r], idx, 'status') || '') === 'archived') {
+      if (idx.status !== undefined) catalog.getRange(r + 1, idx.status + 1).setValue('active');
+      if (idx.updated_at !== undefined) catalog.getRange(r + 1, idx.updated_at + 1).setValue(new Date());
+    }
     cache.put(cacheKey, sheetName, 21600);
     return { partition_id: partitionId, sheet_name: sheetName };
   }
@@ -183,7 +223,7 @@ function getStorageStatus_() {
   return {
     schema_version: Number(config.storage_schema_version || STORAGE_SCHEMA_VERSION),
     mode: storageMode_(),
-    retention_days: Number(config.retention_days || 7),
+    retention_days: Number(config.retention_days || 30),
     migration_id: String(config.storage_migration_id || ''),
     migration: migration,
     partition_count: partitions.length,
@@ -403,7 +443,7 @@ function readDeviceModels_() {
 }
 
 function findFirstRetainedLegacyRow_(sheet) {
-  const retentionDays = Number(getConfig_('retention_days', 7));
+  const retentionDays = Number(getConfig_('retention_days', 30));
   if (!isFinite(retentionDays) || retentionDays <= 0 || sheet.getLastRow() <= 1) return 2;
   const cutoff = Date.now() - retentionDays * 86400000;
   const idx = headerIndex_(sheet);
@@ -557,10 +597,14 @@ function setConfigValueLocked_(key, value) {
     if (String(values[r][0] || '') !== key) continue;
     sh.getRange(r + 1, 2).setValue(value);
     CacheService.getScriptCache().remove('iot_ingest_ready_v7');
+    CacheService.getScriptCache().remove(INGEST_READY_CACHE_KEY);
+    CacheService.getScriptCache().remove(CONFIG_CACHE_KEY);
     return;
   }
   sh.appendRow([key, value]);
   CacheService.getScriptCache().remove('iot_ingest_ready_v7');
+  CacheService.getScriptCache().remove(INGEST_READY_CACHE_KEY);
+  CacheService.getScriptCache().remove(CONFIG_CACHE_KEY);
 }
 
 function apiRetryStorageMigration() {

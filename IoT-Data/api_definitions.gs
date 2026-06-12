@@ -5,6 +5,7 @@
 const DEF_TYPES = { metric: true, expr: true, expression: true, formula: true };
 
 const DEF_TYPES_EXPR = { expr: true, expression: true, formula: true };
+const DEFINITIONS_CACHE_KEY = 'iot_definitions_v1';
 
 /**
 
@@ -32,10 +33,12 @@ function apiSaveDefinition(definition) {
     for (let r = 1; r < values.length; r++) {
       if (String(values[r][0]) === clean.id) {
         sh.getRange(r + 1, 1, 1, 8).setValues([definitionToRow_(clean)]);
+        clearDefinitionsCache_();
         return getAdminSnapshot_();
       }
     }
     sh.appendRow(definitionToRow_(clean));
+    clearDefinitionsCache_();
     return getAdminSnapshot_();
   } finally {
     lock.releaseLock();
@@ -65,6 +68,7 @@ function apiDeleteDefinition(id) {
     for (let r = values.length - 1; r >= 1; r--) {
       if (String(values[r][0]) === target) sh.deleteRow(r + 1);
     }
+    clearDefinitionsCache_();
     return getAdminSnapshot_();
   } finally {
     lock.releaseLock();
@@ -129,6 +133,7 @@ function seedKnownMetricDefinitions_() {
   if (rows.length) {
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, 8).setValues(rows);
   }
+  if (changed || rows.length) clearDefinitionsCache_();
   return { added: rows.length };
 }
 
@@ -153,6 +158,11 @@ function definitionToRow_(d) {
 }
 
 function readDefinitions_() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(DEFINITIONS_CACHE_KEY);
+  if (cached) {
+    try { return JSON.parse(cached); } catch (err) {}
+  }
   const sh = getSheet_(SHEET_DEFINITIONS);
   const values = sh.getDataRange().getValues();
   const out = [];
@@ -170,10 +180,17 @@ function readDefinitions_() {
       enabled: parseBool_(values[r][7])
     });
   }
+  try { cache.put(DEFINITIONS_CACHE_KEY, JSON.stringify(out), 21600); } catch (err) {}
   return out;
 }
 
 function latestScopeForDevice_(device_id) {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = latestScopeCacheKey_(device_id);
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch (err) {}
+  }
   const sh = getSheet_(SHEET_LATEST);
   const values = sh.getDataRange().getValues();
   const scope = {};
@@ -183,7 +200,12 @@ function latestScopeForDevice_(device_id) {
     const value = Number(values[r][2]);
     if (metric && isFinite(value)) scope[metric] = value;
   }
+  try { cache.put(cacheKey, JSON.stringify(scope), 21600); } catch (err) {}
   return scope;
+}
+
+function clearDefinitionsCache_() {
+  CacheService.getScriptCache().remove(DEFINITIONS_CACHE_KEY);
 }
 
 function applyDefinitionsForDevice_(device_id, ts) {

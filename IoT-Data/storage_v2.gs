@@ -11,8 +11,9 @@ const STORAGE_MODE_DUAL = 'dual';
 const STORAGE_MODE_WIDE = 'wide';
 const STORAGE_PARTITION_BASE_HEADERS = ['reading_id', 'ts', 'device_id', 'empty_keys'];
 const STORAGE_MAX_METRIC_COLUMNS = 512;
-const STORAGE_MIGRATION_BATCH_ROWS = 1500;
+const STORAGE_MIGRATION_BATCH_ROWS = 200;
 const STORAGE_MIGRATION_HANDLER = 'continueStorageMigration';
+const STORAGE_MIGRATION_TRIGGER_VERSION = 'v3-5m';
 const STORAGE_HEADER_CACHE_PREFIX = 'iot_partition_headers_v1:';
 
 function storageMode_() {
@@ -296,6 +297,7 @@ function apiStartStorageMigration() {
 
 function continueStorageMigration() {
   ensureIngestReady_();
+  ensureStorageMigrationTrigger_();
   const migration = readCurrentMigration_();
   if (!migration || migration.status !== 'running') {
     removeStorageMigrationTrigger_();
@@ -306,12 +308,23 @@ function continueStorageMigration() {
   try {
     return continueStorageMigrationLocked_(migration);
   } catch (err) {
-    updateMigrationFields_(migration.migration_id, {
-      status: 'error',
-      error: String(err && err.message || err),
-      updated_at: new Date()
-    });
-    logError_('continueStorageMigration', err, migration);
+    const message = String(err && err.message || err);
+    const transient = /timed out|timeout|service invoked too many times|try again/i.test(message);
+    console.error('continueStorageMigration: ' + message);
+    try {
+      updateMigrationFieldsWithRetry_(migration.migration_id, {
+        status: transient ? 'running' : 'error',
+        error: message,
+        updated_at: new Date()
+      });
+    } catch (statusErr) {
+      console.error('Migration status update failed: ' + String(statusErr && statusErr.message || statusErr));
+    }
+    try {
+      logError_('continueStorageMigration', err, migration);
+    } catch (logErr) {
+      console.error('Migration error log failed: ' + String(logErr && logErr.message || logErr));
+    }
     return { ok: false, error: String(err && err.message || err) };
   } finally {
     lock.releaseLock();
@@ -321,7 +334,7 @@ function continueStorageMigration() {
 function continueStorageMigrationLocked_(migration) {
   const source = getSpreadsheet_().getSheetByName(SHEET_READINGS);
   if (!source || migration.source_rows <= 0 || migration.cursor_row > migration.source_rows + 1) {
-    updateMigrationFields_(migration.migration_id, {
+    updateMigrationFieldsWithRetry_(migration.migration_id, {
       status: 'ready_for_validation',
       updated_at: new Date()
     });
@@ -331,7 +344,10 @@ function continueStorageMigrationLocked_(migration) {
   const lastSourceRow = Math.min(source.getLastRow(), migration.source_rows + 1);
   let startRow = Math.max(2, migration.cursor_row || migration.first_retained_row || 2);
   if (startRow > lastSourceRow) {
-    updateMigrationFields_(migration.migration_id, { status: 'ready_for_validation', updated_at: new Date() });
+    updateMigrationFieldsWithRetry_(migration.migration_id, {
+      status: 'ready_for_validation',
+      updated_at: new Date()
+    });
     removeStorageMigrationTrigger_();
     return { ok: true, done: true };
   }
@@ -349,16 +365,13 @@ function continueStorageMigrationLocked_(migration) {
   const models = readDeviceModels_();
   let migratedMetrics = 0;
   groups.forEach(function (group) {
-    const model = models[group.device_id] || 'device:' + group.device_id;
-    if (!wideReadingExists_(group.reading_id, model, group.context)) {
-      appendWideReading_(group.reading_id, group.device_id, model, group.context, group.metrics, group.derived, group.ts);
-    }
-    appendMeetingSampleFromLegacyGroup_(group);
     migratedMetrics += group.metrics.length + group.derived.length;
   });
+  appendWideMigrationGroups_(groups, models);
+  appendMeetingSamplesFromLegacyGroups_(groups);
   const nextRow = startRow + processCount;
   const done = nextRow > lastSourceRow;
-  updateMigrationFields_(migration.migration_id, {
+  updateMigrationFieldsWithRetry_(migration.migration_id, {
     status: done ? 'ready_for_validation' : 'running',
     cursor_row: nextRow,
     migrated_groups: Number(migration.migrated_groups || 0) + groups.length,
@@ -367,6 +380,118 @@ function continueStorageMigrationLocked_(migration) {
   });
   if (done) removeStorageMigrationTrigger_();
   return { ok: true, done: done, groups: groups.length, next_row: nextRow };
+}
+
+function appendWideMigrationGroups_(groups, models) {
+  const buckets = {};
+  (groups || []).forEach(function (group) {
+    const model = models[group.device_id] || 'device:' + group.device_id;
+    const eventValue = String(group.context && group.context.event || '');
+    const reportValue = normalizeReportType_(group.context && group.context.report_type);
+    const key = [model, eventValue, reportValue].join('\n');
+    if (!buckets[key]) {
+      buckets[key] = {
+        model: model,
+        context: { event: eventValue, report_type: reportValue },
+        groups: []
+      };
+    }
+    buckets[key].groups.push(group);
+  });
+
+  Object.keys(buckets).forEach(function (key) {
+    appendWideMigrationBucket_(buckets[key]);
+  });
+}
+
+function appendWideMigrationBucket_(bucket) {
+  const partition = ensureReadingPartition_(
+    bucket.model,
+    bucket.context.event,
+    bucket.context.report_type
+  );
+  const sh = getSheet_(partition.sheet_name);
+  const headerState = partitionHeaderState_(sh);
+  const headers = headerState.headers;
+  const headerMap = headerState.map;
+  const existingIds = {};
+  if (sh.getLastRow() > 1) {
+    sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().forEach(function (row) {
+      const id = String(row[0] || '');
+      if (id) existingIds[id] = true;
+    });
+  }
+
+  const missing = [];
+  bucket.groups.forEach(function (group) {
+    migrationGroupMetrics_(group).forEach(function (item) {
+      if (!Object.prototype.hasOwnProperty.call(headerMap, item.key) && missing.indexOf(item.key) < 0) {
+        missing.push(item.key);
+      }
+    });
+  });
+  const currentMetricCount = Math.max(0, headers.filter(function (header) {
+    return String(header || '').trim() !== '';
+  }).length - STORAGE_PARTITION_BASE_HEADERS.length);
+  const capacity = Math.max(0, STORAGE_MAX_METRIC_COLUMNS - currentMetricCount);
+  const acceptedMissing = missing.slice(0, capacity);
+  const rejected = missing.slice(capacity);
+  if (acceptedMissing.length) {
+    const startColumn = headers.length + 1;
+    sh.getRange(1, startColumn, 1, acceptedMissing.length).setValues([acceptedMissing]);
+    acceptedMissing.forEach(function (metric, offset) {
+      headerMap[metric] = startColumn - 1 + offset;
+      headers.push(metric);
+    });
+    savePartitionHeaderState_(sh.getName(), headers);
+    updatePartitionCatalog_(
+      partition.partition_id,
+      Math.min(STORAGE_MAX_METRIC_COLUMNS, currentMetricCount + acceptedMissing.length)
+    );
+  }
+
+  const output = [];
+  bucket.groups.forEach(function (group) {
+    if (existingIds[group.reading_id]) return;
+    const row = new Array(headers.length).fill('');
+    row[headerMap.reading_id] = group.reading_id;
+    row[headerMap.ts] = group.ts;
+    row[headerMap.device_id] = group.device_id;
+    const emptyKeys = [];
+    migrationGroupMetrics_(group).forEach(function (item) {
+      if (!Object.prototype.hasOwnProperty.call(headerMap, item.key)) return;
+      if (item.value === '' || item.value === null || item.value === undefined) {
+        emptyKeys.push(item.key);
+      } else {
+        row[headerMap[item.key]] = item.value;
+      }
+    });
+    row[headerMap.empty_keys] = emptyKeys.length ? JSON.stringify(emptyKeys) : '';
+    output.push(row);
+    existingIds[group.reading_id] = true;
+  });
+  if (output.length) {
+    sh.getRange(sh.getLastRow() + 1, 1, output.length, headers.length).setValues(output);
+  }
+  if (rejected.length) {
+    logError_('appendWideMigrationBucket_', new Error('Partition metric limit exceeded'), {
+      partition_id: partition.partition_id,
+      rejected_keys: rejected
+    });
+  }
+}
+
+function migrationGroupMetrics_(group) {
+  const metrics = [];
+  (group.metrics || []).forEach(function (item) {
+    if (item && item.metric) metrics.push({ key: String(item.metric), value: item.value });
+  });
+  (group.derived || []).forEach(function (item) {
+    if (item && item.metric) {
+      metrics.push({ key: 'derived__' + sanitizeMetricName_(item.metric), value: item.value });
+    }
+  });
+  return metrics;
 }
 
 function groupLegacyRows_(rows, idx, sourceStartRow) {
@@ -674,15 +799,42 @@ function updateMigrationFields_(migrationId, fields) {
   throw new Error('Migration not found: ' + migrationId);
 }
 
+function updateMigrationFieldsWithRetry_(migrationId, fields) {
+  let lastError = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      updateMigrationFields_(migrationId, fields);
+      return;
+    } catch (err) {
+      lastError = err;
+      if (attempt === 0) Utilities.sleep(500);
+    }
+  }
+  throw lastError;
+}
+
 function ensureStorageMigrationTrigger_() {
-  const exists = ScriptApp.getProjectTriggers().some(function (trigger) {
+  const props = PropertiesService.getScriptProperties();
+  const triggers = ScriptApp.getProjectTriggers().filter(function (trigger) {
     return trigger.getHandlerFunction() === STORAGE_MIGRATION_HANDLER;
   });
-  if (!exists) ScriptApp.newTrigger(STORAGE_MIGRATION_HANDLER).timeBased().everyMinutes(5).create();
+  const currentVersion = String(props.getProperty('STORAGE_MIGRATION_TRIGGER_VERSION') || '');
+  if (currentVersion !== STORAGE_MIGRATION_TRIGGER_VERSION) {
+    triggers.forEach(function (trigger) {
+      ScriptApp.deleteTrigger(trigger);
+    });
+    ScriptApp.newTrigger(STORAGE_MIGRATION_HANDLER).timeBased().everyMinutes(5).create();
+    props.setProperty('STORAGE_MIGRATION_TRIGGER_VERSION', STORAGE_MIGRATION_TRIGGER_VERSION);
+    return;
+  }
+  if (!triggers.length) {
+    ScriptApp.newTrigger(STORAGE_MIGRATION_HANDLER).timeBased().everyMinutes(5).create();
+  }
 }
 
 function removeStorageMigrationTrigger_() {
   ScriptApp.getProjectTriggers().forEach(function (trigger) {
     if (trigger.getHandlerFunction() === STORAGE_MIGRATION_HANDLER) ScriptApp.deleteTrigger(trigger);
   });
+  PropertiesService.getScriptProperties().deleteProperty('STORAGE_MIGRATION_TRIGGER_VERSION');
 }

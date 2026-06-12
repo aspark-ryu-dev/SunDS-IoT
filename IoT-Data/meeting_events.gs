@@ -88,6 +88,44 @@ function meetingSampleExists_(sheet, idx, sampleKey) {
 }
 
 function appendMeetingSampleFromLegacyGroup_(group) {
+  return appendMeetingSamplesFromLegacyGroups_([group]) > 0;
+}
+
+function appendMeetingSamplesFromLegacyGroups_(groups) {
+  const devices = readDeviceMeetingInfoMap_();
+  const sh = getSheet_(SHEET_MEETING_SAMPLES);
+  const idx = headerIndex_(sh);
+  const existing = {};
+  if (sh.getLastRow() > 1 && idx.sample_key !== undefined) {
+    sh.getRange(2, idx.sample_key + 1, sh.getLastRow() - 1, 1).getValues().forEach(function (row) {
+      const key = String(row[0] || '');
+      if (key) existing[key] = true;
+    });
+  }
+  const width = Math.max.apply(null, Object.keys(idx).map(function (name) { return idx[name]; })) + 1;
+  const output = [];
+  (groups || []).forEach(function (group) {
+    const people = legacyMeetingPeopleCount_(group);
+    const device = devices[group.device_id];
+    if (people === null || !device || !device.location) return;
+    const sampleKey = 'legacy_sample_' + storageHash_(group.reading_id, 24);
+    if (existing[sampleKey]) return;
+    const row = new Array(width).fill('');
+    setByHeader_(row, idx, 'ts', group.ts);
+    setByHeader_(row, idx, 'device_id', group.device_id);
+    setByHeader_(row, idx, 'location', device.location);
+    setByHeader_(row, idx, 'count', people);
+    setByHeader_(row, idx, 'sample_key', sampleKey);
+    output.push(row);
+    existing[sampleKey] = true;
+  });
+  if (output.length) {
+    sh.getRange(sh.getLastRow() + 1, 1, output.length, width).setValues(output);
+  }
+  return output.length;
+}
+
+function legacyMeetingPeopleCount_(group) {
   let direct = null;
   let areaTotal = 0;
   let hasArea = false;
@@ -104,16 +142,22 @@ function appendMeetingSampleFromLegacyGroup_(group) {
     }
   });
   const people = direct !== null ? direct : hasArea ? areaTotal : null;
-  if (people === null) return false;
-  const device = readDeviceMeetingInfo_(group.device_id);
-  if (!device || !device.location) return false;
-  return appendMeetingSample_(
-    group.ts,
-    group.device_id,
-    device.location,
-    people,
-    'legacy_sample_' + storageHash_(group.reading_id, 24)
-  );
+  return people;
+}
+
+function readDeviceMeetingInfoMap_() {
+  const sh = getSheet_(SHEET_DEVICES);
+  const idx = headerIndex_(sh);
+  const values = sh.getDataRange().getValues();
+  const out = {};
+  for (let r = 1; r < values.length; r++) {
+    const deviceId = String(valueByHeader_(values[r], idx, 'device_id') || '').trim();
+    if (!deviceId) continue;
+    out[deviceId] = {
+      location: String(valueByHeader_(values[r], idx, 'location') || '').trim()
+    };
+  }
+  return out;
 }
 
 function readDeviceMeetingInfo_(deviceId) {
